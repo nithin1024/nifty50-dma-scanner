@@ -1,7 +1,7 @@
 import httpx
 import json
 import logging
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from app.services.constituents_service import constituents_service
@@ -12,6 +12,13 @@ HISTORICAL_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "
 COVERAGE_REPORT_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "coverage_report.json"
 
 MIN_REQUIRED_SESSIONS = 200
+
+# Explicitly documented symbol alias mappings for corporate actions and provider naming
+PROVIDER_TICKER_MAP = {
+    "TATAMOTORS": ["TATAMOTORS.NS", "TMPV.NS"],
+    "M&M": ["M&M.NS"],
+    "BAJAJ-AUTO": ["BAJAJ-AUTO.NS"]
+}
 
 
 class HistoricalDataService:
@@ -51,111 +58,118 @@ class HistoricalDataService:
         Provider: Yahoo Finance NSE feed (.NS) with unadjusted close prices matching exchange Bhavcopy.
         """
         clean_symbol = symbol.strip().upper()
-        # Symbol adjustments for Yahoo Finance (e.g., M&M -> M&M.NS)
-        ticker = f"{clean_symbol}.NS"
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range={range_period}"
+        tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
+
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
-                resp = await client.get(url)
-                if resp.status_code != 200:
-                    raise ValueError(f"Provider returned status {resp.status_code}")
-
-                data = resp.json()
-                result = data["chart"]["result"][0]
-                timestamps = result.get("timestamp", [])
-                indicators = result["indicators"]["quote"][0]
-
-                opens = indicators.get("open", [])
-                highs = indicators.get("high", [])
-                lows = indicators.get("low", [])
-                closes = indicators.get("close", [])
-                volumes = indicators.get("volume", [])
-
-                valid_candles: List[Dict[str, Any]] = []
-                seen_dates = set()
-
-                for i, ts in enumerate(timestamps):
-                    dt = datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
-                    if dt in seen_dates:
-                        continue
-                    seen_dates.add(dt)
-
-                    o = opens[i] if i < len(opens) else None
-                    h = highs[i] if i < len(highs) else None
-                    l = lows[i] if i < len(lows) else None
-                    c = closes[i] if i < len(closes) else None
-                    v = volumes[i] if i < len(volumes) and volumes[i] is not None else 0
-
-                    if any(x is None for x in [o, h, l, c]):
+        last_error = None
+        for ticker in tickers_to_try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range={range_period}"
+            try:
+                async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
+                    resp = await client.get(url)
+                    if resp.status_code != 200:
+                        last_error = f"Status {resp.status_code} for {ticker}"
                         continue
 
-                    candle = {
-                        "trading_date": dt,
-                        "open": round(float(o), 2),
-                        "high": round(float(h), 2),
-                        "low": round(float(l), 2),
-                        "close": round(float(c), 2),
-                        "volume": int(v) if v else 0,
+                    data = resp.json()
+                    result = data.get("chart", {}).get("result", [{}])[0]
+                    timestamps = result.get("timestamp", [])
+                    indicators = result.get("indicators", {}).get("quote", [{}])[0]
+
+                    opens = indicators.get("open", [])
+                    highs = indicators.get("high", [])
+                    lows = indicators.get("low", [])
+                    closes = indicators.get("close", [])
+                    volumes = indicators.get("volume", [])
+
+                    valid_candles: List[Dict[str, Any]] = []
+                    seen_dates = set()
+
+                    for i, ts in enumerate(timestamps):
+                        dt = datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
+                        if dt in seen_dates:
+                            continue
+                        seen_dates.add(dt)
+
+                        o = opens[i] if i < len(opens) else None
+                        h = highs[i] if i < len(highs) else None
+                        l = lows[i] if i < len(lows) else None
+                        c = closes[i] if i < len(closes) else None
+                        v = volumes[i] if i < len(volumes) and volumes[i] is not None else 0
+
+                        if any(x is None for x in [o, h, l, c]):
+                            continue
+
+                        candle = {
+                            "trading_date": dt,
+                            "open": round(float(o), 2),
+                            "high": round(float(h), 2),
+                            "low": round(float(l), 2),
+                            "close": round(float(c), 2),
+                            "volume": int(v) if v else 0,
+                        }
+
+                        is_valid, reason = self.validate_candle(candle)
+                        if is_valid:
+                            valid_candles.append(candle)
+                        else:
+                            logger.warning(f"Discarding invalid candle for {symbol} on {dt}: {reason}")
+
+                    # Sort chronologically ascending
+                    valid_candles.sort(key=lambda x: x["trading_date"])
+
+                    # Determine provenance status
+                    if len(valid_candles) >= MIN_REQUIRED_SESSIONS:
+                        quality_status = "VERIFIED"
+                    elif len(valid_candles) > 0:
+                        quality_status = "INSUFFICIENT_HISTORY"
+                    else:
+                        quality_status = "UNAVAILABLE"
+
+                    result_payload = {
+                        "symbol": clean_symbol,
+                        "ticker_used": ticker,
+                        "provider": "YAHOO_FINANCE_NSE",
+                        "price_adjustment": "UNADJUSTED_CLOSE",
+                        "retrieval_timestamp": datetime.now(timezone.utc).isoformat(),
+                        "total_sessions": len(valid_candles),
+                        "min_required_sessions": MIN_REQUIRED_SESSIONS,
+                        "quality_status": quality_status,
+                        "first_trading_date": valid_candles[0]["trading_date"] if valid_candles else None,
+                        "latest_trading_date": valid_candles[-1]["trading_date"] if valid_candles else None,
+                        "candles": valid_candles
                     }
 
-                    is_valid, reason = self.validate_candle(candle)
-                    if is_valid:
-                        valid_candles.append(candle)
-                    else:
-                        logger.warning(f"Discarding invalid candle for {symbol} on {dt}: {reason}")
+                    # Save to cache file
+                    cache_file = self._get_cache_path(clean_symbol)
+                    with open(cache_file, "w", encoding="utf-8") as f:
+                        json.dump(result_payload, f, indent=2)
 
-                # Sort chronologically ascending
-                valid_candles.sort(key=lambda x: x["trading_date"])
+                    return result_payload
 
-                # Determine provenance status
-                if len(valid_candles) >= MIN_REQUIRED_SESSIONS:
-                    quality_status = "VERIFIED"
-                elif len(valid_candles) > 0:
-                    quality_status = "INSUFFICIENT_HISTORY"
-                else:
-                    quality_status = "UNAVAILABLE"
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Error fetching {ticker}: {e}")
 
-                result_payload = {
-                    "symbol": clean_symbol,
-                    "provider": "YAHOO_FINANCE_NSE",
-                    "price_adjustment": "UNADJUSTED_CLOSE",
-                    "retrieval_timestamp": datetime.now(timezone.utc).isoformat(),
-                    "total_sessions": len(valid_candles),
-                    "min_required_sessions": MIN_REQUIRED_SESSIONS,
-                    "quality_status": quality_status,
-                    "first_trading_date": valid_candles[0]["trading_date"] if valid_candles else None,
-                    "latest_trading_date": valid_candles[-1]["trading_date"] if valid_candles else None,
-                    "candles": valid_candles
-                }
+        # Check if cached data exists
+        cached = self.get_cached_history(clean_symbol)
+        if cached:
+            return cached
 
-                # Save to cache file
-                cache_file = self._get_cache_path(clean_symbol)
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    json.dump(result_payload, f, indent=2)
-
-                return result_payload
-
-        except Exception as e:
-            logger.error(f"Error fetching historical data for {symbol}: {e}")
-            # Check if cached data exists
-            cached = self.get_cached_history(clean_symbol)
-            if cached:
-                return cached
-            return {
-                "symbol": clean_symbol,
-                "provider": "YAHOO_FINANCE_NSE",
-                "price_adjustment": "UNADJUSTED_CLOSE",
-                "retrieval_timestamp": datetime.now(timezone.utc).isoformat(),
-                "total_sessions": 0,
-                "min_required_sessions": MIN_REQUIRED_SESSIONS,
-                "quality_status": "UNAVAILABLE",
-                "error": str(e),
-                "candles": []
-            }
+        return {
+            "symbol": clean_symbol,
+            "provider": "YAHOO_FINANCE_NSE",
+            "price_adjustment": "UNADJUSTED_CLOSE",
+            "retrieval_timestamp": datetime.now(timezone.utc).isoformat(),
+            "total_sessions": 0,
+            "min_required_sessions": MIN_REQUIRED_SESSIONS,
+            "quality_status": "UNAVAILABLE",
+            "error": last_error,
+            "candles": []
+        }
 
     def get_cached_history(self, symbol: str) -> Optional[Dict[str, Any]]:
         cache_file = self._get_cache_path(symbol)

@@ -1,8 +1,9 @@
 {
   "symbol": "RELIANCE",
+  "ticker_used": "RELIANCE.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:26:18.266424+00:00",
+  "retrieval_timestamp": "2026-11-11T14:10:29.179862+00:00",
   "total_sessions": 248,
   "min_required_sessions": 200,
   "quality_status": "VERIFIED",
