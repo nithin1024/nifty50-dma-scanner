@@ -1,14 +1,32 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from typing import List, Dict, Any
+from app.services.constituents_service import constituents_service
 
 router = APIRouter(prefix="/stocks", tags=["NIFTY 50 Constituents"])
 
 
-@router.get("")
-async def get_constituents():
-    """Level 2 stub: returns official NIFTY 50 constituents."""
+@router.get("", response_model=Dict[str, Any])
+async def list_constituents():
+    """Retrieve all 50 official current NIFTY 50 constituents."""
+    stocks = constituents_service.get_constituents()
     return {
-        "status": "pending_level_2",
-        "message": "NIFTY 50 constituents management will be activated in Level 2.",
-        "count": 0,
-        "constituents": []
+        "index": "NIFTY 50",
+        "total_count": len(stocks),
+        "verified_count": len(stocks),
+        "constituents": stocks
     }
+
+
+@router.get("/{symbol}", response_model=Dict[str, Any])
+async def get_constituent(symbol: str):
+    """Retrieve details for a single NIFTY 50 constituent."""
+    stock = constituents_service.get_by_symbol(symbol)
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock symbol '{symbol}' is not a current NIFTY 50 constituent.")
+    return stock
+
+
+@router.post("/sync", response_model=Dict[str, Any])
+async def sync_constituents():
+    """Force synchronization with official NSE constituent registry."""
+    return await constituents_service.sync_constituents()
