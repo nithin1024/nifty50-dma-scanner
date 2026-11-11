@@ -1,0 +1,65 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import logging
+
+from app.config import get_settings
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status
+from app import __version__
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("nifty50_dma_scanner")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    logger.info("Starting %s v%s in %s mode", settings.APP_NAME, __version__, settings.APP_ENV)
+    yield
+    logger.info("Shutting down %s", settings.APP_NAME)
+
+
+settings = get_settings()
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=__version__,
+    description=(
+        "Production-grade NIFTY 50 Daily and Live DMA (Simple Moving Average) Scanner API. "
+        "Strict real market data provenance, 6/6 and 5/6 classifications, and fresh crossover detection."
+    ),
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
+
+# CORS Middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Register routers under /api/v1
+app.include_router(health.router, prefix="/api/v1")
+app.include_router(stocks.router, prefix="/api/v1")
+app.include_router(daily_scanner.router, prefix="/api/v1")
+app.include_router(live_scanner.router, prefix="/api/v1")
+app.include_router(data_status.router, prefix="/api/v1")
+
+
+@app.get("/")
+async def root():
+    return {
+        "app": settings.APP_NAME,
+        "version": __version__,
+        "documentation": "/api/docs",
+        "health": "/api/v1/health"
+    }
