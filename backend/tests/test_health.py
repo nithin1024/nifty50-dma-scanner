@@ -8,12 +8,17 @@ from app import __version__
 async def test_root_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/")
-        assert response.status_code == 200
-        data = response.json()
+        # Test API root metadata
+        api_res = await client.get("/api")
+        assert api_res.status_code == 200
+        data = api_res.json()
         assert data["app"] == "NIFTY 50 DMA Scanner"
         assert data["version"] == __version__
         assert data["health"] == "/api/v1/health"
+
+        # Test root endpoint (returns 200, serving either frontend SPA or fallback JSON)
+        root_res = await client.get("/")
+        assert root_res.status_code == 200
 
 
 @pytest.mark.asyncio

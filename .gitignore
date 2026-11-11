@@ -34,6 +34,10 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Database
+*.db
+*.sqlite3
+
 # Logs
 *.log
 npm-debug.log*
