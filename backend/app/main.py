@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
@@ -62,6 +62,23 @@ app.include_router(live_scanner.router, prefix="/api/v1")
 app.include_router(data_status.router, prefix="/api/v1")
 app.include_router(history.router, prefix="/api/v1")
 app.include_router(stock_details.router, prefix="/api/v1")
+
+
+@app.websocket("/ws/live-scanner")
+async def live_scanner_websocket(websocket: WebSocket):
+    """WebSocket endpoint for real-time live intraday DMA scanner streaming."""
+    from app.services.upstox_service import live_feed_manager
+    await live_feed_manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection open and receive optional client messages / pings
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        live_feed_manager.disconnect(websocket)
+    except Exception:
+        live_feed_manager.disconnect(websocket)
 
 
 @app.get("/")

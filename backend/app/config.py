@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/nifty50_dma"
     DATA_FRESHNESS_THRESHOLD_SECONDS: int = 60
+    UPSTOX_API_KEY: str = ""
+    UPSTOX_API_SECRET: str = ""
+    UPSTOX_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/upstox/callback"
 
     model_config = SettingsConfigDict(
         env_file=".env",
