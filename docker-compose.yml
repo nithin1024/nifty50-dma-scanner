@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: nifty50_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: nifty_user
+      POSTGRES_PASSWORD: nifty_secure_password
+      POSTGRES_DB: nifty50_dma
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nifty_user -d nifty50_dma"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nifty50_dma_scanner
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=NIFTY 50 DMA Scanner
+      - APP_ENV=production
+      - DEBUG=False
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://nifty_user:nifty_secure_password@db:5432/nifty50_dma
+      - CORS_ORIGINS=*
+      - UPSTOX_API_KEY=${UPSTOX_API_KEY:-}
+      - UPSTOX_API_SECRET=${UPSTOX_API_SECRET:-}
+      - UPSTOX_REDIRECT_URI=${UPSTOX_REDIRECT_URI:-http://localhost:8000/api/v1/auth/upstox/callback}
+
+volumes:
+  postgres_data:

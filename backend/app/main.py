@@ -1,6 +1,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from pathlib import Path
 import logging
 
 from app.config import get_settings
@@ -81,11 +83,26 @@ async def live_scanner_websocket(websocket: WebSocket):
         live_feed_manager.disconnect(websocket)
 
 
-@app.get("/")
-async def root():
+@app.get("/api")
+async def api_root():
     return {
         "app": settings.APP_NAME,
         "version": __version__,
         "documentation": "/api/docs",
         "health": "/api/v1/health"
     }
+
+
+# Mount compiled frontend if dist directory exists
+frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "app": settings.APP_NAME,
+            "version": __version__,
+            "documentation": "/api/docs",
+            "health": "/api/v1/health"
+        }
