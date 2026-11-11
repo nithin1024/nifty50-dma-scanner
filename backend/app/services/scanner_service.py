@@ -8,6 +8,7 @@ from app.services.constituents_service import constituents_service
 from app.services.historical_data_service import historical_data_service
 from app.services.dma_service import dma_engine, DMA_PERIODS
 from app.services.crossover_service import crossover_engine
+from app.services.db_service import db_service
 
 logger = logging.getLogger("scanner_service")
 
@@ -128,6 +129,12 @@ class DailyScannerService:
         # Save to disk
         with open(DAILY_SCAN_FILE, "w", encoding="utf-8") as f:
             json.dump(scan_payload, f, indent=2)
+
+        # Persist to database
+        try:
+            db_service.persist_scan_result(scan_payload)
+        except Exception as e:
+            logger.warning(f"Could not persist scan to DB: {e}")
 
         return scan_payload
 

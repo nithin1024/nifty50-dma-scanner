@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config import get_settings
-from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details
+from app.services.db_service import db_service
 from app import __version__
 
 # Set up logging
@@ -19,6 +20,12 @@ logger = logging.getLogger("nifty50_dma_scanner")
 async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info("Starting %s v%s in %s mode", settings.APP_NAME, __version__, settings.APP_ENV)
+    # Initialize database tables and sync constituents
+    try:
+        db_service.init_db()
+        db_service.sync_constituents_to_db()
+    except Exception as e:
+        logger.warning(f"Database startup sync warning: {e}")
     yield
     logger.info("Shutting down %s", settings.APP_NAME)
 
@@ -53,6 +60,8 @@ app.include_router(stocks.router, prefix="/api/v1")
 app.include_router(daily_scanner.router, prefix="/api/v1")
 app.include_router(live_scanner.router, prefix="/api/v1")
 app.include_router(data_status.router, prefix="/api/v1")
+app.include_router(history.router, prefix="/api/v1")
+app.include_router(stock_details.router, prefix="/api/v1")
 
 
 @app.get("/")
