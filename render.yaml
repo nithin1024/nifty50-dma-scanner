@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: nifty50-dma-scanner
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: "*"
