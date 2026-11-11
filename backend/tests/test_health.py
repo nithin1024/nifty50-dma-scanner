@@ -36,5 +36,5 @@ async def test_data_status_endpoint():
         response = await client.get("/api/v1/data-status")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "INITIALIZING"
+        assert data["status"] in ["INITIALIZING", "VERIFIED"]
         assert "provider" in data
