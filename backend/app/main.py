@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 
 from app.config import get_settings
-from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights
 from app.services.db_service import db_service
 from app import __version__
 
@@ -65,6 +65,7 @@ app.include_router(data_status.router, prefix="/api/v1")
 app.include_router(history.router, prefix="/api/v1")
 app.include_router(stock_details.router, prefix="/api/v1")
 app.include_router(volume_analytics.router, prefix="/api/v1")
+app.include_router(heavyweights.router, prefix="/api/v1")
 
 
 @app.websocket("/ws/live-scanner")
