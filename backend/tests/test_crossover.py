@@ -53,3 +53,33 @@ def test_intraday_crossing_labeled_provisional():
     assert len(crossings) > 0
     assert crossings[0]["type"] == "PROVISIONAL_INTRADAY_CROSSING"
     assert "Provisional" in crossings[0]["notes"]
+
+
+def test_alignment_transitions():
+    """Verify detection of alignment transitions (5/6 to 6/6, maintaining 6/6, etc.)."""
+    # 205 prices strictly ascending -> both sessions 6/6
+    ascending_closes = [100.0 + (i * 0.5) for i in range(205)]
+    transition = crossover_engine.detect_alignment_transition(ascending_closes)
+    assert transition["transition_type"] == "MAINTAINED_6_6"
+    assert transition["prev_score"] == 6
+    assert transition["current_score"] == 6
+
+    # 205 prices strictly descending -> weakening
+    descending_closes = [200.0 - (i * 0.5) for i in range(205)]
+    transition_down = crossover_engine.detect_alignment_transition(descending_closes)
+    assert transition_down["current_score"] == 0
+    assert transition_down["transition_type"] in ["WEAKENING", "LOST_BULLISH_ALIGNMENT", "STABLE"]
+
+
+def test_approaching_crossovers():
+    """Verify detection of stocks within 1.0% of an uncrossed DMA."""
+    # Build 205 prices where price is just 0.5% below 5 DMA
+    # SMA5 will be ~100.0, current close = 99.6 (0.4% below)
+    closes = [100.0] * 200 + [100.0, 100.0, 100.0, 100.0, 99.6]
+    approaching = crossover_engine.detect_approaching_crossovers(closes, proximity_pct=1.0)
+    assert len(approaching) > 0
+    periods = [a["period"] for a in approaching]
+    assert 5 in periods
+    match = next(a for a in approaching if a["period"] == 5)
+    assert match["distance_to_dma_pct"] <= 1.0
+    assert match["status"] == "APPROACHING_BREAKOUT"

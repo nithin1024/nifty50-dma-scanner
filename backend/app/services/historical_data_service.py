@@ -68,14 +68,21 @@ class HistoricalDataService:
 
         return True, None
 
-    async def fetch_symbol_history(self, symbol: str, range_period: str = "1y") -> Dict[str, Any]:
+    async def fetch_symbol_history(self, symbol: str, range_period: str = "1y", force_refresh: bool = False) -> Dict[str, Any]:
         """
         Fetch historical daily candles for an NSE constituent.
         Provider priority:
-        1. Yahoo Finance NSE feed (.NS) with unadjusted settlement prices matching exchange Bhavcopy.
-        2. Fallback to local verified cache if network error.
+        1. Local verified cache if available and force_refresh is False.
+        2. Yahoo Finance NSE feed (.NS) with unadjusted settlement prices matching exchange Bhavcopy.
+        3. Fallback to local verified cache if network error.
         """
         clean_symbol = symbol.strip().upper()
+
+        if not force_refresh:
+            cached = self.get_cached_history(clean_symbol)
+            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+                return cached
+
         tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
 
         headers = {

@@ -81,6 +81,15 @@ class DailyScannerService:
                 xo["company_name"] = company_name
                 all_fresh_crossovers.append(xo)
 
+            # 4. Evaluate session-over-session alignment transitions
+            transition = crossover_engine.detect_alignment_transition(closes)
+
+            # 5. Identify approaching potential crossovers (within 1%)
+            approaching = crossover_engine.detect_approaching_crossovers(closes, proximity_pct=1.0)
+            for app_item in approaching:
+                app_item["symbol"] = symbol
+                app_item["company_name"] = company_name
+
             # Build enriched constituent result
             entry = {
                 "symbol": symbol,
@@ -95,6 +104,9 @@ class DailyScannerService:
                 "classification": classification["classification"],
                 "is_6_6": classification["is_6_6"],
                 "is_5_6": classification["is_5_6"],
+                "transition_type": transition["transition_type"],
+                "transition_description": transition["description"],
+                "prev_score": transition["prev_score"],
                 "failed_dma": classification.get("failed_dma"),
                 "failed_dma_label": classification.get("failed_dma_label"),
                 "failed_dma_value": classification.get("failed_dma_value"),
@@ -106,7 +118,8 @@ class DailyScannerService:
                 "comparisons": classification["comparisons"],
                 "smas": {k: round(v, 2) if v is not None else None for k, v in smas.items()},
                 "distances": {k: round(v, 2) if v is not None else None for k, v in classification["distances"].items()},
-                "fresh_crossovers": fresh_crossovers
+                "fresh_crossovers": fresh_crossovers,
+                "approaching_crossovers": approaching
             }
 
             all_results.append(entry)
@@ -123,6 +136,17 @@ class DailyScannerService:
 
         completed_session_date = max(latest_session_dates) if latest_session_dates else None
 
+        # Aggregate transitions
+        maintaining_6_6 = [r for r in all_results if r.get("transition_type") == "MAINTAINED_6_6"]
+        upgraded_5_to_6 = [r for r in all_results if r.get("transition_type") == "UPGRADED_5_TO_6"]
+        downgraded_6_to_5 = [r for r in all_results if r.get("transition_type") == "DOWNGRADED_6_TO_5"]
+        lost_alignment = [r for r in all_results if r.get("transition_type") == "LOST_BULLISH_ALIGNMENT"]
+        all_approaching = [
+            app_item 
+            for r in all_results 
+            for app_item in r.get("approaching_crossovers", [])
+        ]
+
         scan_payload = {
             "scan_timestamp": scan_time,
             "completed_session_date": completed_session_date,
@@ -132,6 +156,11 @@ class DailyScannerService:
             "count_5_6": len(stocks_5_6),
             "stocks_6_6": stocks_6_6,
             "stocks_5_6": stocks_5_6,
+            "maintaining_6_6": maintaining_6_6,
+            "upgraded_5_to_6": upgraded_5_to_6,
+            "downgraded_6_to_5": downgraded_6_to_5,
+            "lost_alignment": lost_alignment,
+            "approaching_crossovers": all_approaching,
             "fresh_crossovers": all_fresh_crossovers,
             "all_results": all_results
         }

@@ -75,23 +75,38 @@ class DatabaseService:
             db.add(record)
 
             # Persist individual DMAs
-            session_date = scan_data.get("completed_session_date")
+            session_date = scan_data.get("completed_session_date") or datetime.now(timezone.utc).date().isoformat()
             for res in scan_data.get("all_results", []):
                 sym = res["symbol"]
                 smas = res.get("smas", {})
-                dma_entry = DailyDMAModel(
-                    symbol=sym,
-                    trading_date=session_date or datetime.now(timezone.utc).date().isoformat(),
-                    dma5=smas.get("dma5"),
-                    dma10=smas.get("dma10"),
-                    dma20=smas.get("dma20"),
-                    dma50=smas.get("dma50"),
-                    dma100=smas.get("dma100"),
-                    dma200=smas.get("dma200"),
-                    score=res.get("score", 0),
-                    classification=res.get("classification", "NEUTRAL_OR_BEARISH")
-                )
-                db.merge(dma_entry)
+                existing_dma = db.query(DailyDMAModel).filter(
+                    DailyDMAModel.symbol == sym,
+                    DailyDMAModel.trading_date == session_date
+                ).first()
+
+                if existing_dma:
+                    existing_dma.dma5 = smas.get("dma5")
+                    existing_dma.dma10 = smas.get("dma10")
+                    existing_dma.dma20 = smas.get("dma20")
+                    existing_dma.dma50 = smas.get("dma50")
+                    existing_dma.dma100 = smas.get("dma100")
+                    existing_dma.dma200 = smas.get("dma200")
+                    existing_dma.score = res.get("score", 0)
+                    existing_dma.classification = res.get("classification", "NEUTRAL_OR_BEARISH")
+                else:
+                    dma_entry = DailyDMAModel(
+                        symbol=sym,
+                        trading_date=session_date,
+                        dma5=smas.get("dma5"),
+                        dma10=smas.get("dma10"),
+                        dma20=smas.get("dma20"),
+                        dma50=smas.get("dma50"),
+                        dma100=smas.get("dma100"),
+                        dma200=smas.get("dma200"),
+                        score=res.get("score", 0),
+                        classification=res.get("classification", "NEUTRAL_OR_BEARISH")
+                    )
+                    db.add(dma_entry)
 
             # Persist fresh crossovers
             for xo in scan_data.get("fresh_crossovers", []):
