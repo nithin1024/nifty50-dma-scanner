@@ -1,6 +1,7 @@
 export type NavTab = 
   | 'overview' 
   | 'dma-scanner' 
+  | 'ema-scanner'
   | 'all-volume' 
   | 'heavyweights' 
   | 'volume-analytics' 
@@ -308,6 +309,7 @@ export interface CpiInflationCategory {
 }
 
 export interface MacroGlossaryTerm {
+  id?: string;
   term: string;
   definition: string;
   remember_this: string;
@@ -356,7 +358,7 @@ export interface MarketIntelligenceReport {
 }
 
 export interface EventCountdown {
-  status: 'UPCOMING' | 'ONGOING' | 'RELEASED';
+  status: 'UPCOMING' | 'ONGOING' | 'RELEASED' | 'RELEASE_DUE' | 'DELAYED' | 'POSTPONED' | 'CANCELLED' | 'TIME_NOT_CONFIRMED';
   countdown_label_en: string;
   countdown_label_te: string;
   is_imminent: boolean;
@@ -393,7 +395,8 @@ export interface GlobalEvent {
   revision_value: string | null;
   surprise_value: number | null;
   surprise_direction: 'POSITIVE' | 'NEGATIVE' | 'IN_LINE' | 'PENDING';
-  status: 'UPCOMING' | 'ONGOING' | 'RELEASED' | 'POSTPONED' | 'CANCELLED';
+  status: 'UPCOMING' | 'ONGOING' | 'RELEASED' | 'POSTPONED' | 'CANCELLED' | 'RELEASE_DUE' | 'DELAYED' | 'TIME_NOT_CONFIRMED';
+  lifecycle_state?: string;
   countdown: EventCountdown;
   source_name: string;
   source_url: string;

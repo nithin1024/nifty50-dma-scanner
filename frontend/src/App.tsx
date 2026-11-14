@@ -10,6 +10,7 @@ import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
 import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
+import { EmaScanner } from './pages/EmaScanner';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -157,6 +158,12 @@ export const App: React.FC = () => {
           <DailyScanner 
             dailyScan={dailyScan}
             loading={loading}
+            onSelectStock={handleSelectStock}
+          />
+        )}
+
+        {activeTab === 'ema-scanner' && (
+          <EmaScanner 
             onSelectStock={handleSelectStock}
           />
         )}

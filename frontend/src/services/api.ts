@@ -178,3 +178,55 @@ export async function saveUserPreferences(prefs: any): Promise<any> {
   return response.json();
 }
 
+// Institutional Market Intelligence APIs (FII/DII, Macro, News, EMA)
+export async function fetchFiiDiiCash(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/fii-dii/cash`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchFiiDiiDerivatives(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/fii-dii/derivatives`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchMacroTopics(): Promise<any[]> {
+  const response = await fetch(`${API_BASE}/market-intelligence/macro-topics`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchMacroTopicDetail(topicId: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/macro-topics/${topicId}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchGlobalNews(category?: string): Promise<any[]> {
+  const url = category && category !== 'ALL' 
+    ? `${API_BASE}/market-intelligence/news?category=${category}` 
+    : `${API_BASE}/market-intelligence/news`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchEmaScanner(rsiMin = 40.0, rsiMax = 60.0): Promise<any> {
+  const response = await fetch(`${API_BASE}/scanner/ema?rsi_min=${rsiMin}&rsi_max=${rsiMax}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+

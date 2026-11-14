@@ -16,6 +16,8 @@
 | Level 10 | Professional Institutional 7-Page Dashboard | Completed | Responsive React pages covering all 7 institutional operational views (MarketOverview, DailyScanner, AllVolumeDashboard, Top7Heavyweights, VolumeAnalyticsPage, StockDetails, DataStatus) |
 | Level 11 | Comprehensive Validation & Automated Testing Suite | Completed | 52 automated unit, regression, and API integration tests passing in Pytest; 0 TS build errors |
 | Level 12 | End-to-End System Integration & Final Delivery | Completed | Verified end-to-end API endpoints, WebSocket streams, export downloads, and system architecture |
+| Level 13 | Global Events Calendar & Bilingual Translation Engine | Completed | Worldwide economic calendar (India, US, EU, UK, CN, JP), 8 sub-calendars, Telugu+English support, countdowns |
+| Level 14 | Institutional Market Intelligence Upgrade | Completed | FII/DII cash & derivatives analytics, 41 Macro Topics & Modal, EMA 9/21 + RSI 14 Scanner, Global News & 3-Way Scenarios, 71/71 tests passing |
 
 ---
 
@@ -130,3 +132,30 @@
 #### Level 12 — End-to-End System Integration & Final Delivery
 - Full verification of backend API routes, WebSocket endpoints, and frontend application.
 - Production-ready documentation in `README.md` and audit tracking in `PROJECT_AUDIT.md`.
+
+#### Level 13 — Global Events Calendar & Telugu Bilingual Architecture
+- Integrated dedicated worldwide calendar covering India, US, EU, UK, China, Japan, Canada, Australia.
+- Dual-language engine supporting English, Telugu, and Bilingual views across descriptions, why-it-matters, and Indian equity impact.
+- Implemented 8 distinct lifecycle event states (`UPCOMING`, `RELEASE_DUE`, `RELEASED_ACTUAL_AVAILABLE`, `RELEASED_ACTUAL_UNVERIFIED`, `DELAYED`, `POSTPONED`, `CANCELLED`, `TIME_NOT_CONFIRMED`).
+- Fixed contradiction bug between timestamp countdown and pending actual values (resolved WPI release status).
+
+#### Level 14 — Institutional Market Intelligence Upgrade
+- **Phase 0 Audit**: Authored `APPLICATION_UPGRADE_AUDIT.md` reviewing entire platform architecture and establishing fix matrix.
+- **FII/DII Intelligence Dashboard**:
+  - Cash table with latest gross purchases, gross sales, net investment, 5-session, 20-session, MTD, and YTD totals.
+  - Interactive dual-series historical graph with a balanced zero baseline.
+  - Participant-wise index futures positioning (FII, DII, Pro, Client) with FII short-covering trajectory (225k peak shorts -> 63,650 contracts, 71.7% unwound).
+  - Automated institutional regime interpretation (BULLISH_SHORT_COVERING_RALLY, etc.) in English and Telugu.
+- **Macroeconomic Intelligence & National Accounts Suite**:
+  - Catalog of 41 indicators and concepts with full definitions, mathematical formulations, 5-year historical tables, charts, and sector sensitivity matrices.
+  - Interactive `MacroIndicatorModal` modal drawer triggered by clicking cheat sheet terms.
+- **NIFTY 50 Brand Dropdown & EMA 9/21 Scanner**:
+  - Brand header menu toggling between `1. DMA SCANNER` and `2. EMA SCANNER`.
+  - Dedicated EMA Scanner page (`/scanner/ema`) computing EMA 9, EMA 21, Wilder RSI 14, and volume confirmation across all 50 constituents.
+  - Configurable RSI corridor filter (40–60 range), fresh crossover detection, and 6 institutional groupings.
+- **Global News Wire & 3-Way Scenario Analysis**:
+  - Verified news wire service with bilingual summaries and Indian stock market sensitivity.
+  - 3-Way scenario matrices (Above Forecast, In-Line, Below Forecast) on event cards and news articles.
+- **Automated Validation**:
+  - 71/71 tests passing in Pytest across 16 test suites.
+  - Production TypeScript build verified (`tsc -b && vite build`) with 0 errors.

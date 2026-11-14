@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { NavTab } from '../types';
 import { 
   LayoutDashboard, 
@@ -11,7 +11,9 @@ import {
   TrendingUp, 
   Download,
   Languages,
-  Globe
+  Globe,
+  ChevronDown,
+  Zap
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -24,10 +26,24 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline }) => {
   const { language, toggleLanguage, t } = useLanguage();
+  const [scannerDropdownOpen, setScannerDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setScannerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'ema-scanner', label: 'EMA Scanner ⚡', icon: <Zap className="w-4 h-4 text-amber-400" /> },
     { id: 'all-volume', label: '3. All 50 Volume', icon: <Activity className="w-4 h-4" /> },
     { id: 'heavyweights', label: '4. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
     { id: 'volume-analytics', label: '5. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
@@ -40,20 +56,80 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
     <nav className="bg-[#121824] border-b border-[#232E47] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onTabChange('overview')}>
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-lg tracking-tight text-white">NIFTY 50 DMA</span>
-                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  {t('Institutional')}
-                </span>
+          {/* Brand with DMA / EMA Selector Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <div 
+              className="flex items-center space-x-3 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-800/50 transition-colors"
+              onClick={() => setScannerDropdownOpen(!scannerDropdownOpen)}
+              title="Click to select DMA or EMA Technical Scanner"
+            >
+              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+                <TrendingUp className="w-6 h-6" />
               </div>
-              <div className="text-xs text-slate-400">{t('Institutional DMA + Live Volume Engine')}</div>
+              <div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold text-lg tracking-tight text-white flex items-center">
+                    NIFTY 50 <ChevronDown className="w-4 h-4 ml-1 text-slate-400" />
+                  </span>
+                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    {activeTab === 'ema-scanner' ? 'EMA + RSI' : t('Institutional')}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400">
+                  {activeTab === 'ema-scanner' ? 'EMA 9/21 + RSI 14 Scanner' : t('Institutional DMA + Live Volume Engine')}
+                </div>
+              </div>
             </div>
+
+            {/* Dropdown Menu for DMA vs EMA Selection */}
+            {scannerDropdownOpen && (
+              <div className="absolute left-0 mt-2 w-64 rounded-xl bg-[#121824] border border-[#232E47] shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-b border-[#232E47]/70">
+                  Select Technical Scanner
+                </div>
+
+                {/* Option 1: DMA Scanner */}
+                <button
+                  onClick={() => {
+                    onTabChange('dma-scanner');
+                    setScannerDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 text-left text-xs transition-colors ${
+                    activeTab === 'dma-scanner' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">1. DMA SCANNER</div>
+                    <div className="text-[10px] text-slate-400">6-SMA (5, 10, 20, 50, 100, 200) Pure Engine</div>
+                  </div>
+                </button>
+
+                {/* Option 2: EMA Scanner */}
+                <button
+                  onClick={() => {
+                    onTabChange('ema-scanner');
+                    setScannerDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 text-left text-xs transition-colors ${
+                    activeTab === 'ema-scanner' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white flex items-center space-x-1">
+                      <span>2. EMA SCANNER</span>
+                      <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono">NEW</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">EMA 9 / 21 &amp; Wilder RSI 14 (40-60 Corridor)</div>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Desktop Nav Items */}

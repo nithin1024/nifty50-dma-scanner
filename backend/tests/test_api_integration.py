@@ -78,12 +78,12 @@ async def test_market_intelligence_endpoint():
 
         # Check FII/DII cash
         assert "fii_dii_cash_activity" in data
-        assert data["fii_dii_cash_activity"]["fii_net_crores"] == 12563.0
-        assert data["fii_dii_cash_activity"]["dii_net_crores"] == -8435.0
+        assert data["fii_dii_cash_activity"]["fii_net_crores"] == 2410.0
+        assert data["fii_dii_cash_activity"]["dii_net_crores"] == -1350.0
 
         # Check FII derivatives short covering
         assert "fii_derivatives_positioning" in data
-        assert data["fii_derivatives_positioning"]["net_index_futures_contracts"] == -70413
+        assert data["fii_derivatives_positioning"]["net_index_futures_contracts"] == -63650
 
         # Check CPI inflation 12 categories
         assert "cpi_inflation_breakdown" in data

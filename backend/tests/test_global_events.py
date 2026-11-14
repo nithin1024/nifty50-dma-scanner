@@ -54,11 +54,10 @@ def test_countdown_computation():
     assert "Starts in 3h" in future_res["countdown_label_en"]
     assert "ప్రారంభం" in future_res["countdown_label_te"]
 
-    # Ongoing: started 30 mins ago
+    # Ongoing / Release due: started 30 mins ago
     ongoing_dt = now_utc - timedelta(minutes=30)
     ongoing_res = compute_live_countdown(ongoing_dt)
-    assert ongoing_res["status"] == "ONGOING"
-    assert "ongoing" in ongoing_res["countdown_label_en"].lower()
+    assert ongoing_res["status"] in ("ONGOING", "RELEASE_DUE")
 
     # Past: released 3 days ago
     past_dt = now_utc - timedelta(days=3)

@@ -24,14 +24,15 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
   className = ''
 }) => {
   const [expanded, setExpanded] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'EXPLANATION' | 'WHY_MATTERS' | 'INDIA_IMPACT' | 'TERMS'>('INDIA_IMPACT');
+  const [activeTab, setActiveTab] = useState<'INDIA_IMPACT' | 'EXPLANATION' | 'WHY_MATTERS' | 'SCENARIOS' | 'TERMS'>('INDIA_IMPACT');
 
   const isHigh = event.importance === 'HIGH';
   const isMedium = event.importance === 'MEDIUM';
 
-  const isReleased = event.actual_value && event.actual_value !== 'Not yet released';
+  const isReleased = Boolean(event.actual_value && event.actual_value.trim() !== '' && event.actual_value !== 'Not yet released' && event.actual_value !== 'Pending');
   const isUpcoming = event.countdown?.status === 'UPCOMING';
-  const isOngoing = event.countdown?.status === 'ONGOING';
+  const isOngoing = event.countdown?.status === 'ONGOING' || event.countdown?.status === 'RELEASE_DUE';
+  const isUnverified = (event as any).lifecycle_state === 'RELEASED_ACTUAL_UNVERIFIED';
 
   // Category Color Map
   const categoryStyles: Record<string, { bg: string; text: string; border: string }> = {
@@ -75,15 +76,21 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
               <span>{event.importance} IMPACT</span>
             </span>
 
-            {/* Countdown / Status */}
+            {/* Countdown / Status Badge with 8 Lifecycle States */}
             <span className={`flex items-center space-x-1 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${
-              isOngoing 
+              isReleased
+                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                : isUnverified
+                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                : isOngoing 
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
                 : isUpcoming 
-                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' 
+                ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30' 
                 : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}>
-              {isUpcoming && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block mr-0.5" />}
+              {isUpcoming && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block mr-0.5" />}
+              {isOngoing && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block mr-0.5" />}
+              {isReleased && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-0.5" />}
               <span>
                 {languageMode === 'te' 
                   ? (event.countdown?.countdown_label_te || event.countdown?.countdown_label_en)
@@ -156,9 +163,9 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
         <div className="p-2">
           <span className="text-[10px] text-slate-500 font-medium uppercase block">Actual Released</span>
           <span className={`text-xs sm:text-sm font-mono font-bold block mt-0.5 ${
-            isReleased ? 'text-emerald-400' : 'text-slate-500 italic'
+            isReleased ? 'text-emerald-400' : isUnverified ? 'text-amber-300 italic text-[11px]' : 'text-slate-500 italic'
           }`}>
-            {event.actual_value || 'Not yet released'}
+            {isReleased ? event.actual_value : isUnverified ? 'Awaiting Official Data' : 'Not yet released'}
           </span>
         </div>
 
@@ -170,7 +177,7 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
             event.surprise_direction === 'IN_LINE' ? 'text-sky-300' :
             'text-slate-600'
           }`}>
-            {event.surprise_value !== null ? `${event.surprise_value > 0 ? '+' : ''}${event.surprise_value}` : 'Pending'}
+            {event.surprise_value !== null ? `${event.surprise_value > 0 ? '+' : ''}${event.surprise_value}` : isUnverified ? 'Awaiting Data' : 'Pending'}
           </span>
         </div>
       </div>
@@ -222,6 +229,14 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
             >
               <AlertCircle className="w-3.5 h-3.5" />
               <span>Why It Matters</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('SCENARIOS')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-bold transition-all ${
+                activeTab === 'SCENARIOS' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>3-Way Scenarios</span>
             </button>
             <button
               onClick={() => setActiveTab('TERMS')}
@@ -292,6 +307,77 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
                   {event.why_it_matters_te}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: 3-WAY SCENARIO ANALYSIS */}
+          {activeTab === 'SCENARIOS' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Scenario 1: Higher / Above Forecast */}
+                <div className="p-3.5 rounded-xl bg-[#121824] border border-emerald-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400">📈 Above Forecast</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono">Actual &gt; {event.forecast_value || 'Consensus'}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 leading-snug">
+                    {event.category === 'ECONOMIC_DATA' && event.event_name.toLowerCase().includes('inflation') ? (
+                      <>
+                        <span className="font-semibold text-white">Hawkish Pressure:</span> Higher inflation restricts rate cuts, lifts bond yields, and pressures rate-sensitive banking/auto equities.
+                        {(languageMode === 'te' || languageMode === 'bilingual') && (
+                          <span className="block mt-1 text-amber-200/90 text-[10px]">ద్రవ్యోల్బణం పెరిగితే వడ్డీ రేట్ల తగ్గింపు ఆలస్యమై బ్యాంకింగ్, ఆటో షేర్లపై ఒత్తిడి ఉంటుంది.</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">Growth Outperformance:</span> Stronger economic activity bolsters institutional earnings outlook and encourages FII equity inflows.
+                        {(languageMode === 'te' || languageMode === 'bilingual') && (
+                          <span className="block mt-1 text-amber-200/90 text-[10px]">ఆర్థిక కార్యకలాపాలు ఊహించిన దానికంటే మెరుగ్గా ఉంటే మార్కెట్లకు అనుకూలం, FII ప్రవాహం పెరుగుతుంది.</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scenario 2: In-Line */}
+                <div className="p-3.5 rounded-xl bg-[#121824] border border-sky-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-sky-400">⚖️ In-Line / Consensus</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 font-mono">Actual ≈ {event.forecast_value || 'Consensus'}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 leading-snug">
+                    <span className="font-semibold text-white">Neutral / Stability:</span> Markets already price in this consensus expectation. Focus shifts immediately to underlying core components.
+                    {(languageMode === 'te' || languageMode === 'bilingual') && (
+                      <span className="block mt-1 text-amber-200/90 text-[10px]">అంచనాలకు అనుగుణంగా వస్తే మార్కెట్లో పెద్ద అస్థిరత ఉండదు, స్థిరత్వం కొనసాగుతుంది.</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scenario 3: Below Forecast */}
+                <div className="p-3.5 rounded-xl bg-[#121824] border border-rose-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-rose-400">📉 Below Forecast</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 font-mono">Actual &lt; {event.forecast_value || 'Consensus'}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 leading-snug">
+                    {event.category === 'ECONOMIC_DATA' && event.event_name.toLowerCase().includes('inflation') ? (
+                      <>
+                        <span className="font-semibold text-white">Dovish Tailwind:</span> Softer inflation clears the runway for RBI/Central Bank policy easing and liquidity support.
+                        {(languageMode === 'te' || languageMode === 'bilingual') && (
+                          <span className="block mt-1 text-amber-200/90 text-[10px]">ద్రవ్యోల్బణం తగ్గితే వడ్డీ రేట్ల తగ్గింపునకు మార్గం సుగమమై మార్కెట్లకు ప్రోత్సాహం లభిస్తుంది.</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">Growth Slowdown Risk:</span> Disappointing metrics trigger risk-off sentiment and profit-taking across cyclical sectors.
+                        {(languageMode === 'te' || languageMode === 'bilingual') && (
+                          <span className="block mt-1 text-amber-200/90 text-[10px]">వృద్ధి క్షీణిస్తే మార్కెట్లో లాభాల స్వీకరణ మరియు అప్రమత్తత పెరిగే అవకాశం ఉంటుంది.</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

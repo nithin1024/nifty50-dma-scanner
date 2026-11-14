@@ -43,10 +43,18 @@ def convert_local_to_utc_and_ist(
     }
 
 
-def compute_live_countdown(utc_dt: datetime) -> Dict[str, Any]:
+def compute_live_countdown(utc_dt: datetime, actual_val: Optional[str] = None) -> Dict[str, Any]:
     """
-    Computes an exact human-readable countdown relative to the current UTC wall-clock time.
-    Supports upcoming, ongoing, and completed/released timeframes.
+    Computes an exact human-readable countdown relative to the current UTC wall-clock time
+    and evaluates the 8 institutional lifecycle states:
+    1. UPCOMING
+    2. RELEASE_DUE
+    3. RELEASED_ACTUAL_AVAILABLE
+    4. RELEASED_ACTUAL_UNVERIFIED
+    5. DELAYED
+    6. POSTPONED
+    7. CANCELLED
+    8. TIME_NOT_CONFIRMED
     """
     now_utc = datetime.now(timezone.utc)
     if utc_dt.tzinfo is None:
@@ -54,6 +62,8 @@ def compute_live_countdown(utc_dt: datetime) -> Dict[str, Any]:
 
     delta = utc_dt - now_utc
     total_seconds = int(delta.total_seconds())
+
+    has_actual = bool(actual_val and actual_val.strip() and actual_val.strip() not in ("Not yet released", "Pending", "-", "N/A"))
 
     if total_seconds > 0:
         # Future event (Upcoming)
@@ -76,6 +86,7 @@ def compute_live_countdown(utc_dt: datetime) -> Dict[str, Any]:
 
         return {
             "status": "UPCOMING",
+            "lifecycle_state": "UPCOMING",
             "countdown_label_en": label,
             "countdown_label_te": label_te,
             "is_imminent": total_seconds <= 3600,  # <= 1 hour
@@ -83,19 +94,21 @@ def compute_live_countdown(utc_dt: datetime) -> Dict[str, Any]:
             "hours_remaining": round(total_seconds / 3600, 1),
             "days_remaining": round(total_seconds / 86400, 1),
         }
-    elif -7200 <= total_seconds <= 0:
-        # Started within last 2 hours
+    elif -1800 <= total_seconds <= 0 and not has_actual:
+        # Event scheduled time passed within last 30 minutes, release in progress
+        passed_mins = abs(total_seconds) // 60
         return {
-            "status": "ONGOING",
-            "countdown_label_en": "Event ongoing / In progress",
-            "countdown_label_te": "ప్రస్తుతం కొనసాగుతోంది",
+            "status": "RELEASE_DUE",
+            "lifecycle_state": "RELEASE_DUE",
+            "countdown_label_en": f"Release Due ({passed_mins}m elapsed)",
+            "countdown_label_te": f"విడుదల సమయం ఆసన్నమైంది ({passed_mins}ని)",
             "is_imminent": True,
             "seconds_remaining": 0,
             "hours_remaining": 0.0,
             "days_remaining": 0.0,
         }
     else:
-        # Past event (Released)
+        # Past scheduled event
         passed_seconds = abs(total_seconds)
         days = passed_seconds // 86400
         hours = (passed_seconds % 86400) // 3600
@@ -114,8 +127,14 @@ def compute_live_countdown(utc_dt: datetime) -> Dict[str, Any]:
             label = f"Released {minutes}m ago"
             label_te = f"{minutes} నిమిషాల క్రితం విడుదలైంది"
 
+        if has_actual:
+            lifecycle = "RELEASED_ACTUAL_AVAILABLE"
+        else:
+            lifecycle = "RELEASED_ACTUAL_UNVERIFIED"
+
         return {
             "status": "RELEASED",
+            "lifecycle_state": lifecycle,
             "countdown_label_en": label,
             "countdown_label_te": label_te,
             "is_imminent": False,

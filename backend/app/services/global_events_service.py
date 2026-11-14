@@ -828,9 +828,9 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "original_timezone": "Asia/Kolkata",
         "importance": "MEDIUM",
         "currency": "INR",
-        "previous_value": "2.36%",
-        "forecast_value": "2.50%",
-        "actual_value": "Not yet released",
+        "previous_value": "1.84%",
+        "forecast_value": "2.20%",
+        "actual_value": "2.36%",
         "revision_value": None,
         "source_name": "Office of the Economic Adviser, Ministry of Commerce and Industry",
         "source_url": "https://eaindustry.nic.in/",
@@ -1247,8 +1247,9 @@ class GlobalEventsService:
 
             results = []
             for r in records:
-                # Add live countdown
-                countdown = compute_live_countdown(r.start_time_utc)
+                # Add live countdown and lifecycle state
+                countdown = compute_live_countdown(r.start_time_utc, r.actual_value)
+                lifecycle_state = countdown.get("lifecycle_state", r.status)
                 key_terms = []
                 try:
                     if r.key_terms:
@@ -1277,7 +1278,8 @@ class GlobalEventsService:
                     "revision_value": r.revision_value,
                     "surprise_value": r.surprise_value,
                     "surprise_direction": r.surprise_direction,
-                    "status": r.status,
+                    "status": lifecycle_state,
+                    "lifecycle_state": lifecycle_state,
                     "countdown": countdown,
                     "source_name": r.source_name,
                     "source_url": r.source_url,

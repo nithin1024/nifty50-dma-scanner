@@ -5,6 +5,8 @@ geopolitical macro indicators, and India CPI inflation category breakdown.
 """
 from typing import Dict, Any, List
 from datetime import datetime, timezone
+from app.services.institutional_data_service import institutional_data_service
+from app.services.macro_data_service import macro_data_service
 
 
 class MarketIntelligenceService:
@@ -13,6 +15,9 @@ class MarketIntelligenceService:
     @classmethod
     def get_market_intelligence(cls) -> Dict[str, Any]:
         """Retrieve full institutional market intelligence report."""
+        cash_report = institutional_data_service.get_cash_market_report()
+        deriv_report = institutional_data_service.get_derivatives_positioning_report()
+        macro_topics = macro_data_service.get_all_topics()
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "report_date": "11-12 November 2026",
@@ -43,32 +48,43 @@ class MarketIntelligenceService:
                 )
             },
             "fii_dii_cash_activity": {
-                "session_date": "Wednesday, 11 November 2026",
-                "fii_net_crores": 12563.0,
-                "fii_sentiment": "STRONG_FOREIGN_BUYING",
-                "dii_net_crores": -8435.0,
-                "dii_sentiment": "DOMESTIC_INSTITUTIONAL_SELLING",
-                "net_institutional_crores": 4128.0,
+                "session_date": cash_report["session_date"],
+                "fii_net_crores": cash_report["latest"]["fii_net"],
+                "fii_sentiment": cash_report["latest"]["fii_status"],
+                "fii_gross_buy": cash_report["latest"]["fii_gross_buy"],
+                "fii_gross_sell": cash_report["latest"]["fii_gross_sell"],
+                "dii_net_crores": cash_report["latest"]["dii_net"],
+                "dii_sentiment": cash_report["latest"]["dii_status"],
+                "dii_gross_buy": cash_report["latest"]["dii_gross_buy"],
+                "dii_gross_sell": cash_report["latest"]["dii_gross_sell"],
+                "net_institutional_crores": cash_report["latest"]["net_institutional_flow"],
+                "previous_session": cash_report["previous_session"],
+                "aggregates": cash_report["aggregates"],
                 "recent_fii_history": [
-                    {"date": "11 Nov 2026", "fii_net_cr": 12563.0, "status": "NET_BUYER"},
-                    {"date": "6 Nov 2026", "fii_net_cr": 13750.0, "status": "NET_BUYER"},
-                    {"date": "5 Nov 2026", "fii_net_cr": 14975.0, "status": "NET_BUYER"}
+                    {"date": s["date"], "fii_net_cr": s["fii_net"], "dii_net_cr": s["dii_net"], "status": "NET_BUYER" if s["fii_net"] > 0 else "NET_SELLER"}
+                    for s in cash_report["historical_daily_series"][:5]
                 ],
-                "source": "Moneycontrol daily institutional trading table & NSE corroborated data"
+                "historical_daily_series": cash_report["historical_daily_series"],
+                "source": cash_report["source"]
             },
             "fii_derivatives_positioning": {
-                "session_date": "11 November 2026 close",
-                "net_index_futures_contracts": -70413,
-                "contracts_change": 20328,
-                "change_description": "20,328 fewer net shorts vs 9 Nov",
-                "sentiment": "NET_BEARISH_EXPOSURE_REDUCED",
-                "status": "SHARP_SHORT_COVERING_RALLY",
-                "historical_peak_shorts": 225000,
-                "trend_analysis": (
-                    "Aggressive short covering has unfolded as FII net index-futures shorts tumbled "
-                    "from over 225,000 contracts to 70,413 contracts, providing massive liquidity tailwind."
-                ),
-                "instrument_coverage": "NSE participant-wise index futures (Nifty, Bank Nifty, and index contracts)"
+                "session_date": deriv_report["session_date"],
+                "net_index_futures_contracts": deriv_report["fii_derivatives"]["net_contracts"],
+                "long_contracts": deriv_report["fii_derivatives"]["long_contracts"],
+                "short_contracts": deriv_report["fii_derivatives"]["short_contracts"],
+                "contracts_change": deriv_report["fii_derivatives"]["change_in_net"],
+                "change_pct": deriv_report["fii_derivatives"]["change_pct"],
+                "change_description": f"{abs(deriv_report['fii_derivatives']['change_in_net']):,} contracts shift",
+                "sentiment": deriv_report["fii_derivatives"]["sentiment"],
+                "status": deriv_report["institutional_interpretation"]["regime"],
+                "historical_peak_shorts": deriv_report["fii_derivatives"]["peak_historical_shorts"],
+                "trend_analysis": deriv_report["fii_derivatives"]["deleveraging_summary"],
+                "dii_derivatives": deriv_report["dii_derivatives"],
+                "pro_derivatives": deriv_report["pro_derivatives"],
+                "client_derivatives": deriv_report["client_derivatives"],
+                "historical_derivatives_series": deriv_report["historical_derivatives_series"],
+                "institutional_interpretation": deriv_report["institutional_interpretation"],
+                "instrument_coverage": deriv_report["contract_universe"]
             },
             "cpi_inflation_breakdown": {
                 "headline": "Inflation breaches RBI's 6% ceiling, six states cross 7%, onion prices surge 116%",
