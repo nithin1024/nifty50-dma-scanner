@@ -31,6 +31,7 @@ import {
 
 type SubCalendarKey = 
   | 'all' 
+  | 'india'
   | 'today' 
   | '7days' 
   | '30days' 
@@ -137,6 +138,8 @@ export const GlobalEventsPage: React.FC = () => {
       let eventsData: GlobalEvent[] = [];
       if (tab === 'all') {
         eventsData = await fetchGlobalEvents();
+      } else if (tab === 'india') {
+        eventsData = await fetchSubCalendar('india');
       } else if (tab === 'today') {
         eventsData = await fetchSubCalendar('today');
       } else if (tab === '7days') {
@@ -228,6 +231,7 @@ export const GlobalEventsPage: React.FC = () => {
   // Sub Calendar Nav Tabs
   const subCalendarTabs: { id: SubCalendarKey; labelEn: string; labelTe: string; count?: number; icon: React.ReactNode }[] = [
     { id: 'all', labelEn: 'All Events', labelTe: 'మొత్తం ఈవెంట్లు', icon: <Globe className="w-3.5 h-3.5" /> },
+    { id: 'india', labelEn: 'India Focus 🇮🇳', labelTe: 'భారతదేశం 🇮🇳', icon: <Landmark className="w-3.5 h-3.5 text-amber-400" /> },
     { id: 'today', labelEn: "Today's Events", labelTe: 'నేటి ఈవెంట్లు', count: summary?.events_today_count, icon: <Clock className="w-3.5 h-3.5" /> },
     { id: '7days', labelEn: 'Next 7 Days', labelTe: 'రాబోయే 7 రోజులు', icon: <CalendarDays className="w-3.5 h-3.5" /> },
     { id: '30days', labelEn: 'Next 30 Days', labelTe: 'రాబోయే 30 రోజులు', icon: <CalendarDays className="w-3.5 h-3.5" /> },

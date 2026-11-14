@@ -42,6 +42,12 @@ async def get_today_events():
     return global_events_service.get_all_events(timeframe="TODAY")
 
 
+@router.get("/india", response_model=List[Dict[str, Any]])
+async def get_india_events():
+    """Retrieve dedicated Indian macroeconomic, policy, fiscal, and market events calendar."""
+    return global_events_service.get_all_events(country_code="IN")
+
+
 @router.get("/central-banks", response_model=List[Dict[str, Any]])
 async def get_central_bank_calendar():
     """Retrieve dedicated Central Bank interest rate and MPC calendar."""

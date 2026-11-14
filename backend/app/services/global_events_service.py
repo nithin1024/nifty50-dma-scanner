@@ -713,6 +713,390 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "key_terms": [
             {"term": "China Plus One", "term_te": "చైనా ప్లస్ వన్ వ్యూహం", "def_en": "Global corporate strategy to diversify manufacturing investments beyond China into alternative hubs like India.", "def_te": "కేవలం చైనాపైనే ఆధారపడకుండా భారతదేశం వంటి ఇతర దేశాల్లో కూడా ఫ్యాక్టరీలు నెలకొల్పే గ్లోబల్ వ్యూహం."}
         ]
+    },
+
+    # 16. INDIA — GDP GROWTH RATE & GVA OUTPUT
+    {
+        "id": "evt_in_gdp_q2_2026",
+        "event_name": "India Quarterly GDP Growth Rate (YoY) & Gross Value Added (GVA)",
+        "event_name_te": "భారత త్రైమాసిక స్థూల దేశీయోత్పత్తి (GDP) వృద్ధి రేటు & స్థూల విలువ జోడింపు (GVA)",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "ECONOMIC_DATA",
+        "year": 2026, "month": 11, "day": 28, "hour": 17, "minute": 30,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "HIGH",
+        "currency": "INR",
+        "previous_value": "6.70%",
+        "forecast_value": "6.85%",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Ministry of Statistics and Programme Implementation (MoSPI)",
+        "source_url": "https://www.mospi.gov.in/",
+        "description_en": (
+            "National Accounts release evaluating India's headline Real GDP growth and Sectoral Gross Value Added (GVA) "
+            "across Agriculture, Manufacturing, Construction, and Services sectors, incorporating Private Final Consumption Expenditure (PFCE) "
+            "and Gross Fixed Capital Formation (GFCF)."
+        ),
+        "description_te": (
+            "భారత జాతీయ గణాంకాల నివేదిక: వ్యవసాయం, తయారీ రంగం, నిర్మాణం మరియు సేవల రంగాలలో భారత నిజమైన GDP వృద్ధి రేటును, "
+            "స్థూల విలువ జోడింపు (GVA), ప్రైవేట్ వినియోగ వ్యయం (PFCE) మరియు స్థిర మూలధన పెట్టుబడులను (GFCF) సమగ్రంగా విశ్లేషిస్తుంది."
+        ),
+        "why_it_matters_en": (
+            "India is the world's fastest-growing major economy. GDP trajectories dictate institutional FII asset allocation, sovereign "
+            "credit ratings, and corporate earnings multiple expansions across Indian equity markets."
+        ),
+        "why_it_matters_te": (
+            "భారతదేశం ప్రపంచంలోనే అత్యంత వేగంగా అభివృద్ధి చెందుతున్న ప్రధాన ఆర్థిక వ్యవస్థ. GDP వృద్ధి రేటు ఆధారంగానే విదేశీ సంస్థాగత పెట్టుబడిదారులు (FIIs) "
+            "భారత మార్కెట్లలో పెట్టుబడులు కేటాయిస్తారు మరియు కార్పొరేట్ లాభాల వృద్ధి అంచనా వేయబడుతుంది."
+        ),
+        "india_market_impact_en": (
+            "Direct catalyst for NIFTY 50 and Bank Nifty. A growth rate above 7.0% sparks broad-based institutional accumulation in capital goods, "
+            "banking, and infrastructure stocks (L&T, HDFC Bank, ICICI Bank). A miss below 6.5% sparks valuation contraction."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: GDP వృద్ధి 7.0% కంటే ఎక్కువగా ఉంటే క్యాపిటల్ గూడ్స్, బ్యాంకింగ్ మరియు ఇన్‌ఫ్రా స్టాక్స్‌లో (L&T, HDFC Bank, ICICI Bank) "
+            "భారీ కొనుగోళ్లు జరుగుతాయి. 6.5% కంటే తక్కువగా నమోదైతే మార్కెట్లో తాత్కాలిక అమ్మకాల ఒత్తిడి కనిపించవచ్చు."
+        ),
+        "key_terms": [
+            {"term": "Real GDP", "term_te": "నిజమైన GDP", "def_en": "GDP adjusted for price changes/inflation, reflecting actual volume growth.", "def_te": "ధరల పెరుగుదల లేదా ద్రవ్యోల్బణాన్ని సర్దుబాటు చేసిన తర్వాత లభించే నిజమైన ఆర్థిక ఉత్పత్తి వృద్ధి."},
+            {"term": "Gross Value Added (GVA)", "term_te": "స్థూల విలువ జోడింపు (GVA)", "def_en": "Output minus intermediate consumption; measures sectoral production value.", "def_te": "మధ్యంతర వినియోగాన్ని తీసివేసి వివిధ రంగాల ఉత్పత్తి విలువను కొలిచే పద్ధతి."},
+            {"term": "PFCE", "term_te": "ప్రైవేట్ తుది వినియోగ వ్యయం", "def_en": "Private Final Consumption Expenditure; captures household consumer spending momentum.", "def_te": "దేశంలోని గృహాలు మరియు వ్యక్తులు వస్తువులు, సేవలపై చేసే మొత్తం వినియోగ వ్యయం."},
+            {"term": "GFCF", "term_te": "స్థూల స్థిర మూలధన నిర్మాణం", "def_en": "Gross Fixed Capital Formation; measures business and government infrastructure capital investments.", "def_te": "కార్పొరేట్లు మరియు ప్రభుత్వం యంత్రాలు, కర్మాగారాలు, మౌలిక సదుపాయాలపై చేసే మూలధన పెట్టుబడులు."}
+        ]
+    },
+
+    # 17. INDIA — MONTHLY GROSS GST REVENUE COLLECTIONS
+    {
+        "id": "evt_in_gst_rev_202612",
+        "event_name": "India Monthly Gross GST Revenue Collections",
+        "event_name_te": "భారత నెలవారీ స్థూల GST పన్ను వసూళ్ల నివేదిక",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "GOVERNMENT_FISCAL",
+        "year": 2026, "month": 12, "day": 1, "hour": 16, "minute": 0,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "INR",
+        "previous_value": "₹1,87,346 Cr",
+        "forecast_value": "₹1,92,000 Cr",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Ministry of Finance, Government of India (PIB)",
+        "source_url": "https://pib.gov.in/",
+        "description_en": (
+            "Monthly gross Goods and Services Tax (GST) collections across CGST, SGST, IGST, and Compensation Cess, "
+            "providing the single most transparent high-frequency indicator of domestic formal economic consumption and trade velocity."
+        ),
+        "description_te": (
+            "భారత ఆర్థిక మంత్రిత్వ శాఖ విడుదల చేసే నెలవారీ GST పన్ను వసూళ్లు (CGST, SGST, IGST, మరియు సెస్). ఇది దేశీయ వర్తకం, పరిశ్రమలు "
+            "మరియు వినియోగదారుల ఖర్చుల యొక్క అత్యంత విశ్వసనీయమైన ఆర్థిక స్థితి సూచిక."
+        ),
+        "why_it_matters_en": (
+            "Robust tax collections provide the Union Government fiscal headroom to sustain infrastructure Capex without expanding "
+            "the fiscal deficit or market borrowing program."
+        ),
+        "why_it_matters_te": (
+            "పన్ను వసూళ్లు బలంగా ఉంటే ప్రభుత్వం ఆర్థిక లోటును పెంచకుండానే రోడ్లు, రైల్వేలు, రక్షణ వంటి మౌలిక సదుపాయాల (Capex) పై ఖర్చు చేయగలదు."
+        ),
+        "india_market_impact_en": (
+            "Collections above ₹1.85 Lakh Crore reinforce macroeconomic stability, keeping bond yields anchored and supporting auto, "
+            "consumer discretionary, and capital goods sectors."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: GST వసూళ్లు ₹1.85 లక్షల కోట్లకు పైగా కొనసాగితే మార్కెట్లో బుల్లిష్ సెంటిమెంట్ బలపడుతుంది. ఆటో, కన్స్యూమర్ మరియు "
+            "ఇన్‌ఫ్రాస్ట్రక్చర్ రంగాల షేర్లకు బలమైన మద్దతు లభిస్తుంది."
+        ),
+        "key_terms": [
+            {"term": "IGST", "term_te": "సమీకృత GST (IGST)", "def_en": "Integrated Goods and Services Tax levied on inter-state commerce and import shipments.", "def_te": "రాష్ట్రాల మధ్య జరిగే వ్యాపారం మరియు విదేశీ దిగుమతులపై విధించే పన్ను."},
+            {"term": "Fiscal Runway", "term_te": "ఆర్థిక పరిమితి", "def_en": "Government revenue capacity to finance public investments without exceeding deficit targets.", "def_te": "ప్రభుత్వం బడ్జెట్ లోటు పరిమితిని దాటకుండా ప్రజా సంక్షేమం మరియు మౌలిక సదుపాయాలపై ఖర్చు చేయగల సామర్థ్యం."}
+        ]
+    },
+
+    # 18. INDIA — WHOLESALE PRICE INDEX (WPI) INFLATION
+    {
+        "id": "evt_in_wpi_202611",
+        "event_name": "India Wholesale Price Index (WPI Inflation) YoY",
+        "event_name_te": "భారత హోల్‌సేల్ ధరల సూచిక (WPI ద్రవ్యోల్బణం)",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "ECONOMIC_DATA",
+        "year": 2026, "month": 11, "day": 14, "hour": 12, "minute": 0,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "INR",
+        "previous_value": "2.36%",
+        "forecast_value": "2.50%",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Office of the Economic Adviser, Ministry of Commerce and Industry",
+        "source_url": "https://eaindustry.nic.in/",
+        "description_en": (
+            "Measures wholesale producer and wholesale market price changes across Primary Articles, Fuel & Power, "
+            "and Manufactured Products, reflecting input cost pressures confronting corporate India."
+        ),
+        "description_te": (
+            "భారత వాణిజ్య మంత్రిత్వ శాఖ విడుదల చేసే టోకు ధరల సూచిక (WPI). ప్రాథమిక వస్తువులు, ఇంధనం మరియు తయారీ వస్తువుల ధరల్లో వచ్చే మార్పులను "
+            "ఇది కొలుస్తుంది. కంపెనీల ముడిసరుకు ఖర్చుల ఒత్తిడిని అర్థం చేసుకోవడానికి ఇది తోడ్పడుతుంది."
+        ),
+        "why_it_matters_en": (
+            "WPI is a critical leading indicator for corporate operating profit margins. A widening divergence between CPI and WPI "
+            "reveals whether manufacturers are absorbing raw material costs or passing them to consumers."
+        ),
+        "why_it_matters_te": (
+            "కార్పొరేట్ కంపెనీల లాభాల మార్జిన్లను అంచనా వేయడానికి WPI అత్యంత ముఖ్యం. ముడిసరుకు ధరలు పెరిగితే కంపెనీల లాభాలు తగ్గే ప్రమాదం ఉంటుంది."
+        ),
+        "india_market_impact_en": (
+            "Direct impact on manufacturing and chemicals sectors. Subdued WPI below 3.0% protects operating margins for FMCG, Auto, "
+            "and Cement heavyweights, maintaining positive earnings projections."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: WPI 3% కంటే తక్కువగా ఉంటే ఆటో, సిమెంట్, పెయింట్స్ మరియు FMCG కంపెనీల లాభాల మార్జిన్లు స్థిరంగా ఉంటాయి. "
+            "ఇది నిఫ్టీ తయారీ రంగ షేర్లకు సానుకూలం."
+        ),
+        "key_terms": [
+            {"term": "Input Cost Pressure", "term_te": "ముడిసరుకు వ్యయాల ఒత్తిడి", "def_en": "Cost inflation for industrial raw materials that reduces corporate gross margins.", "def_te": "పరిశ్రమలు ఉపయోగించే ముడిసరుకుల ధరలు పెరగడం వల్ల కంపెనీల లాభాలు తగ్గడం."},
+            {"term": "Pricing Power", "term_te": "ధర నిర్ణయించే శక్తి", "def_en": "Ability of market leaders to pass higher wholesale costs on to consumers without sacrificing sales volumes.", "def_te": "ముడిసరుకు ధరలు పెరిగినప్పుడు అమ్మకాలు తగ్గకుండా తుది వస్తువుల ధరలను పెంచగల కంపెనీల సామర్థ్యం."}
+        ]
+    },
+
+    # 19. INDIA — HSBC MANUFACTURING & SERVICES PMI
+    {
+        "id": "evt_in_hsbc_pmi_202612",
+        "event_name": "HSBC India Manufacturing & Services PMI",
+        "event_name_te": "HSBC భారత తయారీ & సేవల రంగాల PMI సూచిక",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "ECONOMIC_DATA",
+        "year": 2026, "month": 12, "day": 1, "hour": 10, "minute": 30,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "INR",
+        "previous_value": "57.5",
+        "forecast_value": "57.8",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "S&P Global / HSBC",
+        "source_url": "https://www.pmi.spglobal.com/",
+        "description_en": (
+            "Monthly survey of over 400 purchasing managers evaluating new domestic orders, export demand, employment levels, "
+            "input prices, and factory output. A reading above 50.0 signals economic expansion."
+        ),
+        "description_te": (
+            "భారతదేశంలోని 400 కంటే ఎక్కువ కంపెనీల పర్చేజింగ్ మేనేజర్ల నుండి సేకరించిన సర్వే. కొత్త ఆర్డర్లు, ఎగుమతులు, ఉపాధి మరియు ఫ్యాక్టరీ ఉత్పత్తిని "
+            "ఇది అంచనా వేస్తుంది. 50 కంటే పైన ఉంటే ఆర్థిక రంగం విస్తరిస్తున్నట్లు అర్థం."
+        ),
+        "why_it_matters_en": (
+            "India consistently leads global economies in PMI velocity, demonstrating superior resilient domestic demand compared "
+            "to sluggish European and East Asian manufacturing hubs."
+        ),
+        "why_it_matters_te": (
+            "ప్రపంచంలోని ఇతర ప్రధాన ఆర్థిక వ్యవస్థల కంటే భారతదేశం అత్యధిక PMI స్థాయిలను నమోదు చేస్తూ, దేశీయ డిమాండ్ యొక్క తిరుగులేని బలాన్ని చాటుతోంది."
+        ),
+        "india_market_impact_en": (
+            "Sustained prints above 55.0 support industrial heavyweights, capital goods players, and commercial banking loan book growth, "
+            "attracting foreign institutional inflows."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: PMI 55 కంటే ఎక్కువగా కొనసాగడం పరిశ్రమలు మరియు మూలధన రంగాలకు (L&T, Siemens, Cummins) అత్యంత సానుకూలం. "
+            "ఇది విదేశీ ఇన్వెస్టర్లలో విశ్వాసాన్ని నింపుతుంది."
+        ),
+        "key_terms": [
+            {"term": "50 Expansion Line", "term_te": "50 విస్తరణ పరిమితి", "def_en": "Diffusion index boundary: >50 indicates month-on-month economic growth, <50 denotes contraction.", "def_te": "PMI సూచికలో 50 కంటే ఎక్కువ ఉంటే వృద్ధి, 50 కంటే తక్కువ ఉంటే సంకోచం."},
+            {"term": "Export Order Velocity", "term_te": "ఎగుమతి ఆర్డర్ల వేగం", "def_en": "Rate of inbound international orders placed with Indian manufacturing export units.", "def_te": "భారత తయారీ పరిశ్రమలకు విదేశాల నుండి లభించే ఆర్డర్ల పరిమాణం."}
+        ]
+    },
+
+    # 20. INDIA — FOREIGN EXCHANGE RESERVES (RBI WEEKLY)
+    {
+        "id": "evt_in_forex_reserves_202611",
+        "event_name": "India Foreign Exchange (Forex) Reserves — RBI Weekly Report",
+        "event_name_te": "భారత విదేశీ మారక ద్రవ్య నిల్వలు (Forex) — RBI వారపు నివేదిక",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "CENTRAL_BANK",
+        "year": 2026, "month": 11, "day": 21, "hour": 17, "minute": 0,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "USD",
+        "previous_value": "$682.13 Billion",
+        "forecast_value": "$685.00 Billion",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Reserve Bank of India (RBI Weekly Statistical Supplement)",
+        "source_url": "https://www.rbi.org.in/",
+        "description_en": (
+            "Weekly audit of India's sovereign foreign currency assets (FCA), monetary gold reserves, Special Drawing Rights (SDRs), "
+            "and Reserve Tranche Position (RTP) held by the Reserve Bank of India."
+        ),
+        "description_te": (
+            "రిజర్వ్ బ్యాంక్ ఆఫ్ ఇండియా ప్రతి వారం విడుదల చేసే అధికారిక నివేదిక. ఇందులో విదేశీ కరెన్సీ ఆస్తులు (FCA), బంగారం నిల్వలు మరియు "
+            "SDRల వివరాలు ఉంటాయి. రూపాయి స్థిరత్వానికి ఈ నిల్వలు రక్షణ కవచం వంటివి."
+        ),
+        "why_it_matters_en": (
+            "Record forex buffers provide the RBI robust ammunition to curb speculative rupee volatility during foreign institutional "
+            "selling waves, shielding India from emerging-market currency contagion."
+        ),
+        "why_it_matters_te": (
+            "భారీ ఫారెక్స్ నిల్వల వల్ల రూపాయి విలువ పడిపోకుండా కాపాడేందుకు RBI వద్ద తగినంత డాలర్ల బలం ఉంటుంది. ఇది భారత కరెన్సీని గ్లోబల్ ఒడిదుడుకుల నుండి రక్షిస్తుంది."
+        ),
+        "india_market_impact_en": (
+            "Forex reserves exceeding $680 Billion assure foreign investors of currency stability, capping USD/INR depreciation and reducing "
+            "hedging costs for foreign portfolio investors (FPIs)."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: ఫారెక్స్ నిల్వలు $680 బిలియన్లకు పైగా ఉండటం వల్ల విదేశీ ఇన్వెస్టర్లకు రూపాయి స్థిరత్వంపై పూర్తి నమ్మకం కలుగుతుంది. "
+            "భారత మార్కెట్లలో పెట్టుబడులు కొనసాగడానికి ఇది దోహదపడుతుంది."
+        ),
+        "key_terms": [
+            {"term": "Foreign Currency Assets (FCA)", "term_te": "విదేశీ కరెన్సీ ఆస్తులు (FCA)", "def_en": "Major component of reserves held in US Dollars, Euros, Yen, and sovereign treasury bills.", "def_te": "డాలర్లు, యూరోలు మరియు విదేశీ ట్రెజరీ బాండ్లలో భద్రపరచబడిన ఆస్తులు."},
+            {"term": "Import Cover", "term_te": "దిగుమతి రక్షణ పరిమితి", "def_en": "Number of months of national imports that can be financed purely by current forex holdings.", "def_te": "ప్రస్తుత ఫారెక్స్ నిల్వలతో దేశం ఎన్ని నెలల దిగుమతుల ఖర్చులను భరించగలదో తెలిపే నిష్పత్తి."}
+        ]
+    },
+
+    # 21. INDIA — MERCHANDISE TRADE BALANCE
+    {
+        "id": "evt_in_trade_balance_202611",
+        "event_name": "India Merchandise Trade Balance & Exports/Imports Release",
+        "event_name_te": "భారత వాణిజ్య లోటు & వస్తు ఎగుమతులు/దిగుమతుల నివేదిక",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "ECONOMIC_DATA",
+        "year": 2026, "month": 11, "day": 15, "hour": 17, "minute": 30,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "USD",
+        "previous_value": "-$20.78 Billion",
+        "forecast_value": "-$21.40 Billion",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Ministry of Commerce and Industry",
+        "source_url": "https://commerce.gov.in/",
+        "description_en": (
+            "Monthly national trade accounting tracking merchandise exports (petroleum, electronics, pharmaceuticals, engineering goods) "
+            "against imports (crude oil, gold, machinery, coking coal)."
+        ),
+        "description_te": (
+            "భారత వాణిజ్య మంత్రిత్వ శాఖ విడుదల చేసే ఎగుమతులు మరియు దిగుమతుల నెలవారీ గణాంకాలు. పెట్రోలియం, ఎలక్ట్రానిక్స్, ఇంజనీరింగ్ వస్తువుల "
+            "ఎగుమతులు మరియు ముడిచమురు, బంగారం దిగుమతుల వ్యత్యాసాన్ని (వాణిజ్య లోటు) ఇది వెల్లడిస్తుంది."
+        ),
+        "why_it_matters_en": (
+            "India's trade deficit directly influences the Current Account Deficit (CAD) and sovereign demand for US Dollars, impacting "
+            "currency valuation against benchmark global baskets."
+        ),
+        "why_it_matters_te": (
+            "వాణిజ్య లోటు పెరిగితే డాలర్ల డిమాండ్ పెరిగి రూపాయిపై ఒత్తిడి వస్తుంది. చమురు ధరలు పెరిగినప్పుడు దిగుమతి బిల్లు భారీగా పెరుగుతుంది."
+        ),
+        "india_market_impact_en": (
+            "A widening deficit above $25 Billion pressures USD/INR towards 84.50+, negatively affecting aviation and oil refiners (HPCL, BPCL), "
+            "while benefiting export heavyweights in IT and Pharmaceuticals (TCS, Sun Pharma)."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: వాణిజ్య లోటు పెరిగితే విమానయాన మరియు చమురు రిఫైనింగ్ కంపెనీలపై ఒత్తిడి పెరుగుతుంది. అయితే IT మరియు ఫార్మా వంటి "
+            "ఎగుమతి ఆధారిత షేర్లకు ఇది కలిసివస్తుంది."
+        ),
+        "key_terms": [
+            {"term": "Trade Deficit", "term_te": "వాణిజ్య లోటు", "def_en": "Condition where monetary value of merchandise imports exceeds merchandise export receipts.", "def_te": "ఎగుమతుల కంటే దిగుమతుల విలువ ఎక్కువగా ఉన్నప్పుడు ఏర్పడే లోటు."},
+            {"term": "Current Account Deficit (CAD)", "term_te": "కరెంట్ ఖాతా లోటు (CAD)", "def_en": "Broader measure combining trade deficit with net service receipts and remittances.", "def_te": "వాణిజ్య లోటుతో పాటు సేవల ఆదాయం మరియు విదేశీ నగదు బదిలీల నికర నిష్పత్తి."}
+        ]
+    },
+
+    # 22. INDIA — CORPORATE HEAVYWEIGHTS EARNINGS
+    {
+        "id": "evt_in_corp_earnings_heavyweights",
+        "event_name": "Indian Institutional Heavyweights Q3 Earnings Season Bellwether",
+        "event_name_te": "భారత కార్పొరేట్ దిగ్గజాల Q3 ఫలితాల సీజన్ (రిలయన్స్ & TCS)",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "CORPORATE_TECH",
+        "year": 2026, "month": 12, "day": 15, "hour": 18, "minute": 0,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "HIGH",
+        "currency": "INR",
+        "previous_value": "₹34,500 Cr",
+        "forecast_value": "₹36,200 Cr",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "National Stock Exchange of India (NSE Corporate Disclosures)",
+        "source_url": "https://www.nseindia.com/",
+        "description_en": (
+            "Quarterly financial scorecard and earnings announcements from India's largest NIFTY 50 index heavyweights (Reliance Industries, "
+            "TCS, HDFC Bank, Infosys, ICICI Bank), establishing baseline corporate profitability and dividend payouts."
+        ),
+        "description_te": (
+            "నిఫ్టీ 50 సూచీలో దాదాపు 40% వాటా కలిగిన రిలయన్స్ ఇండస్ట్రీస్, TCS, HDFC Bank వంటి అగ్రగామి సంస్థల త్రైమాసిక లాభాల ఫలితాల నివేదిక."
+        ),
+        "why_it_matters_en": (
+            "Earnings growth drives stock valuations. Upgrades or downgrades by domestic mutual funds and FIIs directly govern index momentum "
+            "and set the benchmark P/E multiple for the entire market."
+        ),
+        "why_it_matters_te": (
+            "కార్పొరేట్ లాభాల వృద్ధి మార్కెట్ దిశను నిర్ణయిస్తుంది. ఫలితాలు అంచనాల కంటే మెరుగ్గా ఉంటే మార్కెట్ కొత్త గరిష్టాలకు చేరుకుంటుంది."
+        ),
+        "india_market_impact_en": (
+            "High direct volatility trigger. Heavyweight surprises (+/- 5%) dictate daily NIFTY swings of 100-250 points and drive sector-wide "
+            "re-ratings across IT and Banking."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: హెవీవెయిట్ షేర్ల ఫలితాలు నిఫ్టీ 50 ని 100 నుండి 250 పాయింట్ల వరకు కదిలించే శక్తిని కలిగి ఉంటాయి. బ్యాంకింగ్ మరియు IT రంగాల భవిష్యత్తును ఇవి శాసిస్తాయి."
+        ),
+        "key_terms": [
+            {"term": "EBITDA Margin", "term_te": "EBITDA మార్జిన్", "def_en": "Operating profitability metric measuring core cash earnings relative to total revenues.", "def_te": "పన్నులు మరియు వడ్డీలకు ముందు కంపెనీ సాధించే ప్రధాన వ్యాపార నిర్వహణ లాభాల శాతం."},
+            {"term": "EPS Growth", "term_te": "షేరుకు ఆర్జన (EPS) వృద్ధి", "def_en": "Earnings Per Share growth indicating profitability attributed to each individual equity share.", "def_te": "కంపెనీ సంపాదించే లాభంలో ఒక్కో షేరుకు లభించే ఆర్జన పెరుగుదల."}
+        ]
+    },
+
+    # 23. INDIA — 10-YEAR BENCHMARK G-SEC AUCTION
+    {
+        "id": "evt_in_gsec_auction_202611",
+        "event_name": "RBI 10-Year Benchmark Government Bond (G-Sec) Yield Auction",
+        "event_name_te": "RBI 10-సంవత్సరాల బెంచ్‌మార్క్ ప్రభుత్వ బాండ్ల (G-Sec) వేలం",
+        "country": "India",
+        "country_code": "IN",
+        "country_flag": "🇮🇳",
+        "category": "FINANCIAL_MARKETS",
+        "year": 2026, "month": 11, "day": 27, "hour": 13, "minute": 30,
+        "original_timezone": "Asia/Kolkata",
+        "importance": "MEDIUM",
+        "currency": "INR",
+        "previous_value": "6.82%",
+        "forecast_value": "6.85%",
+        "actual_value": "Not yet released",
+        "revision_value": None,
+        "source_name": "Reserve Bank of India (Public Debt Management)",
+        "source_url": "https://www.rbi.org.in/",
+        "description_en": (
+            "Bi-weekly sovereign debt auction conducted by the RBI on behalf of the Government of India, establishing the risk-free "
+            "benchmark interest rate for the Indian economy."
+        ),
+        "description_te": (
+            "భారత ప్రభుత్వం తరపున రిజర్వ్ బ్యాంక్ నిర్వహించే 10 సంవత్సరాల ప్రభుత్వ బాండ్ల వేలం. ఇది భారతదేశంలోని మొత్తం రుణాలకు ప్రామాణిక రిస్క్-ఫ్రీ వడ్డీ రేటును నిర్ణయిస్తుంది."
+        ),
+        "why_it_matters_en": (
+            "The 10-Year G-Sec yield is the benchmark discount rate utilized to value domestic equities. Rising bond yields compress equity "
+            "price-to-earnings (P/E) multiples and increase borrowing costs for Indian corporates."
+        ),
+        "why_it_matters_te": (
+            "ప్రభుత్వ బాండ్ల రాబడి (Yield) పెరిగితే కార్పొరేట్ కంపెనీల రుణ వ్యయం పెరుగుతుంది మరియు షేర్ల వాల్యుయేషన్లు తగ్గవచ్చు."
+        ),
+        "india_market_impact_en": (
+            "Direct impact on Banking and NBFCs. Lower cut-off yields create treasury mark-to-market profits for PSU and private banks (SBI, Bank of Baroda), "
+            "while higher yields increase deposit competition."
+        ),
+        "india_market_impact_te": (
+            "భారత మార్కెట్ ప్రభావం: బాండ్ ఈల్డ్స్ తగ్గితే ప్రభుత్వ రంగ బ్యాంకులు (SBI, PNB) తమ బాండ్ల పోర్ట్‌ఫోలియోపై లాభాలు పొందుతాయి. ఇది బ్యాంక్ నిఫ్టీకి బలమైన సానుకూలత."
+        ),
+        "key_terms": [
+            {"term": "10-Year Benchmark G-Sec", "term_te": "10-సంవత్సరాల బెంచ్‌మార్క్ G-Sec", "def_en": "Sovereign bond serving as India's primary risk-free discount rate reference.", "def_te": "భారత ఆర్థిక వ్యవస్థలో ప్రామాణిక రిస్క్ లేని వడ్డీ రేటును సూచించే 10 ఏళ్ల ప్రభుత్వ బాండ్."},
+            {"term": "Cut-off Yield", "term_te": "కట్-ఆఫ్ ఈల్డ్", "def_en": "Maximum acceptable yield at which RBI accepts bids to clear government borrowing quota.", "def_te": "ప్రభుత్వ రుణ సేకరణ కోసం RBI ఆమోదించే గరిష్ట వడ్డీ రాబడి రేటు."}
+        ]
     }
 ]
 
@@ -843,17 +1227,18 @@ class GlobalEventsService:
 
             # Timeframe filter based on start_time_utc
             now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-            if timeframe == "TODAY":
+            tf = (timeframe or "").upper().strip()
+            if tf in ("TODAY", "1D"):
                 today_start = now_utc.replace(hour=0, minute=0, second=0)
                 today_end = now_utc.replace(hour=23, minute=59, second=59)
                 query = query.filter(GlobalEventModel.start_time_utc >= today_start, GlobalEventModel.start_time_utc <= today_end)
-            elif timeframe == "7_DAYS":
+            elif tf in ("7_DAYS", "7D"):
                 end_7d = now_utc + timedelta(days=7)
                 query = query.filter(GlobalEventModel.start_time_utc <= end_7d)
-            elif timeframe == "30_DAYS":
+            elif tf in ("30_DAYS", "30D"):
                 end_30d = now_utc + timedelta(days=30)
                 query = query.filter(GlobalEventModel.start_time_utc <= end_30d)
-            elif timeframe == "90_DAYS":
+            elif tf in ("90_DAYS", "90D"):
                 end_90d = now_utc + timedelta(days=90)
                 query = query.filter(GlobalEventModel.start_time_utc <= end_90d)
 

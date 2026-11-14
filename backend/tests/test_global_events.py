@@ -148,6 +148,13 @@ def test_global_events_summary(client):
 
 def test_sub_calendars(client):
     """Verify sub-calendar endpoints."""
+    # India focus sub-calendar
+    res_in = client.get("/api/v1/global-events/india")
+    assert res_in.status_code == 200
+    events_in = res_in.json()
+    assert len(events_in) >= 5
+    assert all(e["country_code"] == "IN" for e in events_in)
+
     # Central banks
     res = client.get("/api/v1/global-events/central-banks")
     assert res.status_code == 200
