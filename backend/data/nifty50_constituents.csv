@@ -1,0 +1,51 @@
+symbol,company_name,sector,industry,isin,series,weightage,effective_date,upstox_instrument_key,active
+HDFCBANK,HDFC Bank Ltd.,Financial Services,Private Sector Bank,INE040A01034,EQ,11.25,2024-09-27,NSE_EQ|INE040A01034,True
+RELIANCE,Reliance Industries Ltd.,Energy,Oil Gas & Consumable Fuels,INE002A01018,EQ,8.62,2024-09-27,NSE_EQ|INE002A01018,True
+ICICIBANK,ICICI Bank Ltd.,Financial Services,Private Sector Bank,INE090A01021,EQ,8.11,2024-09-27,NSE_EQ|INE090A01021,True
+INFY,Infosys Ltd.,Information Technology,IT - Software,INE009A01021,EQ,5.54,2024-09-27,NSE_EQ|INE009A01021,True
+BHARTIARTL,Bharti Airtel Ltd.,Telecommunication,Telecom - Services,INE397D01024,EQ,4.62,2024-09-27,NSE_EQ|INE397D01024,True
+LT,Larsen & Toubro Ltd.,Construction,Construction & Engineering,INE018A01030,EQ,4.14,2024-09-27,NSE_EQ|INE018A01030,True
+TCS,Tata Consultancy Services Ltd.,Information Technology,IT - Software,INE467B01029,EQ,3.72,2024-09-27,NSE_EQ|INE467B01029,True
+ITC,ITC Ltd.,Fast Moving Consumer Goods,Cigarettes & FMCG,INE154A01025,EQ,3.67,2024-09-27,NSE_EQ|INE154A01025,True
+SBIN,State Bank of India,Financial Services,Public Sector Bank,INE062A01020,EQ,3.24,2024-09-27,NSE_EQ|INE062A01020,True
+AXISBANK,Axis Bank Ltd.,Financial Services,Private Sector Bank,INE238A01034,EQ,3.1,2024-09-27,NSE_EQ|INE238A01034,True
+KOTAKBANK,Kotak Mahindra Bank Ltd.,Financial Services,Private Sector Bank,INE237A01028,EQ,2.74,2024-09-27,NSE_EQ|INE237A01028,True
+M&M,Mahindra & Mahindra Ltd.,Automobile and Auto Components,Automobiles,INE101A01026,EQ,2.4,2024-09-27,NSE_EQ|INE101A01026,True
+HINDUNILVR,Hindustan Unilever Ltd.,Fast Moving Consumer Goods,Diversified FMCG,INE030A01027,EQ,2.13,2024-09-27,NSE_EQ|INE030A01027,True
+BAJFINANCE,Bajaj Finance Ltd.,Financial Services,Non-Banking Financial Company,INE296A01024,EQ,1.93,2024-09-27,NSE_EQ|INE296A01024,True
+MARUTI,Maruti Suzuki India Ltd.,Automobile and Auto Components,Passenger Cars & Utility Vehicles,INE585B01010,EQ,1.68,2024-09-27,NSE_EQ|INE585B01010,True
+SUNPHARMA,Sun Pharmaceutical Industries Ltd.,Healthcare,Pharmaceuticals,INE044A01036,EQ,1.64,2024-09-27,NSE_EQ|INE044A01036,True
+TATASTEEL,Tata Steel Ltd.,Metals & Mining,Iron & Steel,INE081A01020,EQ,1.5,2024-09-27,NSE_EQ|INE081A01020,True
+NTPC,NTPC Ltd.,Power,Power Generation,INE733E01010,EQ,1.42,2024-09-27,NSE_EQ|INE733E01010,True
+POWERGRID,Power Grid Corporation of India Ltd.,Power,Power Transmission,INE752E01010,EQ,1.38,2024-09-27,NSE_EQ|INE752E01010,True
+TITAN,Titan Company Ltd.,Consumer Durables,Gems Jewellery & Watches,INE280A01028,EQ,1.35,2024-09-27,NSE_EQ|INE280A01028,True
+TRENT,Trent Ltd.,Consumer Services,Retailing,INE849A01020,EQ,1.33,2024-09-27,NSE_EQ|INE849A01020,True
+ADANIENT,Adani Enterprises Ltd.,Metals & Mining,Trading - Minerals & Metals,INE423A01024,EQ,1.29,2024-09-27,NSE_EQ|INE423A01024,True
+ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,Services,Port & Port Services,INE742F01042,EQ,1.25,2024-09-27,NSE_EQ|INE742F01042,True
+HCLTECH,HCL Technologies Ltd.,Information Technology,IT - Software,INE860A01027,EQ,1.23,2024-09-27,NSE_EQ|INE860A01027,True
+TATAMOTORS,Tata Motors Ltd.,Automobile and Auto Components,Commercial & Passenger Vehicles,INE155A01022,EQ,1.19,2024-09-27,NSE_EQ|INE155A01022,True
+COALINDIA,Coal India Ltd.,Oil Gas & Consumable Fuels,Coal,INE522F01014,EQ,1.09,2024-09-27,NSE_EQ|INE522F01014,True
+BAJAJ-AUTO,Bajaj Auto Ltd.,Automobile and Auto Components,2/3 Wheelers,INE917I01010,EQ,1.07,2024-09-27,NSE_EQ|INE917I01010,True
+ONGC,Oil & Natural Gas Corporation Ltd.,Oil Gas & Consumable Fuels,Oil Exploration & Production,INE213A01029,EQ,1.05,2024-09-27,NSE_EQ|INE213A01029,True
+JSWSTEEL,JSW Steel Ltd.,Metals & Mining,Iron & Steel,INE019A01038,EQ,1.01,2024-09-27,NSE_EQ|INE019A01038,True
+BEL,Bharat Electronics Ltd.,Capital Goods,Aerospace & Defense,INE263A01024,EQ,0.99,2024-09-27,NSE_EQ|INE263A01024,True
+GRASIM,Grasim Industries Ltd.,Construction Materials,Cement & Building Materials,INE047A01021,EQ,0.94,2024-09-27,NSE_EQ|INE047A01021,True
+SHRIRAMFIN,Shriram Finance Ltd.,Financial Services,Non-Banking Financial Company,INE721A01013,EQ,0.92,2024-09-27,NSE_EQ|INE721A01013,True
+BPCL,Bharat Petroleum Corporation Ltd.,Oil Gas & Consumable Fuels,Refineries & Marketing,INE029A01011,EQ,0.86,2024-09-27,NSE_EQ|INE029A01011,True
+TECHM,Tech Mahindra Ltd.,Information Technology,IT - Software,INE669C01036,EQ,0.84,2024-09-27,NSE_EQ|INE669C01036,True
+CIPLA,Cipla Ltd.,Healthcare,Pharmaceuticals,INE059A01026,EQ,0.82,2024-09-27,NSE_EQ|INE059A01026,True
+DRREDDY,Dr. Reddy's Laboratories Ltd.,Healthcare,Pharmaceuticals,INE089A01023,EQ,0.8,2024-09-27,NSE_EQ|INE089A01023,True
+APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,Healthcare,Hospital & Healthcare Services,INE437A01024,EQ,0.78,2024-09-27,NSE_EQ|INE437A01024,True
+ASIANPAINT,Asian Paints Ltd.,Consumer Durables,Paints & Varnishes,INE021A01026,EQ,0.76,2024-09-27,NSE_EQ|INE021A01026,True
+EICHERMOT,Eicher Motors Ltd.,Automobile and Auto Components,Motorcycles,INE066A01021,EQ,0.74,2024-09-27,NSE_EQ|INE066A01021,True
+HDFCLIFE,HDFC Life Insurance Company Ltd.,Financial Services,Life Insurance,INE795G01014,EQ,0.72,2024-09-27,NSE_EQ|INE795G01014,True
+SBILIFE,SBI Life Insurance Company Ltd.,Financial Services,Life Insurance,INE123W01016,EQ,0.7,2024-09-27,NSE_EQ|INE123W01016,True
+BAJAJFINSV,Bajaj Finserv Ltd.,Financial Services,Financial Holding Company,INE918I01026,EQ,0.68,2024-09-27,NSE_EQ|INE918I01026,True
+WIPRO,Wipro Ltd.,Information Technology,IT - Software,INE075A01022,EQ,0.66,2024-09-27,NSE_EQ|INE075A01022,True
+ULTRACEMCO,UltraTech Cement Ltd.,Construction Materials,Cement & Building Materials,INE481G01011,EQ,0.64,2024-09-27,NSE_EQ|INE481G01011,True
+TATACONSUM,Tata Consumer Products Ltd.,Fast Moving Consumer Goods,Tea Coffee & Food Products,INE192A01025,EQ,0.62,2024-09-27,NSE_EQ|INE192A01025,True
+HEROMOTOCO,Hero MotoCorp Ltd.,Automobile and Auto Components,2/3 Wheelers,INE158A01026,EQ,0.6,2024-09-27,NSE_EQ|INE158A01026,True
+NESTLEIND,Nestle India Ltd.,Fast Moving Consumer Goods,Packaged Foods,INE239A01024,EQ,0.59,2024-09-27,NSE_EQ|INE239A01024,True
+INDUSINDBK,IndusInd Bank Ltd.,Financial Services,Private Sector Bank,INE095A01012,EQ,0.57,2024-09-27,NSE_EQ|INE095A01012,True
+HINDALCO,Hindalco Industries Ltd.,Metals & Mining,Aluminium,INE038A01020,EQ,0.55,2024-09-27,NSE_EQ|INE038A01020,True
+BRITANNIA,Britannia Industries Ltd.,Fast Moving Consumer Goods,Bakery Products,INE216A01030,EQ,0.53,2024-09-27,NSE_EQ|INE216A01030,True

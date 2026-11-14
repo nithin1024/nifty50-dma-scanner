@@ -43,10 +43,15 @@ class DatabaseService:
                         industry=s["industry"],
                         isin=s["isin"],
                         series=s.get("series", "EQ"),
+                        weightage=s.get("weightage", 0.0),
                         upstox_instrument_key=s["upstox_instrument_key"],
                         active=True
                     )
                     db.add(item)
+                else:
+                    existing.weightage = s.get("weightage", existing.weightage)
+                    existing.company_name = s["company_name"]
+                    existing.industry = s["industry"]
             db.commit()
             logger.info("Constituents synchronized with database.")
         except Exception as e:

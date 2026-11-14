@@ -12,6 +12,7 @@ class ConstituentModel(Base):
     industry = Column(String(100), nullable=False)
     isin = Column(String(20), nullable=False, unique=True, index=True)
     series = Column(String(10), default="EQ")
+    weightage = Column(Float, default=0.0)
     upstox_instrument_key = Column(String(50), nullable=False, unique=True)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

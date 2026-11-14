@@ -48,3 +48,37 @@ async def test_get_individual_stock():
         # Not found test
         resp_404 = await client.get("/api/v1/stocks/INVALIDXYZ")
         assert resp_404.status_code == 404
+
+
+def test_constituents_weightages_and_csv():
+    """Verify weightages exist, sum to 100%, and CSV file is valid."""
+    from pathlib import Path
+    import csv
+
+    stocks = constituents_service.get_constituents()
+    assert len(stocks) == 50
+    total_weight = sum(s["weightage"] for s in stocks)
+    assert abs(total_weight - 100.0) < 0.05, f"Weights sum to {total_weight}, expected 100.0"
+
+    for s in stocks:
+        assert "weightage" in s and s["weightage"] > 0
+        assert "effective_date" in s and len(s["effective_date"]) == 10
+        assert "sector" in s and len(s["sector"]) > 0
+
+    csv_path = Path("backend/data/nifty50_constituents.csv")
+    assert csv_path.exists(), "Constituents CSV not found in backend/data"
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = list(csv.DictReader(f))
+        assert len(reader) == 50
+
+
+def test_top_7_heavyweights_registry():
+    """Verify top 7 heavyweights retrieval and combined dominance."""
+    top7 = constituents_service.get_top_heavyweights(7)
+    assert len(top7) == 7
+    expected = {"HDFCBANK", "ICICIBANK", "RELIANCE", "BHARTIARTL", "LT", "SBIN", "INFY"}
+    actual = {s["symbol"] for s in top7}
+    assert expected == actual, f"Top 7 mismatch: {actual} vs {expected}"
+
+    combined_weight = sum(s["weightage"] for s in top7)
+    assert combined_weight > 40.0, f"Combined top 7 weight {combined_weight}% is below 40%"
