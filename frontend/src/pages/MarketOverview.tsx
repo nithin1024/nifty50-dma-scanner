@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { MarketIntelligenceDashboard } from '../components/MarketIntelligenceDashboard';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MarketOverviewProps {
   health: BackendHealth | null;
@@ -36,6 +37,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
   onNavigate,
   onSelectStock
 }) => {
+  const { t } = useLanguage();
   const verifiedCount = dataStatus?.verified_stocks_count ?? dailyScan?.verified_constituents ?? 50;
   const coveragePct = Math.round((verifiedCount / 50) * 100);
 
@@ -55,10 +57,10 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         <div>
           <div className="flex items-center space-x-2">
             <span className="text-xs uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              NSE Settlement Session
+              {t('NSE Settlement Session')}
             </span>
             <span className="text-xs text-slate-400">
-              Completed Date: <strong className="text-slate-200">{dailyScan?.completed_session_date || 'Latest'}</strong>
+              {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || 'Latest'}</strong>
             </span>
             <span className="text-xs text-slate-500 hidden sm:inline">&bull;</span>
             <span className="text-xs text-slate-400 hidden sm:inline">
@@ -66,10 +68,10 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1">
-            NIFTY 50 Institutional DMA &amp; Volume Executive Overview
+            {t('NIFTY 50 Institutional DMA & Volume Executive Overview')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            Real-time quantitative screening across 6 Simple Moving Averages and 6-session volume benchmarks.
+            {t('Real-time quantitative screening across 6 Simple Moving Averages and 6-session volume benchmarks.')}
           </p>
         </div>
 
@@ -80,13 +82,13 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
             className="flex items-center space-x-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md"
           >
             <Download className="w-4 h-4" />
-            <span>Daily Excel (12 Sheets)</span>
+            <span>{t('Daily Excel (12 Sheets)')}</span>
           </a>
           <button
             onClick={onRefresh}
             disabled={loading}
             className="p-2 rounded-lg bg-[#1A2234] hover:bg-slate-700/60 border border-[#232E47] text-slate-300 transition-colors"
-            title="Refresh Scan Data"
+            title={t('Refresh Scan Data')}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
           </button>
@@ -101,14 +103,14 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           className="p-4 rounded-xl bg-[#121824] border border-[#232E47] hover:border-emerald-500/50 cursor-pointer transition-all shadow-sm group"
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span className="font-semibold text-emerald-400">Category A: 6/6 Bullish</span>
+            <span className="font-semibold text-emerald-400">{t('Category A: 6/6 Bullish')}</span>
             <span className="p-1 rounded bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-4 h-4" />
             </span>
           </div>
           <div className="text-3xl font-black text-white">{count66} <span className="text-xs text-slate-400 font-normal">/ 50 stocks</span></div>
           <div className="text-[11px] text-slate-400 mt-1">
-            Price &gt; 5, 10, 20, 50, 100, 200 DMA
+            {t('Price > 5, 10, 20, 50, 100, 200 DMA')}
           </div>
         </div>
 
@@ -118,14 +120,14 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           className="p-4 rounded-xl bg-[#121824] border border-[#232E47] hover:border-amber-500/50 cursor-pointer transition-all shadow-sm group"
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span className="font-semibold text-amber-400">Category B: 5/6 Watchlist</span>
+            <span className="font-semibold text-amber-400">{t('Category B: 5/6 Watchlist')}</span>
             <span className="p-1 rounded bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
               <Activity className="w-4 h-4" />
             </span>
           </div>
           <div className="text-3xl font-black text-white">{count56} <span className="text-xs text-slate-400 font-normal">/ 50 stocks</span></div>
           <div className="text-[11px] text-slate-400 mt-1">
-            Price above exactly 5 SMAs (1 hurdle)
+            {t('Price above exactly 5 SMAs (1 hurdle)')}
           </div>
         </div>
 
@@ -135,7 +137,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           className="p-4 rounded-xl bg-[#121824] border border-[#232E47] hover:border-sky-500/50 cursor-pointer transition-all shadow-sm group"
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span className="font-semibold text-sky-400">Fresh Bullish Crossovers</span>
+            <span className="font-semibold text-sky-400">{t('Fresh Bullish Crossovers')}</span>
             <span className="p-1 rounded bg-sky-500/10 text-sky-400 group-hover:scale-110 transition-transform">
               <BarChart3 className="w-4 h-4" />
             </span>
@@ -152,14 +154,14 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           className="p-4 rounded-xl bg-[#121824] border border-[#232E47] hover:border-purple-500/50 cursor-pointer transition-all shadow-sm group"
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span className="font-semibold text-purple-400">Data Coverage (220+ Sess)</span>
+            <span className="font-semibold text-purple-400">{t('Data Coverage (220+ Sess)')}</span>
             <span className="p-1 rounded bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-4 h-4" />
             </span>
           </div>
           <div className="text-3xl font-black text-white">{coveragePct}% <span className="text-xs text-slate-400 font-normal">({verifiedCount}/50)</span></div>
           <div className="text-[11px] text-slate-400 mt-1">
-            Unadjusted settlement prices verified
+            {t('Unadjusted settlement prices verified')}
           </div>
         </div>
       </div>
@@ -173,7 +175,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] flex flex-col justify-between">
           <div className="flex items-center space-x-2 text-xs font-semibold text-amber-400">
             <Crown className="w-4 h-4" />
-            <span>Top 7 Heavyweights Impact</span>
+            <span>{t('Top 7 Heavyweights Impact')}</span>
           </div>
           <div className="my-3">
             <div className="flex justify-between items-baseline">
@@ -196,7 +198,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="font-semibold text-emerald-400 flex items-center space-x-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>Leading Index Supporter</span>
+              <span>{t('Leading Index Supporter')}</span>
             </span>
             <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Top Push</span>
           </div>
@@ -223,7 +225,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="font-semibold text-rose-400 flex items-center space-x-1">
               <TrendingDown className="w-3.5 h-3.5" />
-              <span>Leading Index Dragger</span>
+              <span>{t('Leading Index Dragger')}</span>
             </span>
             <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">Top Drag</span>
           </div>
@@ -251,20 +253,20 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
             <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <span>Combined DMA + Volume Market Signals</span>
+              <span>{t('Combined DMA + Volume Market Signals')}</span>
               <span className="text-xs px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 font-semibold">
-                Phase 7 Engine
+                {t('Phase 7 Engine')}
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Synthesis of 6-DMA technical alignment, price direction, and volume expansion confirmation.
+              {t('Synthesis of 6-DMA technical alignment, price direction, and volume expansion confirmation.')}
             </p>
           </div>
           <button
             onClick={() => onNavigate('dma-scanner')}
             className="text-xs text-sky-400 hover:text-sky-300 font-semibold flex items-center space-x-1"
           >
-            <span>View Full Scanner Table &rarr;</span>
+            <span>{t('View Full Scanner Table →')}</span>
           </button>
         </div>
 
@@ -272,15 +274,15 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider">
               <tr>
-                <th className="py-2.5 px-3">Symbol</th>
-                <th className="py-2.5 px-3">Company Name</th>
-                <th className="py-2.5 px-3">Weight</th>
-                <th className="py-2.5 px-3 text-right">Close</th>
-                <th className="py-2.5 px-3 text-right">Chg %</th>
-                <th className="py-2.5 px-3 text-center">DMA Score</th>
-                <th className="py-2.5 px-3 text-right">RVOL</th>
-                <th className="py-2.5 px-3">Volume Class</th>
-                <th className="py-2.5 px-3">Combined Signal</th>
+                <th className="py-2.5 px-3">{t('Symbol')}</th>
+                <th className="py-2.5 px-3">{t('Company Name')}</th>
+                <th className="py-2.5 px-3">{t('Weight')}</th>
+                <th className="py-2.5 px-3 text-right">{t('Close')}</th>
+                <th className="py-2.5 px-3 text-right">{t('Chg %')}</th>
+                <th className="py-2.5 px-3 text-center">{t('DMA Score')}</th>
+                <th className="py-2.5 px-3 text-right">{t('RVOL')}</th>
+                <th className="py-2.5 px-3">{t('Volume Class')}</th>
+                <th className="py-2.5 px-3">{t('Combined Signal')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#232E47]/60">
@@ -318,7 +320,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                         r.volume_classification === 'LOW_VOLUME' ? 'bg-amber-500/20 text-amber-300' :
                         'bg-slate-800 text-slate-400'
                       }`}>
-                        {r.volume_classification?.replace('_', ' ') || 'NORMAL'}
+                        {t(r.volume_classification || 'NORMAL_VOLUME')}
                       </span>
                     </td>
                     <td className="py-2.5 px-3">
@@ -329,7 +331,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                         sig?.signal === 'WEAKENING' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                         'bg-slate-800 text-slate-400'
                       }`}>
-                        {sig?.label || 'NO SIGNAL'}
+                        {t(sig?.label || 'NO SIGNAL')}
                       </span>
                     </td>
                   </tr>

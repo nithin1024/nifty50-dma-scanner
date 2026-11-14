@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 export interface VolumeTrendSession {
   date: string; // e.g. "2026-11-13"
@@ -67,12 +68,13 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
   avgVolume,
   className = ''
 }) => {
+  const { t } = useLanguage();
   const [order, setOrder] = useState<'NEWEST_FIRST' | 'CHRONOLOGICAL'>('NEWEST_FIRST');
 
   if (!sessions || sessions.length === 0) {
     return (
       <div className={`p-5 rounded-xl bg-[#121824] border border-[#232E47] text-slate-400 text-xs text-center ${className}`}>
-        No volume trend data available.
+        {t('No volume trend data available.')}
       </div>
     );
   }
@@ -109,11 +111,11 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
       <div className="flex items-center justify-between pb-4 border-b border-[#232E47]/60 mb-5">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
-            <span>{title}</span>
+            <span>{t(title)}</span>
             {symbol && <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono font-semibold">{symbol}</span>}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Institutional daily traded volume with 6-session average benchmark (Cr / Lakhs)
+            {t('Institutional daily traded volume with 6-session average benchmark (Cr / Lakhs)')}
           </p>
         </div>
 
@@ -128,7 +130,7 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
             }`}
             title="Show latest session on the left (matches trading app)"
           >
-            Newest First
+            {t('Newest First')}
           </button>
           <button
             onClick={() => setOrder('CHRONOLOGICAL')}
@@ -139,7 +141,7 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
             }`}
             title="Show oldest to newest"
           >
-            Chronological
+            {t('Chronological')}
           </button>
         </div>
       </div>
@@ -230,15 +232,15 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1.5">
             <span className="w-3 h-3 rounded-sm bg-[#C4B5FD] inline-block"></span>
-            <span>Daily Traded Volume</span>
+            <span>{t('Daily Traded Volume')}</span>
           </div>
           <div className="flex items-center space-x-1.5">
             <span className="w-4 h-0.5 border-t-2 border-dashed border-purple-400 inline-block"></span>
-            <span className="text-purple-300 font-mono">6-Session Average Line</span>
+            <span className="text-purple-300 font-mono">{t('6-Session Average Line')}</span>
           </div>
         </div>
         <div className="text-[11px] text-slate-500 font-mono">
-          Average: {formatIndianVolume(calculatedAvg)} ({Math.round(calculatedAvg).toLocaleString()})
+          {t('Average')}: {formatIndianVolume(calculatedAvg)} ({Math.round(calculatedAvg).toLocaleString()})
         </div>
       </div>
     </div>

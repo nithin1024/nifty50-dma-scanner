@@ -3,11 +3,12 @@ import type { DailyScanResponse, LiveScanResponse } from '../types';
 import { 
   Activity, 
   Search, 
-  ArrowUpDown,
-  RefreshCw,
+  ArrowUpDown, 
+  RefreshCw, 
   BarChart2,
   Radio
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AllVolumeDashboardProps {
   dailyScan: DailyScanResponse | null;
@@ -45,6 +46,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
   onSelectStock,
   onRefreshLive
 }) => {
+  const { t } = useLanguage();
   const [feedMode, setFeedMode] = useState<'LIVE' | 'COMPLETED'>('LIVE');
   const [showTopChart, setShowTopChart] = useState<boolean>(true);
   const [chartMetric, setChartMetric] = useState<'VOLUME' | 'RVOL'>('VOLUME');
@@ -191,11 +193,11 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
               <Activity className="w-5 h-5" />
             </span>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              Page 3 — All 50 Stocks Live Traded Volume &amp; Bar Graph Engine
+              {t('Page 3 — All 50 Stocks Live Traded Volume & Bar Graph Engine')}
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time live volume streaming, 6-session volume benchmarks, RVOL metrics, and interactive volume bar graphs for all 50 NIFTY constituents.
+            {t('Real-time live volume streaming, 6-session volume benchmarks, RVOL metrics, and interactive volume bar graphs for all 50 NIFTY constituents.')}
           </p>
         </div>
 
@@ -215,7 +217,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>Live Volume Feed</span>
+              <span>{t('Live Volume Feed')}</span>
             </button>
             <button
               onClick={() => setFeedMode('COMPLETED')}
@@ -225,7 +227,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Completed Daily
+              {t('Completed Daily')}
             </button>
           </div>
 
@@ -238,7 +240,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
               title="Refresh live volume from exchange feed"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>{refreshing ? 'Refreshing...' : 'Refresh Feed'}</span>
+              <span>{refreshing ? t('Refreshing...') : t('Refresh Feed')}</span>
             </button>
           )}
 
@@ -252,7 +254,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            <span>{showTopChart ? 'Hide Bar Graph' : 'Show Bar Graph'}</span>
+            <span>{showTopChart ? t('Hide Bar Graph') : t('Show Bar Graph')}</span>
           </button>
         </div>
       </div>
@@ -282,7 +284,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                 <BarChart2 className="w-4 h-4" />
               </span>
               <h3 className="text-sm font-bold text-white">
-                Top 10 Most Active Stocks — {chartMetric === 'VOLUME' ? 'Traded Volume Bar Graph' : 'Relative Volume (RVOL) Leaderboard'}
+                {chartMetric === 'VOLUME' ? t('Top 10 Most Active Stocks — Traded Volume Bar Graph') : t('Top 10 Most Active Stocks — Relative Volume (RVOL) Leaderboard')}
               </h3>
             </div>
 
@@ -294,7 +296,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                     chartMetric === 'VOLUME' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  By Volume
+                  {t('By Volume')}
                 </button>
                 <button
                   onClick={() => setChartMetric('RVOL')}
@@ -302,7 +304,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                     chartMetric === 'RVOL' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  By RVOL
+                  {t('By RVOL')}
                 </button>
               </div>
             </div>
@@ -397,7 +399,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search stock symbol or name..."
+            placeholder={t('Search stock symbol or name...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
@@ -410,7 +412,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           onChange={(e) => setSectorFilter(e.target.value)}
           className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
         >
-          <option value="ALL">All Sectors ({unifiedStocks.length})</option>
+          <option value="ALL">{t('All Sectors')} ({unifiedStocks.length})</option>
           {sectors.map(sec => (
             <option key={sec} value={sec}>{sec}</option>
           ))}
@@ -422,9 +424,9 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           onChange={(e) => setDmaFilter(e.target.value)}
           className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
         >
-          <option value="ALL">All DMA Scores</option>
-          <option value="6_6">6/6 Bullish Alignment</option>
-          <option value="5_6">5/6 Bullish Alignment</option>
+          <option value="ALL">{t('All DMA Scores')}</option>
+          <option value="6_6">{t('6/6 Bullish Alignment')}</option>
+          <option value="5_6">{t('5/6 Bullish Alignment')}</option>
         </select>
 
         {/* Volume Classification Filter */}
@@ -433,12 +435,12 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           onChange={(e) => setVolumeFilter(e.target.value)}
           className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
         >
-          <option value="ALL">All Volume Tiers</option>
-          <option value="VERY_HIGH_VOLUME">Very High Volume (&ge; 2.0x RVOL)</option>
-          <option value="HIGH_VOLUME">High Volume (1.25x - 2.0x RVOL)</option>
-          <option value="NORMAL_VOLUME">Normal Volume</option>
-          <option value="LOW_VOLUME">Low Volume</option>
-          <option value="DECLINING_VOLUME">Declining Volume</option>
+          <option value="ALL">{t('All Volume Tiers')}</option>
+          <option value="VERY_HIGH_VOLUME">{t('Very High Volume (>= 2.0x RVOL)')}</option>
+          <option value="HIGH_VOLUME">{t('High Volume (1.25x - 2.0x RVOL)')}</option>
+          <option value="NORMAL_VOLUME">{t('Normal Volume')}</option>
+          <option value="LOW_VOLUME">{t('Low Volume')}</option>
+          <option value="DECLINING_VOLUME">{t('Declining Volume')}</option>
         </select>
       </div>
 
@@ -458,13 +460,13 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
               <tr>
-                <th className="py-3 px-3">Stock &amp; Sector</th>
+                <th className="py-3 px-3">{t('Stock & Sector')}</th>
                 <th 
                   className="py-3 px-3 text-right cursor-pointer hover:text-white"
                   onClick={() => handleSort('weightage')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Weight</span>
+                    <span>{t('Weight')}</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -473,7 +475,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>{feedMode === 'LIVE' ? 'Live LTP' : 'Close'}</span>
+                    <span>{feedMode === 'LIVE' ? t('Live LTP') : t('Close')}</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -482,7 +484,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   onClick={() => handleSort('price_change_pct')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Change %</span>
+                    <span>{t('Change %')}</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -492,35 +494,35 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   onClick={() => handleSort('volume')}
                 >
                   <div className="flex items-center justify-between space-x-1">
-                    <span>{feedMode === 'LIVE' ? 'Live Cumulative Vol' : 'Traded Volume'}</span>
+                    <span>{feedMode === 'LIVE' ? t('Live Cumulative Vol') : t('Traded Volume')}</span>
                     <div className="flex items-center space-x-1">
                       <span className="text-[9px] text-purple-400 lowercase font-normal">(bar meter)</span>
                       <ArrowUpDown className="w-3 h-3 text-purple-400" />
                     </div>
                   </div>
                 </th>
-                <th className="py-3 px-3 text-right">6-Day Avg Vol</th>
+                <th className="py-3 px-3 text-right">{t('6-Day Avg Vol')}</th>
                 <th 
                   className="py-3 px-3 text-right cursor-pointer hover:text-white"
                   onClick={() => handleSort('rvol')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>RVOL</span>
+                    <span>{t('RVOL')}</span>
                     <ArrowUpDown className="w-3 h-3 text-sky-400" />
                   </div>
                 </th>
-                <th className="py-3 px-3 text-center">Trend</th>
-                <th className="py-3 px-3">Classification</th>
+                <th className="py-3 px-3 text-center">{t('Trend')}</th>
+                <th className="py-3 px-3">{t('Classification')}</th>
                 <th 
                   className="py-3 px-3 text-center cursor-pointer hover:text-white"
                   onClick={() => handleSort('score')}
                 >
                   <div className="flex items-center justify-center space-x-1">
-                    <span>DMA Score</span>
+                    <span>{t('DMA Score')}</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
-                <th className="py-3 px-3">Price-Volume Signal</th>
+                <th className="py-3 px-3">{t('Price-Volume Signal')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#232E47]/60">

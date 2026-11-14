@@ -3,6 +3,7 @@ import { LineChart, Search, Sparkles, Check, X } from 'lucide-react';
 import { fetchStockDetails } from '../services/api';
 import type { StockDetailsResponse } from '../types';
 import { VolumeTrendChart } from '../components/VolumeTrendChart';
+import { useLanguage } from '../context/LanguageContext';
 
 interface StockDetailsProps {
   selectedSymbol: string;
@@ -15,6 +16,7 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
   onSymbolChange,
   availableSymbols
 }) => {
+  const { t } = useLanguage();
   const [data, setData] = useState<StockDetailsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -86,26 +88,26 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1.5">
               <span className="w-2.5 h-0.5 bg-sky-400" />
-              <span className="text-slate-300">Daily Close</span>
+              <span className="text-slate-300">{t('Daily Close')}</span>
             </div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2.5 h-0.5 bg-amber-400" />
-              <span className="text-slate-300">20 DMA</span>
+              <span className="text-slate-300">{t('20 DMA')}</span>
             </div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/80" />
-              <span className="text-slate-300">Vol (Up)</span>
+              <span className="text-slate-300">{t('Vol (Up)')}</span>
             </div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/80" />
-              <span className="text-slate-300">Vol (Down)</span>
+              <span className="text-slate-300">{t('Vol (Down)')}</span>
             </div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2.5 h-0.5 bg-purple-400" />
-              <span className="text-slate-300">20 Vol SMA</span>
+              <span className="text-slate-300">{t('20 Vol SMA')}</span>
             </div>
           </div>
-          <div className="text-slate-500 text-[11px]">Last 90 Sessions</div>
+          <div className="text-slate-500 text-[11px]">{t('Last 90 Sessions')}</div>
         </div>
 
         <svg viewBox={`0 0 ${width} ${totalHeight}`} className="w-full h-[320px] pt-2" preserveAspectRatio="none">
@@ -234,11 +236,11 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
               <div className="flex items-center space-x-2">
                 <LineChart className="w-4 h-4 text-sky-400" />
                 <h2 className="font-bold text-white text-sm">
-                  Historical Price &amp; 20 DMA Trajectory
+                  {t('Historical Price & 20 DMA Trajectory')}
                 </h2>
               </div>
               <span className="text-xs font-mono text-white">
-                Latest Close: <span className="font-bold text-emerald-400">₹{data.latest_close.toFixed(2)}</span> ({data.latest_trading_date})
+                {t('Latest Close')}: <span className="font-bold text-emerald-400">₹{data.latest_close.toFixed(2)}</span> ({data.latest_trading_date})
               </span>
             </div>
             {renderChart()}

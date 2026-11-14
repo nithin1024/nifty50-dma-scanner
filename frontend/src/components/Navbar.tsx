@@ -9,9 +9,11 @@ import {
   LineChart, 
   ShieldCheck, 
   TrendingUp, 
-  Download 
+  Download,
+  Languages
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -20,6 +22,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline }) => {
+  const { language, toggleLanguage, t } = useLanguage();
+
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
@@ -43,10 +47,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
               <div className="flex items-center space-x-2">
                 <span className="font-bold text-lg tracking-tight text-white">NIFTY 50 DMA</span>
                 <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  Institutional
+                  {t('Institutional')}
                 </span>
               </div>
-              <div className="text-xs text-slate-400">Institutional DMA + Live Volume Engine</div>
+              <div className="text-xs text-slate-400">{t('Institutional DMA + Live Volume Engine')}</div>
             </div>
           </div>
 
@@ -65,14 +69,30 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                   }`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Action & Indicators */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
+            {/* Language Toggle Button */}
+            <button
+              onClick={toggleLanguage}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${
+                language === 'te'
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 shadow-sm'
+                  : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700/60'
+              }`}
+              title={language === 'te' ? 'Switch to English' : 'తెలుగు వెర్షన్‌కి మారండి'}
+            >
+              <Languages className="w-3.5 h-3.5 text-amber-400" />
+              <span className={language === 'te' ? 'text-amber-300 font-bold' : 'text-slate-400'}>తెలుగు</span>
+              <span className="text-slate-500">/</span>
+              <span className={language === 'en' ? 'text-sky-300 font-bold' : 'text-slate-400'}>EN</span>
+            </button>
+
             <a
               href={getExcelDownloadUrl()}
               download
@@ -80,13 +100,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
               title="Download 12-sheet official daily Excel workbook"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Excel (12-Sheet)</span>
+              <span>{t('Excel (12-Sheet)')}</span>
             </a>
 
             <div className="flex items-center space-x-2 px-2.5 py-1 rounded-full bg-[#1A2234] border border-[#232E47] text-xs">
               <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
               <span className={backendOnline ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
-                {backendOnline ? 'Live 50/50' : 'Offline'}
+                {backendOnline ? t('Live 50/50') : t('Offline')}
               </span>
             </div>
           </div>
@@ -107,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </button>
             );
           })}

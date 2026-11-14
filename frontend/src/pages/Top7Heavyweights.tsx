@@ -5,6 +5,7 @@ import {
   BarChart2
 } from 'lucide-react';
 import { VolumeTrendChart } from '../components/VolumeTrendChart';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Top7HeavyweightsProps {
   heavyweights: HeavyweightsReport | null;
@@ -17,6 +18,7 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
   loading: _loading,
   onSelectStock: _onSelectStock
 }) => {
+  const { t } = useLanguage();
   const [selectedSymbol, setSelectedSymbol] = useState<string>('HDFCBANK');
 
   const stocks = heavyweights?.heavyweights || [];
@@ -32,7 +34,7 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
               <Crown className="w-5 h-5" />
             </span>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              Page 4 — Top 7 NIFTY 50 Heavyweight Stock Tracker
+              {t('Page 4 — Top 7 NIFTY 50 Heavyweight Stock Tracker')}
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
@@ -42,11 +44,11 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
 
         <div className="flex items-center space-x-4 bg-[#1A2234] px-4 py-2 rounded-lg border border-[#232E47] text-xs">
           <div>
-            <span className="text-slate-400 block text-[10px]">COMBINED WEIGHT</span>
+            <span className="text-slate-400 block text-[10px]">{t('COMBINED WEIGHT')}</span>
             <strong className="text-white text-base">{heavyweights?.combined_weightage_pct || 45.5}%</strong>
           </div>
           <div className="border-l border-[#232E47] pl-4">
-            <span className="text-slate-400 block text-[10px]">EST. INDEX CONTRIBUTION</span>
+            <span className="text-slate-400 block text-[10px]">{t('EST. INDEX CONTRIBUTION')}</span>
             <strong className={`text-base ${((heavyweights?.combined_estimated_contribution_pts || 0) >= 0) ? 'text-emerald-400' : 'text-rose-400'}`}>
               {(heavyweights?.combined_estimated_contribution_pts || 0) >= 0 ? '+' : ''}
               {(heavyweights?.combined_estimated_contribution_pts || 0).toFixed(4)} pts
@@ -102,7 +104,7 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
               {/* Price & Contribution Highlights */}
               <div className="flex items-center space-x-6">
                 <div>
-                  <div className="text-xs text-slate-400">Current LTP</div>
+                  <div className="text-xs text-slate-400">{t('Current LTP')}</div>
                   <div className="text-2xl font-black text-white">₹{selectedHw.market_data.ltp.toFixed(2)}</div>
                   <div className={`text-xs font-bold ${selectedHw.market_data.price_change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {selectedHw.market_data.price_change_pct >= 0 ? '+' : ''}{selectedHw.market_data.price_change_pct.toFixed(2)}% (₹{selectedHw.market_data.price_change.toFixed(2)})
@@ -110,13 +112,13 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
                 </div>
 
                 <div className="border-l border-[#232E47] pl-6">
-                  <div className="text-xs text-slate-400">NIFTY Contribution (pts)</div>
+                  <div className="text-xs text-slate-400">{t('NIFTY Contribution (pts)')}</div>
                   <div className={`text-2xl font-black ${selectedHw.weightage_impact.approx_index_contribution_pts >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {selectedHw.weightage_impact.approx_index_contribution_pts >= 0 ? '+' : ''}
                     {selectedHw.weightage_impact.approx_index_contribution_pts.toFixed(4)}
                   </div>
                   <div className="text-[10px] text-slate-500 font-medium uppercase">
-                    Role: {selectedHw.weightage_impact.impact_status}
+                    {t('Role')}: {selectedHw.weightage_impact.impact_status}
                   </div>
                 </div>
               </div>
@@ -125,31 +127,31 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
             {/* Quick Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-4 text-xs">
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">INDEX WEIGHTAGE</span>
+                <span className="text-slate-400 block text-[10px]">{t('INDEX WEIGHTAGE')}</span>
                 <strong className="text-white text-sm">{selectedHw.weightage.toFixed(2)}%</strong>
               </div>
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">CUMULATIVE VOLUME</span>
+                <span className="text-slate-400 block text-[10px]">{t('CUMULATIVE VOLUME')}</span>
                 <strong className="text-white text-sm">{selectedHw.market_data.cumulative_volume.toLocaleString()}</strong>
               </div>
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">6-SESSION AVG VOL</span>
+                <span className="text-slate-400 block text-[10px]">{t('6-SESSION AVG VOL')}</span>
                 <strong className="text-white text-sm">
                   {selectedHw.volume_analytics.six_session_avg_volume ? Math.round(selectedHw.volume_analytics.six_session_avg_volume).toLocaleString() : '-'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">RVOL</span>
+                <span className="text-slate-400 block text-[10px]">{t('RVOL')}</span>
                 <strong className="text-amber-400 text-sm">
                   {selectedHw.volume_analytics.rvol ? `${selectedHw.volume_analytics.rvol.toFixed(2)}x` : '-'}
                 </strong>
               </div>
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">DMA SCORE</span>
+                <span className="text-slate-400 block text-[10px]">{t('DMA SCORE')}</span>
                 <strong className="text-white text-sm">{selectedHw.technical_analytics.score}/6</strong>
               </div>
               <div className="p-3 rounded-lg bg-[#1A2234]">
-                <span className="text-slate-400 block text-[10px]">CLOSEST SUPPORT</span>
+                <span className="text-slate-400 block text-[10px]">{t('CLOSEST SUPPORT')}</span>
                 <strong className="text-emerald-400 text-sm">{selectedHw.technical_analytics.closest_support_dma || 'None'}</strong>
               </div>
             </div>
@@ -172,19 +174,19 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
             <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
               <h3 className="text-sm font-bold text-white mb-3 flex items-center space-x-2">
                 <BarChart2 className="w-4 h-4 text-sky-400" />
-                <span>Six-Session Historical Volume Table</span>
+                <span>{t('Six-Session Historical Volume Table')}</span>
               </h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase">
                   <tr>
-                    <th className="py-2.5 px-3">Session</th>
-                    <th className="py-2.5 px-3">Trading Date</th>
-                    <th className="py-2.5 px-3 text-right">Close Price</th>
-                    <th className="py-2.5 px-3 text-right">Price Change %</th>
-                    <th className="py-2.5 px-3 text-right">Traded Volume</th>
-                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3">{t('Session')}</th>
+                    <th className="py-2.5 px-3">{t('Trading Date')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Close Price')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Price Change %')}</th>
+                    <th className="py-2.5 px-3 text-right">{t('Traded Volume')}</th>
+                    <th className="py-2.5 px-3">{t('Status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#232E47]/60">
@@ -204,9 +206,9 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
                         </td>
                         <td className="py-2.5 px-3">
                           {isLatest ? (
-                            <span className="text-[10px] uppercase font-bold text-sky-400 px-1.5 py-0.5 rounded bg-sky-500/20">Latest</span>
+                            <span className="text-[10px] uppercase font-bold text-sky-400 px-1.5 py-0.5 rounded bg-sky-500/20">{t('Latest')}</span>
                           ) : (
-                            <span className="text-[10px] text-slate-500">Historical</span>
+                            <span className="text-[10px] text-slate-500">{t('Historical')}</span>
                           )}
                         </td>
                       </tr>
@@ -221,7 +223,7 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
           {/* Section D: Six DMA Technical Analytics Grid */}
           <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
             <h3 className="text-sm font-bold text-white mb-3">
-              Section D — Six Simple Moving Averages (DMAs) &amp; Distances
+              {t('Section D — Six Simple Moving Averages (DMAs) & Distances')}
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">

@@ -1,12 +1,14 @@
 import React from 'react';
 import { ShieldCheck, AlertOctagon, Database } from 'lucide-react';
 import type { DataStatusReport } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DataStatusProps {
   dataStatus: DataStatusReport | null;
 }
 
 export const DataStatus: React.FC<DataStatusProps> = ({ dataStatus }) => {
+  const { t } = useLanguage();
   const statusLevels = [
     { code: 'VERIFIED', label: 'Verified', color: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10', desc: 'Source verified, all OHLC & session continuity checks passed.' },
     { code: 'DELAYED', label: 'Delayed', color: 'text-amber-400 border-amber-500/30 bg-amber-500/10', desc: 'Data exists but exceeds freshness threshold (e.g. feed lag).' },
@@ -19,7 +21,7 @@ export const DataStatus: React.FC<DataStatusProps> = ({ dataStatus }) => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Data Provenance &amp; Verification Health</h1>
+          <h1 className="text-2xl font-bold text-white">{t('System Provenance & Historical Verification')}</h1>
           <p className="text-sm text-slate-400 mt-1">
             Real data integrity audit, exchange connectivity provenance, and quality thresholds.
           </p>
@@ -27,8 +29,8 @@ export const DataStatus: React.FC<DataStatusProps> = ({ dataStatus }) => {
 
         <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-[#121824] border border-[#232E47] text-xs">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span className="text-slate-300">Policy:</span>
-          <span className="text-emerald-400 font-semibold">Zero Synthetic Data</span>
+          <span className="text-slate-300">{t('Price Adjustment Policy')}:</span>
+          <span className="text-emerald-400 font-semibold">{t('Unadjusted Settlement Prices')}</span>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Check } from 'lucide-react';
 import type { DailyScanResponse, StockScanResult } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DailyScannerProps {
   dailyScan: DailyScanResponse | null;
@@ -13,6 +14,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
   loading: _loading,
   onSelectStock
 }) => {
+  const { t } = useLanguage();
   const [filterMode, setFilterMode] = useState<'all' | '6_6' | '5_6' | 'crossovers' | 'transitions' | 'approaching'>('6_6');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -55,13 +57,13 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl bg-[#121824] border border-[#232E47]">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Page 2 — Daily DMA Scanner</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{t('Page 2 — Daily DMA Scanner')}</h1>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Completed Session: {dailyScan?.completed_session_date || 'Analyzing'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Official completed NSE closing prices compared against 6 Simple Moving Averages: 5, 10, 20, 50, 100, and 200 DMA.
+            {t('Official completed NSE closing prices compared against 6 Simple Moving Averages: 5, 10, 20, 50, 100, and 200 DMA.')}
           </p>
         </div>
 
@@ -73,7 +75,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
               filterMode === '6_6' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-[#1A2234] text-slate-400'
             }`}
           >
-            6/6 Bullish ({dailyScan?.count_6_6 || 0})
+            {t('6/6 Bullish')} ({dailyScan?.count_6_6 || 0})
           </button>
           <button
             onClick={() => setFilterMode('5_6')}
@@ -81,7 +83,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
               filterMode === '5_6' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-[#1A2234] text-slate-400'
             }`}
           >
-            5/6 Watchlist ({dailyScan?.count_5_6 || 0})
+            {t('5/6 Watchlist')} ({dailyScan?.count_5_6 || 0})
           </button>
           <button
             onClick={() => setFilterMode('crossovers')}
@@ -89,7 +91,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
               filterMode === 'crossovers' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40' : 'bg-[#1A2234] text-slate-400'
             }`}
           >
-            Fresh Crossovers ({dailyScan?.fresh_crossovers?.length || 0})
+            {t('Fresh Crossovers')} ({dailyScan?.fresh_crossovers?.length || 0})
           </button>
           <button
             onClick={() => setFilterMode('approaching')}
@@ -97,7 +99,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
               filterMode === 'approaching' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40' : 'bg-[#1A2234] text-slate-400'
             }`}
           >
-            Approaching &le;1% ({dailyScan?.approaching_crossovers?.length || 0})
+            {t('Approaching ≤1%')} ({dailyScan?.approaching_crossovers?.length || 0})
           </button>
           <button
             onClick={() => setFilterMode('all')}
@@ -105,7 +107,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
               filterMode === 'all' ? 'bg-slate-700 text-white' : 'bg-[#1A2234] text-slate-400'
             }`}
           >
-            All 50
+            {t('All 50')}
           </button>
         </div>
       </div>
@@ -115,7 +117,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
         <input
           type="text"
-          placeholder="Filter by stock symbol or company name..."
+          placeholder={t('Filter by stock symbol or company name...')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-[#121824] border border-[#232E47] rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
@@ -128,10 +130,10 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
               <tr>
-                <th className="py-3 px-3">Symbol &amp; Company</th>
-                <th className="py-3 px-3 text-right">Close</th>
-                <th className="py-3 px-3 text-right">Chg %</th>
-                <th className="py-3 px-3 text-center">Score</th>
+                <th className="py-3 px-3">{t('Symbol & Company')}</th>
+                <th className="py-3 px-3 text-right">{t('Close')}</th>
+                <th className="py-3 px-3 text-right">{t('Chg %')}</th>
+                <th className="py-3 px-3 text-center">{t('Score')}</th>
                 {/* 6 DMAs */}
                 <th className="py-3 px-2 text-right">5 DMA</th>
                 <th className="py-3 px-2 text-right">10 DMA</th>
@@ -139,9 +141,9 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
                 <th className="py-3 px-2 text-right">50 DMA</th>
                 <th className="py-3 px-2 text-right">100 DMA</th>
                 <th className="py-3 px-2 text-right">200 DMA</th>
-                <th className="py-3 px-3">Failed DMA Hurdle / Support</th>
-                <th className="py-3 px-3 text-right">RVOL</th>
-                <th className="py-3 px-3">Combined Signal</th>
+                <th className="py-3 px-3">{t('Failed DMA Hurdle / Support')}</th>
+                <th className="py-3 px-3 text-right">{t('RVOL')}</th>
+                <th className="py-3 px-3">{t('Combined Signal')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#232E47]/60">
@@ -231,7 +233,7 @@ export const DailyScanner: React.FC<DailyScannerProps> = ({
                         stock.combined_signal?.signal === 'WEAKENING' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                         'bg-slate-800 text-slate-400'
                       }`}>
-                        {stock.combined_signal?.label || 'NEUTRAL'}
+                        {t(stock.combined_signal?.label || 'NEUTRAL')}
                       </span>
                     </td>
                   </tr>

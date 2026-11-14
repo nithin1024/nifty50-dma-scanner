@@ -8,6 +8,7 @@ import {
   Layers
 } from 'lucide-react';
 import { VolumeTrendChart } from '../components/VolumeTrendChart';
+import { useLanguage } from '../context/LanguageContext';
 
 interface VolumeAnalyticsPageProps {
   dailyScan: DailyScanResponse | null;
@@ -22,6 +23,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
   loading: _loading,
   onSelectStock
 }) => {
+  const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VERY_HIGH' | 'HIGH' | 'DIVERGENCE'>('ALL');
   const [barChartMetric, setBarChartMetric] = useState<'RVOL' | 'VOLUME'>('RVOL');
   const [inspectedSymbol, setInspectedSymbol] = useState<string>('RELIANCE');
@@ -75,7 +77,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
             <BarChart2 className="w-5 h-5" />
           </span>
           <h1 className="text-xl font-bold text-white tracking-tight">
-            Page 5 — Institutional Volume &amp; RVOL Analytics Engine
+            {t('Page 5 — Institutional Volume & RVOL Analytics Engine')}
           </h1>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -88,7 +90,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
         <div className="flex items-center justify-between text-xs font-bold text-slate-300 mb-3">
           <div className="flex items-center space-x-2">
             <Layers className="w-4 h-4 text-purple-400" />
-            <span>NIFTY 50 Volume Classification Distribution</span>
+            <span>{t('NIFTY 50 Volume Classification Distribution')}</span>
           </div>
           <span className="text-slate-400 font-mono text-[11px]">Total: {allStocks.length} Constituents</span>
         </div>
@@ -170,7 +172,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
               <BarChart2 className="w-4 h-4" />
             </span>
             <h3 className="text-sm font-bold text-white">
-              Institutional Volume Bar Graph — Top 12 Leaders
+              {t('Institutional Volume Bar Graph — Top 12 Leaders')}
             </h3>
           </div>
 
@@ -315,7 +317,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
         {/* Bullish Volume Confirmation */}
         <div className="p-4 rounded-xl bg-[#121824] border border-emerald-500/20 bg-emerald-500/[0.02]">
           <div className="text-xs font-bold text-emerald-400 flex items-center justify-between mb-3">
-            <span>BULLISH VOLUME CONFIRMATION</span>
+            <span>{t('BULLISH VOLUME CONFIRMATION')}</span>
             <TrendingUp className="w-4 h-4" />
           </div>
           <div className="space-y-2.5">
@@ -345,7 +347,7 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
         {/* Institutional Distribution / Selling Pressure */}
         <div className="p-4 rounded-xl bg-[#121824] border border-rose-500/20 bg-rose-500/[0.02]">
           <div className="text-xs font-bold text-rose-400 flex items-center justify-between mb-3">
-            <span>HIGH VOLUME SELLING (DISTRIBUTION)</span>
+            <span>{t('HIGH VOLUME SELLING (DISTRIBUTION)')}</span>
             <TrendingDown className="w-4 h-4" />
           </div>
           <div className="space-y-2.5">

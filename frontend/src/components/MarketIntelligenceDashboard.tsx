@@ -13,6 +13,7 @@ import {
   BookOpen,
   Search
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MarketIntelligenceDashboardProps {
   intelligence: MarketIntelligenceReport | null;
@@ -23,6 +24,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   intelligence,
   className = ''
 }) => {
+  const { t } = useLanguage();
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'ALL' | 'MACRO' | 'FLOWS' | 'INFLATION' | 'GLOSSARY'>('ALL');
   const [glossarySearch, setGlossarySearch] = useState('');
@@ -63,14 +65,14 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Indian Market Intelligence &amp; Macro Surveillance Suite
+                {t('Indian Market Intelligence & Macro Surveillance Suite')}
               </h2>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
                 VERIFIED MACRO
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              FII/DII Cash Activity, Nifty Index-Futures Shorts, Crude Geopolitics &amp; India CPI Inflation Breakdown
+              {t('FII/DII Cash Activity, Nifty Index-Futures Shorts, Crude Geopolitics & India CPI Inflation Breakdown')}
             </p>
           </div>
         </div>
@@ -84,7 +86,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 activeTab === 'ALL' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Intelligence
+              {t('All Intelligence')}
             </button>
             <button
               onClick={() => setActiveTab('FLOWS')}
@@ -92,7 +94,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 activeTab === 'FLOWS' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
               }`}
             >
-              FII / DII
+              {t('FII / DII')}
             </button>
             <button
               onClick={() => setActiveTab('INFLATION')}
@@ -100,7 +102,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 activeTab === 'INFLATION' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
               }`}
             >
-              CPI Inflation
+              {t('CPI Inflation')}
             </button>
             <button
               onClick={() => setActiveTab('GLOSSARY')}
@@ -108,7 +110,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 activeTab === 'GLOSSARY' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Macro Glossary (21)
+              {t('Macro Glossary (21)')}
             </button>
           </div>
 
@@ -129,7 +131,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  1. Confirmed Closing Levels &amp; Global Geopolitical Benchmarks
+                  {t('1. Confirmed Closing Levels & Global Geopolitical Benchmarks')}
                 </span>
                 <span className="text-[11px] font-mono text-slate-500">
                   Ref Date: {market_closing_levels.nifty_50.date}
@@ -205,7 +207,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center space-x-2">
                       <TrendingUp className="w-4 h-4 text-emerald-400" />
-                      <span>2. FII / DII Cash Activity — Latest Session</span>
+                      <span>{t('2. FII / DII Cash Activity — Latest Session')}</span>
                     </h3>
                     <span className="text-[11px] text-slate-400 font-mono">
                       {fii_dii_cash_activity.session_date}
@@ -219,23 +221,23 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   {/* FII Net Buying */}
                   <div className="p-3.5 rounded-lg bg-[#121824] border border-emerald-500/30">
-                    <span className="text-[10px] text-slate-400 font-medium uppercase block">FII Net Buying</span>
+                    <span className="text-[10px] text-slate-400 font-medium uppercase block">{t('FII Net Buying')}</span>
                     <div className="text-xl font-black text-emerald-400 font-mono mt-0.5">
                       +₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr
                     </div>
                     <span className="text-[10px] font-bold text-emerald-400 block mt-1">
-                      Strong Foreign Buying
+                      {t('Strong Foreign Buying')}
                     </span>
                   </div>
 
                   {/* DII Net Selling */}
                   <div className="p-3.5 rounded-lg bg-[#121824] border border-rose-500/30">
-                    <span className="text-[10px] text-slate-400 font-medium uppercase block">DII Net Selling</span>
+                    <span className="text-[10px] text-slate-400 font-medium uppercase block">{t('DII Net Selling')}</span>
                     <div className="text-xl font-black text-rose-400 font-mono mt-0.5">
                       -₹{Math.abs(fii_dii_cash_activity.dii_net_crores).toLocaleString()} Cr
                     </div>
                     <span className="text-[10px] font-bold text-rose-400 block mt-1">
-                      Domestic Institutional Selling
+                      {t('Domestic Institutional Selling')}
                     </span>
                   </div>
                 </div>
@@ -265,14 +267,14 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center space-x-2">
                       <TrendingDown className="w-4 h-4 text-purple-400" />
-                      <span>3. FII Nifty Shorts — Index Futures Positioning</span>
+                      <span>{t('3. FII Nifty Shorts — Index Futures Positioning')}</span>
                     </h3>
                     <span className="text-[11px] text-slate-400 font-mono">
                       {fii_derivatives_positioning.session_date}
                     </span>
                   </div>
                   <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold font-mono">
-                    Short-Covering Fuel
+                    {t('Short-Covering Fuel')}
                   </span>
                 </div>
 
@@ -290,7 +292,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     {/* Badge */}
                     <div className="text-right">
                       <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 inline-block">
-                        Net Bearish Exposure Reduced
+                        {t('Net Bearish Exposure Reduced')}
                       </span>
                       <div className="text-[10px] text-slate-400 font-mono mt-1">
                         {fii_derivatives_positioning.change_description}
@@ -331,7 +333,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                       <AlertTriangle className="w-4 h-4" />
                     </span>
                     <h3 className="text-sm font-bold text-white">
-                      4. India CPI Inflation Category Breakdown (% YoY)
+                      {t('4. India CPI Inflation Category Breakdown (% YoY)')}
                     </h3>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -342,7 +344,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="flex items-center space-x-3 text-xs">
                   <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono font-bold">
                     <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>RBI Ceiling: 6.0%</span>
+                    <span>{t('RBI Ceiling: 6.0%')}</span>
                   </div>
                   <span className="text-[11px] text-slate-500 font-mono">
                     Source: {cpi_inflation_breakdown.source}
@@ -353,19 +355,19 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               {/* Highlights Chips */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-5 text-[11px]">
                 <div className="p-2.5 rounded-lg bg-[#121824] border border-rose-500/30 text-rose-300">
-                  <strong className="block text-white">RBI Ceiling Breached</strong>
+                  <strong className="block text-white">{t('RBI Ceiling Breached')}</strong>
                   Headline inflation crossed upper band of 6.00%
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#121824] border border-rose-500/30 text-rose-300">
-                  <strong className="block text-white">6 States &gt; 7%</strong>
+                  <strong className="block text-white">{t('6 States > 7%')}</strong>
                   Six major states recorded inflation above 7.0%
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#121824] border border-amber-500/30 text-amber-300">
-                  <strong className="block text-white">Onion Surge +116%</strong>
+                  <strong className="block text-white">{t('Onion Surge +116%')}</strong>
                   Vegetable and essential food items spike
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#121824] border border-purple-500/30 text-purple-300">
-                  <strong className="block text-white">Double-Digit Pockets</strong>
+                  <strong className="block text-white">{t('Double-Digit Pockets')}</strong>
                   Personal Care (10.14%) &amp; Restaurants (10.06%)
                 </div>
               </div>
@@ -378,7 +380,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   style={{ left: `calc(${rbiCeilingPct}% + 180px)` }}
                 >
                   <span className="absolute -top-3 -translate-x-1/2 px-1.5 py-0.5 rounded bg-rose-600 text-white font-mono text-[9px] font-bold shadow-md whitespace-nowrap">
-                    RBI Ceiling (6.0%)
+                    {t('RBI Ceiling (6.0%)')}
                   </span>
                 </div>
 
@@ -437,15 +439,15 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-1.5">
                     <span className="w-3 h-3 rounded bg-rose-500 inline-block"></span>
-                    <span>Above 6.0% RBI Tolerance Band</span>
+                    <span>{t('Above 6.0% RBI Tolerance Band')}</span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <span className="w-3 h-3 rounded bg-sky-500 inline-block"></span>
-                    <span>4.0% - 6.0% Target Band</span>
+                    <span>{t('4.0% - 6.0% Target Band')}</span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <span className="w-3 h-3 rounded bg-slate-500 inline-block"></span>
-                    <span>Sub-4.0% Low Inflation</span>
+                    <span>{t('Sub-4.0% Low Inflation')}</span>
                   </div>
                 </div>
                 <div className="text-slate-500 font-mono">
@@ -466,7 +468,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                       <BookOpen className="w-4 h-4" />
                     </span>
                     <h3 className="text-sm font-bold text-white">
-                      5. Macroeconomic Intelligence &amp; National Accounts Cheat Sheet (21 Core Terms)
+                      {t('5. Macroeconomic Intelligence & National Accounts Cheat Sheet (21 Core Terms)')}
                     </h3>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -479,7 +481,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search term or definition..."
+                    placeholder={t('Search 21 macro terms (GDP, GVA, Nominal, Real, PFCE, Deflator...)...')}
                     value={glossarySearch}
                     onChange={(e) => setGlossarySearch(e.target.value)}
                     className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
@@ -492,9 +494,9 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
                     <tr>
-                      <th className="py-2.5 px-3 min-w-[130px]">Term</th>
-                      <th className="py-2.5 px-3">One-Sentence Definition</th>
-                      <th className="py-2.5 px-3 min-w-[180px]">Remember This</th>
+                      <th className="py-2.5 px-3 min-w-[130px]">{t('Term')}</th>
+                      <th className="py-2.5 px-3">{t('One-Sentence Definition')}</th>
+                      <th className="py-2.5 px-3 min-w-[180px]">{t('Remember This')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#232E47]/60">
