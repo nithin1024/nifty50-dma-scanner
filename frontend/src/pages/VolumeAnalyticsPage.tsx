@@ -7,6 +7,7 @@ import {
   Zap,
   Layers
 } from 'lucide-react';
+import { VolumeTrendChart } from '../components/VolumeTrendChart';
 
 interface VolumeAnalyticsPageProps {
   dailyScan: DailyScanResponse | null;
@@ -23,8 +24,10 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VERY_HIGH' | 'HIGH' | 'DIVERGENCE'>('ALL');
   const [barChartMetric, setBarChartMetric] = useState<'RVOL' | 'VOLUME'>('RVOL');
+  const [inspectedSymbol, setInspectedSymbol] = useState<string>('RELIANCE');
 
   const allStocks = dailyScan?.all_results || [];
+  const inspectedStock = allStocks.find(s => s.symbol === inspectedSymbol) || allStocks[0];
 
   // RVOL Leaderboard
   const rvolSorted = [...allStocks].sort((a, b) => (b.rvol || 0) - (a.rvol || 0));
@@ -373,6 +376,21 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
         </div>
       </div>
 
+      {/* Selected Stock Dedicated Volume Trend Card */}
+      {inspectedStock && (
+        <VolumeTrendChart 
+          title="Stock Volume Trend"
+          symbol={inspectedStock.symbol}
+          sessions={(inspectedStock.six_session_history || []).map(s => ({
+            date: s.trading_date,
+            volume: s.traded_volume,
+            price_change_pct: s.price_change_pct,
+            close_price: s.close_price
+          }))}
+          avgVolume={inspectedStock.six_session_avg_volume || undefined}
+        />
+      )}
+
       {/* Filter Tabs */}
       <div className="flex space-x-2 border-b border-[#232E47] pb-2 text-xs">
         <button
@@ -436,8 +454,13 @@ export const VolumeAnalyticsPage: React.FC<VolumeAnalyticsPageProps> = ({
                 return (
                   <tr 
                     key={stock.symbol}
-                    onClick={() => onSelectStock(stock.symbol)}
-                    className="hover:bg-slate-800/40 cursor-pointer transition-colors"
+                    onClick={() => {
+                      setInspectedSymbol(stock.symbol);
+                      onSelectStock(stock.symbol);
+                    }}
+                    className={`hover:bg-slate-800/40 cursor-pointer transition-colors ${
+                      inspectedSymbol === stock.symbol ? 'bg-purple-500/10' : ''
+                    }`}
                   >
                     <td className="py-2.5 px-3 font-bold text-white">{stock.symbol}</td>
                     <td className="py-2.5 px-3 text-slate-400 truncate max-w-[160px]">{stock.company_name}</td>

@@ -4,6 +4,7 @@ import {
   Crown, 
   BarChart2
 } from 'lucide-react';
+import { VolumeTrendChart } from '../components/VolumeTrendChart';
 
 interface Top7HeavyweightsProps {
   heavyweights: HeavyweightsReport | null;
@@ -154,104 +155,25 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
             </div>
           </div>
 
-          {/* Section B: Six-Session Volume History Table & Bar Graph */}
-          <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47]/70 gap-2 mb-4">
-              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+          {/* Section B: Volume Trend Bar Chart (Exact Institutional Style) & Six-Session History */}
+          <div className="space-y-4">
+            <VolumeTrendChart 
+              title="Volume Trend"
+              symbol={selectedHw.symbol}
+              sessions={(selectedHw.six_session_history || []).map(s => ({
+                date: s.trading_date,
+                volume: s.traded_volume,
+                price_change_pct: s.price_change_pct,
+                close_price: s.close_price
+              }))}
+              avgVolume={selectedHw.volume_analytics.six_session_avg_volume || undefined}
+            />
+
+            <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center space-x-2">
                 <BarChart2 className="w-4 h-4 text-sky-400" />
-                <span>Section B — Six-Session Volume Bar Graph &amp; History</span>
+                <span>Six-Session Historical Volume Table</span>
               </h3>
-              <div className="flex items-center space-x-3 text-xs text-slate-400">
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-3 h-3 rounded bg-emerald-500 inline-block"></span>
-                  <span>Price Up Day</span>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-3 h-3 rounded bg-rose-500 inline-block"></span>
-                  <span>Price Down Day</span>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="w-4 h-0.5 border-t-2 border-dashed border-amber-400 inline-block"></span>
-                  <span>6-Session Avg</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Visual 6-Session Bar Graph */}
-            {(() => {
-              const hist = selectedHw.six_session_history || [];
-              const avgVol = selectedHw.volume_analytics.six_session_avg_volume || 0;
-              const maxVol = Math.max(...hist.map(s => s.traded_volume), avgVol, 1) * 1.15;
-              const avgPct = Math.min(100, Math.max(5, (avgVol / maxVol) * 100));
-
-              return (
-                <div className="relative bg-[#0B0E14] rounded-xl p-4 border border-[#232E47]/60 mb-5">
-                  <div className="text-[11px] font-mono text-slate-400 mb-2 flex justify-between">
-                    <span>DAILY TRADED VOLUME (BARS) vs 6-SESSION BENCHMARK</span>
-                    <span className="text-amber-400 font-bold">
-                      6-Session Avg: {(avgVol / 1000000).toFixed(2)}M ({Math.round(avgVol).toLocaleString()})
-                    </span>
-                  </div>
-
-                  {/* Graph Canvas */}
-                  <div className="relative h-48 flex items-end justify-around gap-2 pt-6 pb-6 border-b border-[#232E47]">
-                    {/* Horizontal 6-session average benchmark line */}
-                    <div 
-                      className="absolute left-0 right-0 border-b-2 border-dashed border-amber-400/80 pointer-events-none z-10"
-                      style={{ bottom: `${avgPct}%` }}
-                    >
-                      <span className="absolute right-2 -top-5 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
-                        Avg: {(avgVol / 1000000).toFixed(2)}M
-                      </span>
-                    </div>
-
-                    {/* Bars for the 6 sessions */}
-                    {hist.map((s, idx) => {
-                      const isLatest = idx === hist.length - 1;
-                      const isPos = s.price_change_pct >= 0;
-                      const barHeightPct = Math.min(100, Math.max(8, (s.traded_volume / maxVol) * 100));
-                      const volFormatted = (s.traded_volume / 1000000).toFixed(2) + 'M';
-
-                      return (
-                        <div key={s.trading_date} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                          {/* Value label on top of bar */}
-                          <div className="mb-1 text-center transition-transform group-hover:-translate-y-1">
-                            <span className={`block font-mono text-[11px] font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              {volFormatted}
-                            </span>
-                            <span className={`text-[10px] font-mono block ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              {isPos ? '+' : ''}{s.price_change_pct.toFixed(2)}%
-                            </span>
-                          </div>
-
-                          {/* The Bar */}
-                          <div 
-                            className={`w-full max-w-[54px] rounded-t-md transition-all duration-300 relative shadow-sm ${
-                              isPos 
-                                ? 'bg-gradient-to-t from-emerald-600/80 to-emerald-400 group-hover:from-emerald-500 group-hover:to-emerald-300' 
-                                : 'bg-gradient-to-t from-rose-600/80 to-rose-400 group-hover:from-rose-500 group-hover:to-rose-300'
-                            } ${isLatest ? 'ring-2 ring-sky-400/60 shadow-sky-500/20' : ''}`}
-                            style={{ height: `${barHeightPct}%` }}
-                          >
-                            {isLatest && (
-                              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-1 py-0.2 rounded bg-sky-500 text-slate-900 font-black text-[8px] uppercase tracking-wider">
-                                Latest
-                              </span>
-                            )}
-                          </div>
-
-                          {/* X-Axis labels below bar */}
-                          <div className="mt-2 text-center">
-                            <div className="text-[10px] font-mono text-slate-300 font-semibold">{s.trading_date.slice(5)}</div>
-                            <div className="text-[9px] text-slate-500">Sess {s.session_index}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
@@ -294,6 +216,7 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
               </table>
             </div>
           </div>
+        </div>
 
           {/* Section D: Six DMA Technical Analytics Grid */}
           <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Search, Sparkles, Check, X } from 'lucide-react';
 import { fetchStockDetails } from '../services/api';
 import type { StockDetailsResponse } from '../types';
+import { VolumeTrendChart } from '../components/VolumeTrendChart';
 
 interface StockDetailsProps {
   selectedSymbol: string;
@@ -242,6 +243,22 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
             </div>
             {renderChart()}
           </div>
+
+          {/* Volume Trend Bar Chart (Matching Screenshot) */}
+          <VolumeTrendChart 
+            title="Volume Trend"
+            symbol={selectedSymbol}
+            sessions={(data.chart_data || []).slice(-6).map((c, i, arr) => {
+              const prevClose = i > 0 ? arr[i - 1].close : c.open;
+              const chgPct = prevClose > 0 ? ((c.close - prevClose) / prevClose) * 100 : 0;
+              return {
+                date: c.time,
+                volume: c.volume,
+                price_change_pct: chgPct,
+                close_price: c.close
+              };
+            })}
+          />
 
           {/* 6 DMA Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
