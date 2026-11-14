@@ -58,8 +58,8 @@ export async function triggerLiveScanRefresh(): Promise<LiveScanResponse> {
   return response.json();
 }
 
-export async function fetchStockDetails(symbol: string): Promise<StockDetailsResponse> {
-  const response = await fetch(`${API_BASE}/stock-details/${encodeURIComponent(symbol)}`);
+export async function fetchStockDetails(symbol: string, timeframe: string = '1y'): Promise<StockDetailsResponse> {
+  const response = await fetch(`${API_BASE}/stock-details/${encodeURIComponent(symbol)}?timeframe=${encodeURIComponent(timeframe)}`);
   if (!response.ok) {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
   }

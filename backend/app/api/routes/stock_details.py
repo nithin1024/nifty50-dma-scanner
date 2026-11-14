@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any
 from app.services.historical_data_service import historical_data_service
 from app.services.constituents_service import constituents_service
@@ -9,14 +9,23 @@ router = APIRouter(prefix="/stock-details", tags=["Stock DMA Details"])
 
 
 @router.get("/{symbol}", response_model=Dict[str, Any])
-async def get_stock_details(symbol: str):
-    """Retrieve detailed DMA metrics, latest prices, and chart data for a stock."""
+async def get_stock_details(
+    symbol: str,
+    timeframe: str = Query("1y", description="Timeframe: 1m, 3m, 6m, 1y, 5y")
+):
+    """Retrieve detailed DMA metrics, latest prices, and chart data for a stock with 5-year multi-timeframe inspect."""
     constituent = constituents_service.get_by_symbol(symbol)
     if not constituent:
         raise HTTPException(status_code=404, detail=f"Stock symbol '{symbol}' not found in NIFTY 50.")
 
     hist = await historical_data_service.fetch_symbol_history(symbol)
     candles = hist.get("candles", [])
+
+    clean_tf = timeframe.lower().strip()
+    if clean_tf in ("5y", "5-year", "5years"):
+        multi_candles = historical_data_service.get_multi_year_candles(symbol, years=5)
+        if multi_candles:
+            candles = multi_candles
 
     if not candles:
         return {

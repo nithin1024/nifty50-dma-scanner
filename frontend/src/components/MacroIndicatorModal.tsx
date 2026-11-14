@@ -68,10 +68,6 @@ export const MacroIndicatorModal: React.FC<MacroIndicatorModalProps> = ({
   const showEn = languageMode === 'en' || languageMode === 'bilingual';
   const showTe = languageMode === 'te' || languageMode === 'bilingual';
 
-  const maxChartVal = Math.max(...(topic.chart_series?.map(s => s.value) || [10]));
-  const minChartVal = Math.min(...(topic.chart_series?.map(s => s.value) || [0]));
-  const range = maxChartVal - minChartVal || 1;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm overflow-y-auto">
       <div className="bg-[#121824] border border-[#232E47] rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95">
@@ -160,34 +156,116 @@ export const MacroIndicatorModal: React.FC<MacroIndicatorModalProps> = ({
             </div>
           </div>
 
-          {/* Historical Trend Line Chart */}
+          {/* Historical Trend Line Graph with Data Dots (Matching Image 1) */}
           {topic.chart_series && topic.chart_series.length > 0 && (
             <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47]">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2 text-white font-bold">
-                  <BarChart3 className="w-4 h-4 text-emerald-400" />
-                  <span>Historical Observation Trendline</span>
+                  <BarChart3 className="w-4 h-4 text-sky-400" />
+                  <span>Historical Observation Trendline (Line Graph with Data Dots)</span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-500">Unit: {topic.unit}</span>
+                <span className="text-[11px] font-mono text-slate-400">Unit: {topic.unit}</span>
               </div>
 
-              {/* Simple Responsive SVG Line Chart */}
-              <div className="h-40 w-full flex items-end space-x-3 pt-6 pb-2 px-4 bg-[#121824] rounded-lg border border-[#232E47]/60">
-                {topic.chart_series.map((point, idx) => {
-                  const normalizedH = Math.max(10, Math.min(100, ((point.value - minChartVal) / range) * 100));
+              {/* Responsive SVG Line Graph */}
+              <div className="h-48 w-full bg-[#121824] rounded-lg border border-[#232E47]/60 p-2">
+                {(() => {
+                  const svgWidth = 800;
+                  const svgHeight = 180;
+                  const padX = 60;
+                  const padY = 25;
+                  const plotW = svgWidth - (padX * 2);
+                  const plotH = svgHeight - (padY * 2);
+
+                  const values = topic.chart_series.map(s => s.value);
+                  const localMax = Math.max(...values);
+                  const localMin = Math.min(...values);
+                  const localRange = (localMax - localMin) || 1;
+
+                  const count = topic.chart_series.length;
+                  const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2);
+                  const getY = (val: number) => padY + plotH - ((val - localMin) / localRange) * (plotH - 10);
+
+                  const pointsStr = topic.chart_series.map((pt, i) => `${getX(i)},${getY(pt.value)}`).join(' ');
+                  const areaPoints = `${getX(0)},${svgHeight - padY} ${pointsStr} ${getX(count - 1)},${svgHeight - padY}`;
+
                   return (
-                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                      <div className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity mb-1 font-bold">
-                        {point.value}%
-                      </div>
-                      <div 
-                        className="w-full max-w-[28px] bg-gradient-to-t from-sky-600 to-emerald-400 rounded-t transition-all group-hover:from-sky-500 group-hover:to-emerald-300"
-                        style={{ height: `${normalizedH}%` }}
+                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="macroLineGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Reference Grid lines */}
+                      <line x1={padX} y1={padY} x2={svgWidth - padX} y2={padY} stroke="#232E47" strokeDasharray="3 3" />
+                      <line x1={padX} y1={padY + plotH / 2} x2={svgWidth - padX} y2={padY + plotH / 2} stroke="#232E47" strokeDasharray="3 3" />
+                      <line x1={padX} y1={svgHeight - padY} x2={svgWidth - padX} y2={svgHeight - padY} stroke="#232E47" strokeDasharray="3 3" />
+
+                      {/* Y-Axis scale text */}
+                      <text x={padX - 8} y={padY + 4} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace">{localMax}%</text>
+                      <text x={padX - 8} y={padY + plotH / 2 + 4} textAnchor="end" fill="#64748B" fontSize="9" fontFamily="monospace">{((localMax + localMin) / 2).toFixed(1)}%</text>
+                      <text x={padX - 8} y={svgHeight - padY + 4} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace">{localMin}%</text>
+
+                      {/* Shaded Area under Curve */}
+                      <polygon points={areaPoints} fill="url(#macroLineGrad)" />
+
+                      {/* Main Line */}
+                      <polyline
+                        points={pointsStr}
+                        fill="none"
+                        stroke="#38BDF8"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
-                      <span className="text-[10px] font-mono text-slate-400 mt-1.5">{point.period}</span>
-                    </div>
+
+                      {/* Data Dots with Numeric Callout and Tooltip */}
+                      {topic.chart_series.map((pt, i) => {
+                        const cx = getX(i);
+                        const cy = getY(pt.value);
+                        return (
+                          <g key={`macro-pt-${i}`} className="group cursor-pointer">
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r="4.5"
+                              fill="#38BDF8"
+                              stroke="#0B0E14"
+                              strokeWidth="2"
+                              className="transition-all hover:r-6"
+                            />
+                            {/* Value label above node */}
+                            <text
+                              x={cx}
+                              y={cy - 8}
+                              textAnchor="middle"
+                              fill="#F8FAFC"
+                              fontSize="9"
+                              fontFamily="monospace"
+                              fontWeight="bold"
+                            >
+                              {pt.value}%
+                            </text>
+                            {/* Period label below on X axis */}
+                            <text
+                              x={cx}
+                              y={svgHeight - 6}
+                              textAnchor="middle"
+                              fill="#94A3B8"
+                              fontSize="9"
+                              fontFamily="monospace"
+                            >
+                              {pt.period}
+                            </text>
+                            <title>{`${pt.period}: ${pt.value}%`}</title>
+                          </g>
+                        );
+                      })}
+                    </svg>
                   );
-                })}
+                })()}
               </div>
             </div>
           )}

@@ -381,96 +381,154 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   </div>
                 </div>
 
-                {/* SVG Visual Bars around Zero-Line */}
-                <div className="relative h-48 w-full flex items-center bg-[#0B0E14] rounded-lg border border-[#232E47]/60 px-4 py-2">
-                  {/* Zero Baseline Line */}
-                  <div className="absolute left-0 right-0 top-1/2 border-b border-dashed border-slate-600 z-10 pointer-events-none">
-                    <span className="absolute -left-1 -top-2.5 text-[9px] font-mono text-slate-500">₹0</span>
+                {/* SVG Visual Dual-Line Graph with Data Dots around Zero-Line (Matching Image 1 & 2) */}
+                <div className="relative w-full bg-[#0B0E14] rounded-lg border border-[#232E47]/60 p-3 overflow-hidden">
+                  {/* Tooltip & Legend Header */}
+                  <div className="flex flex-wrap items-center justify-between text-xs font-mono pb-2 border-b border-[#232E47]/40 gap-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-400" />
+                        <span className="text-white font-semibold">FII Net Cash (₹ Cr)</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="w-3 h-3 rounded-full bg-sky-400 border border-sky-300" />
+                        <span className="text-white font-semibold">DII Net Cash (₹ Cr)</span>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Zero-Baseline Dual Line Graph • Hover points for exact amounts
+                    </div>
                   </div>
 
-                  <div className="w-full h-full flex items-center space-x-2 pt-2 pb-2">
-                    {chronologicalHistory.map((s, idx) => {
-                      const fiiH = Math.min(80, (Math.abs(s.fii_net) / maxAbsFlow) * 80);
-                      const diiH = Math.min(80, (Math.abs(s.dii_net) / maxAbsFlow) * 80);
-                      const isFiiPositive = s.fii_net >= 0;
-                      const isDiiPositive = s.dii_net >= 0;
+                  {/* SVG Line Graph */}
+                  <div className="relative w-full h-56 pt-2">
+                    {(() => {
+                      const svgWidth = 800;
+                      const svgHeight = 200;
+                      const padX = 50;
+                      const padY = 20;
+                      const plotWidth = svgWidth - (padX * 2);
+                      const plotHeight = svgHeight - (padY * 2);
+                      const zeroY = padY + (plotHeight / 2);
+
+                      const count = chronologicalHistory.length;
+                      const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotWidth : plotWidth / 2);
+                      const getY = (val: number) => {
+                        const scaled = (val / (maxAbsFlow || 1)) * (plotHeight / 2 - 5);
+                        return zeroY - scaled;
+                      };
+
+                      const fiiPoints = chronologicalHistory.map((s, i) => `${getX(i)},${getY(s.fii_net)}`).join(' ');
+                      const diiPoints = chronologicalHistory.map((s, i) => `${getX(i)},${getY(s.dii_net)}`).join(' ');
 
                       return (
-                        <div key={idx} className="flex-1 flex flex-col items-center h-full justify-center group relative">
-                          {/* Tooltip */}
-                          <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-[9px] font-mono z-30 pointer-events-none whitespace-nowrap shadow-xl">
-                            {s.date}: FII {isFiiPositive ? '+' : ''}{s.fii_net} Cr | DII {isDiiPositive ? '+' : ''}{s.dii_net} Cr
-                          </div>
+                        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                          {/* Grid Lines */}
+                          <line x1={padX} y1={padY + 5} x2={svgWidth - padX} y2={padY + 5} stroke="#232E47" strokeDasharray="3 3" />
+                          <line x1={padX} y1={svgHeight - padY - 5} x2={svgWidth - padX} y2={svgHeight - padY - 5} stroke="#232E47" strokeDasharray="3 3" />
 
-                          <div className="w-full flex justify-center space-x-1 h-full items-center">
-                            {/* FII Bar */}
-                            <div className="w-1/2 flex flex-col items-center h-full justify-center">
-                              {isFiiPositive ? (
-                                <div className="h-1/2 flex flex-col justify-end w-full">
-                                  <div 
-                                    className="w-full bg-emerald-500 rounded-t transition-all group-hover:bg-emerald-400"
-                                    style={{ height: `${fiiH}%` }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="h-1/2 flex flex-col justify-start w-full">
-                                  <div 
-                                    className="w-full bg-rose-500 rounded-b transition-all group-hover:bg-rose-400"
-                                    style={{ height: `${fiiH}%` }}
-                                  />
-                                </div>
-                              )}
-                            </div>
+                          {/* Zero Baseline with Label */}
+                          <line x1={padX} y1={zeroY} x2={svgWidth - padX} y2={zeroY} stroke="#475569" strokeWidth="1.5" strokeDasharray="4 3" />
+                          <text x={padX - 8} y={zeroY + 3} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace" fontWeight="bold">₹0</text>
+                          <text x={padX - 8} y={padY + 10} textAnchor="end" fill="#10B981" fontSize="9" fontFamily="monospace">+{Math.round(maxAbsFlow).toLocaleString()}</text>
+                          <text x={padX - 8} y={svgHeight - padY} textAnchor="end" fill="#F43F5E" fontSize="9" fontFamily="monospace">-{Math.round(maxAbsFlow).toLocaleString()}</text>
 
-                            {/* DII Bar */}
-                            <div className="w-1/2 flex flex-col items-center h-full justify-center">
-                              {isDiiPositive ? (
-                                <div className="h-1/2 flex flex-col justify-end w-full">
-                                  <div 
-                                    className="w-full bg-sky-500 rounded-t transition-all group-hover:bg-sky-400"
-                                    style={{ height: `${diiH}%` }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="h-1/2 flex flex-col justify-start w-full">
-                                  <div 
-                                    className="w-full bg-amber-500 rounded-b transition-all group-hover:bg-amber-400"
-                                    style={{ height: `${diiH}%` }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          {/* FII Line */}
+                          <polyline
+                            points={fiiPoints}
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
 
-                          <span className="text-[9px] font-mono text-slate-500 mt-1 truncate max-w-full">
-                            {s.date.split(' ')[0]} {s.date.split(' ')[1]}
-                          </span>
-                        </div>
+                          {/* DII Line */}
+                          <polyline
+                            points={diiPoints}
+                            fill="none"
+                            stroke="#38BDF8"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+
+                          {/* FII Data Dots */}
+                          {chronologicalHistory.map((s, i) => {
+                            const cx = getX(i);
+                            const cy = getY(s.fii_net);
+                            const isPositive = s.fii_net >= 0;
+                            return (
+                              <g key={`fii-dot-${i}`} className="group cursor-pointer">
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r="4.5"
+                                  fill="#10B981"
+                                  stroke="#0B0E14"
+                                  strokeWidth="2"
+                                  className="transition-all hover:r-6"
+                                />
+                                <title>{`${s.date}\nFII Net: ${isPositive ? '+' : ''}${s.fii_net.toLocaleString()} Cr\nDII Net: ${s.dii_net >= 0 ? '+' : ''}${s.dii_net.toLocaleString()} Cr`}</title>
+                              </g>
+                            );
+                          })}
+
+                          {/* DII Data Dots */}
+                          {chronologicalHistory.map((s, i) => {
+                            const cx = getX(i);
+                            const cy = getY(s.dii_net);
+                            return (
+                              <g key={`dii-dot-${i}`} className="group cursor-pointer">
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r="4.5"
+                                  fill="#38BDF8"
+                                  stroke="#0B0E14"
+                                  strokeWidth="2"
+                                  className="transition-all hover:r-6"
+                                />
+                                <title>{`${s.date}\nDII Net: ${s.dii_net >= 0 ? '+' : ''}${s.dii_net.toLocaleString()} Cr\nFII Net: ${s.fii_net >= 0 ? '+' : ''}${s.fii_net.toLocaleString()} Cr`}</title>
+                              </g>
+                            );
+                          })}
+
+                          {/* Date Labels below */}
+                          {chronologicalHistory.map((s, i) => {
+                            const cx = getX(i);
+                            return (
+                              <text
+                                key={`date-${i}`}
+                                x={cx}
+                                y={svgHeight - 4}
+                                textAnchor="middle"
+                                fill="#64748B"
+                                fontSize="9"
+                                fontFamily="monospace"
+                              >
+                                {s.date.split(' ')[0]} {s.date.split(' ')[1]}
+                              </text>
+                            );
+                          })}
+                        </svg>
                       );
-                    })}
+                    })()}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 font-mono">
                   <div className="flex items-center space-x-3">
                     <span className="flex items-center space-x-1">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>
-                      <span>FII Buying</span>
+                      <span className="w-2.5 h-0.5 bg-emerald-500" />
+                      <span>FII Daily Net Flow</span>
                     </span>
                     <span className="flex items-center space-x-1">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span>
-                      <span>FII Selling</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block"></span>
-                      <span>DII Buying</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>
-                      <span>DII Selling</span>
+                      <span className="w-2.5 h-0.5 bg-sky-400" />
+                      <span>DII Daily Net Flow</span>
                     </span>
                   </div>
-                  <span>Zero-line centered scaling</span>
+                  <span>Scale: Scaled symmetrically around ₹0 baseline</span>
                 </div>
               </div>
             </div>
@@ -519,21 +577,140 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 </div>
               </div>
 
-              {/* FII Net Index-Futures Shorts — Sharp Decline Progress Track (Image 3) */}
-              <div className="p-4 rounded-xl bg-[#171F32] border border-[#232E47] text-xs">
-                <div className="flex justify-between items-center mb-1 text-[11px] font-mono">
-                  <span className="text-slate-400">All-Time Peak Shorts: 225,000 contracts</span>
-                  <span className="text-emerald-400 font-bold">Current Shorts: 70,413 contracts (-68.7% Deleveraged)</span>
+              {/* FII Net Index-Futures Shorts — Sharp Decline Historical Line Graph (Exact Replica of Image 1) */}
+              <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-2 border-b border-[#232E47]/60 gap-2 font-mono">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-400" />
+                      <span>FII Net Index-Futures Shorts — Sharp Decline</span>
+                    </h4>
+                    <span className="text-[10px] text-slate-400">Absolute number of net-short contracts, end of session</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                      Unwound: -71.7% from 225,000 Peak
+                    </span>
+                  </div>
                 </div>
-                <div className="w-full h-3 bg-[#0B0E14] rounded-full overflow-hidden border border-[#232E47] mb-2">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 via-sky-400 to-emerald-300 rounded-full"
-                    style={{ width: '68.7%' }}
-                  />
+
+                {/* SVG Historical Line Graph Matching Image 1 */}
+                <div className="relative w-full h-48 pt-2">
+                  {(() => {
+                    const shortsHistory = [
+                      { date: '28 Oct', contracts: 225000, label: '225,000 (Peak)' },
+                      { date: '03 Nov', contracts: 180000, label: '180,000' },
+                      { date: '07 Nov', contracts: 126900, label: '126,900' },
+                      { date: '09 Nov', contracts: 90741, label: '90,741' },
+                      { date: '11 Nov', contracts: 70413, label: '70,413' },
+                      { date: '14 Nov', contracts: 63650, label: '63,650 (Current)' }
+                    ];
+
+                    const svgWidth = 800;
+                    const svgHeight = 180;
+                    const padX = 70;
+                    const padY = 25;
+                    const plotW = svgWidth - (padX * 2);
+                    const plotH = svgHeight - (padY * 2);
+
+                    const maxVal = 240000;
+                    const minVal = 40000;
+                    const range = maxVal - minVal;
+
+                    const getX = (i: number) => padX + (i / (shortsHistory.length - 1)) * plotW;
+                    const getY = (val: number) => padY + plotH - ((val - minVal) / range) * plotH;
+
+                    const pointsStr = shortsHistory.map((pt, i) => `${getX(i)},${getY(pt.contracts)}`).join(' ');
+                    const areaPoints = `${getX(0)},${svgHeight - padY} ${pointsStr} ${getX(shortsHistory.length - 1)},${svgHeight - padY}`;
+
+                    return (
+                      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="shortDeclineGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.25" />
+                            <stop offset="70%" stopColor="#F43F5E" stopOpacity="0.10" />
+                            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Y-Axis Reference Lines with Exact Image 1 Markers */}
+                        {[225000, 180000, 120000, 70000].map((level) => {
+                          const yPos = getY(level);
+                          return (
+                            <g key={`lvl-${level}`}>
+                              <line x1={padX} y1={yPos} x2={svgWidth - padX} y2={yPos} stroke="#232E47" strokeDasharray="3 3" />
+                              <text x={padX - 8} y={yPos + 3} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace">
+                                {level.toLocaleString()}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Shaded Area under Curve */}
+                        <polygon points={areaPoints} fill="url(#shortDeclineGrad)" />
+
+                        {/* Blue / Cyan Main Polyline (Exact Image 1 styling) */}
+                        <polyline
+                          points={pointsStr}
+                          fill="none"
+                          stroke="#38BDF8"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Data Dots with Hover and Labels */}
+                        {shortsHistory.map((pt, i) => {
+                          const cx = getX(i);
+                          const cy = getY(pt.contracts);
+                          return (
+                            <g key={`pt-${i}`} className="group cursor-pointer">
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r="4.5"
+                                fill="#38BDF8"
+                                stroke="#0B0E14"
+                                strokeWidth="2"
+                                className="transition-all hover:r-6"
+                              />
+                              {/* Numeric Label Callout on Key Nodes */}
+                              {(i === 0 || i === 1 || i === shortsHistory.length - 1) && (
+                                <text
+                                  x={cx}
+                                  y={cy - 8}
+                                  textAnchor="middle"
+                                  fill="#38BDF8"
+                                  fontSize="9"
+                                  fontFamily="monospace"
+                                  fontWeight="bold"
+                                >
+                                  {pt.contracts.toLocaleString()}
+                                </text>
+                              )}
+                              {/* Date on X-Axis */}
+                              <text
+                                x={cx}
+                                y={svgHeight - 6}
+                                textAnchor="middle"
+                                fill="#64748B"
+                                fontSize="9"
+                                fontFamily="monospace"
+                              >
+                                {pt.date}
+                              </text>
+                              <title>{`${pt.date}\nFII Net Shorts: ${pt.contracts.toLocaleString()} contracts\nUnwound: ${((225000 - pt.contracts) / 225000 * 100).toFixed(1)}%`}</title>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    );
+                  })()}
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+
+                <div className="mt-2 pt-2 border-t border-[#232E47]/60 text-slate-400 text-[11px] font-sans leading-relaxed">
                   {fii_derivatives_positioning.trend_analysis}
-                </p>
+                </div>
               </div>
 
               {/* Automatic Institutional Synthesis Note */}

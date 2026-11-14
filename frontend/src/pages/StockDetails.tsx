@@ -20,11 +20,12 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
   const [data, setData] = useState<StockDetailsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
+  const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y' | '5Y'>('1Y');
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    fetchStockDetails(selectedSymbol)
+    fetchStockDetails(selectedSymbol, timeframe.toLowerCase())
       .then(res => {
         if (isMounted) setData(res);
       })
@@ -33,7 +34,7 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
         if (isMounted) setLoading(false);
       });
     return () => { isMounted = false; };
-  }, [selectedSymbol]);
+  }, [selectedSymbol, timeframe]);
 
   const filteredSymbols = availableSymbols.filter(s => 
     s.toLowerCase().includes(search.toLowerCase())
@@ -42,7 +43,12 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
   // Clean SVG technical analysis chart: Daily Closes, 20 DMA & Synchronized Volume Bar Graph
   const renderChart = () => {
     if (!data || !data.chart_data || data.chart_data.length === 0) return null;
-    const candles = data.chart_data.slice(-90); // Last 90 sessions
+    let candles = data.chart_data;
+    if (timeframe === '1M') candles = candles.slice(-22);
+    else if (timeframe === '3M') candles = candles.slice(-66);
+    else if (timeframe === '6M') candles = candles.slice(-132);
+    else if (timeframe === '1Y') candles = candles.slice(-250);
+    // 5Y uses all candles available
     const closes = candles.map(c => c.close);
     const dma20s = candles.map(c => c.dma20).filter((v): v is number => v !== null);
     const volumes = candles.map(c => c.volume);
@@ -107,7 +113,19 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
               <span className="text-slate-300">{t('20 Vol SMA')}</span>
             </div>
           </div>
-          <div className="text-slate-500 text-[11px]">{t('Last 90 Sessions')}</div>
+          <div className="flex items-center space-x-1 bg-[#121824] p-0.5 rounded-lg border border-[#232E47]">
+            {(['1M', '3M', '6M', '1Y', '5Y'] as const).map(tf => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all ${
+                  timeframe === tf ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
         </div>
 
         <svg viewBox={`0 0 ${width} ${totalHeight}`} className="w-full h-[320px] pt-2" preserveAspectRatio="none">

@@ -43,7 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'ema-scanner', label: 'EMA Scanner ⚡', icon: <Zap className="w-4 h-4 text-amber-400" /> },
     { id: 'all-volume', label: '3. All 50 Volume', icon: <Activity className="w-4 h-4" /> },
     { id: 'heavyweights', label: '4. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
     { id: 'volume-analytics', label: '5. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
@@ -59,20 +58,32 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
           {/* Brand with DMA / EMA Selector Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <div 
-              className="flex items-center space-x-3 cursor-pointer p-1.5 -ml-1.5 rounded-lg hover:bg-slate-800/50 transition-colors"
+              className={`flex items-center space-x-3 cursor-pointer p-1.5 -ml-1.5 rounded-lg transition-colors border ${
+                activeTab === 'ema-scanner' 
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300' 
+                  : 'hover:bg-slate-800/50 border-transparent text-white'
+              }`}
               onClick={() => setScannerDropdownOpen(!scannerDropdownOpen)}
-              title="Click to select DMA or EMA Technical Scanner"
+              title="Click NIFTY 50 logo to toggle DMA Scanner or EMA Scanner"
             >
-              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
-                <TrendingUp className="w-6 h-6" />
+              <div className={`p-2 rounded-lg border ${
+                activeTab === 'ema-scanner'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              }`}>
+                {activeTab === 'ema-scanner' ? <Zap className="w-6 h-6 text-amber-400" /> : <TrendingUp className="w-6 h-6" />}
               </div>
               <div>
                 <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-lg tracking-tight text-white flex items-center">
+                  <span className="font-bold text-lg tracking-tight flex items-center">
                     NIFTY 50 <ChevronDown className="w-4 h-4 ml-1 text-slate-400" />
                   </span>
-                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                    {activeTab === 'ema-scanner' ? 'EMA + RSI' : t('Institutional')}
+                  <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border ${
+                    activeTab === 'ema-scanner'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-mono'
+                      : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                  }`}>
+                    {activeTab === 'ema-scanner' ? '⚡ EMA + RSI' : t('Institutional')}
                   </span>
                 </div>
                 <div className="text-xs text-slate-400">
@@ -132,26 +143,42 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
             )}
           </div>
 
-          {/* Desktop Nav Items */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navItems.map((item) => {
-              const active = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id)}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    active
-                      ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{t(item.label)}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Desktop Nav Items - Hidden in EMA Scanner Mode */}
+          {activeTab === 'ema-scanner' ? (
+            <div className="hidden lg:flex items-center space-x-3">
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
+                <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>EMA 9 / 21 &amp; RSI 14 DEDICATED SCANNER MODE</span>
+              </div>
+              <button
+                onClick={() => onTabChange('overview')}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/40 transition-colors shadow-sm"
+                title="Exit EMA Scanner and return to Institutional DMA Dashboard"
+              >
+                <span>&larr; {t('Back to DMA Platform')}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="hidden lg:flex items-center space-x-1">
+              {navItems.map((item) => {
+                const active = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                      active
+                        ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{t(item.label)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Action & Indicators */}
           <div className="flex items-center space-x-2.5">
@@ -191,25 +218,40 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
         </div>
 
         {/* Mobile / Tablet Horizontal Navigation Scroll */}
-        <div className="lg:hidden flex space-x-1 overflow-x-auto py-2 border-t border-[#232E47]/50 no-scrollbar">
-          {navItems.map((item) => {
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
-                  active
-                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
-              >
-                {item.icon}
-                <span>{t(item.label)}</span>
-              </button>
-            );
-          })}
-        </div>
+        {activeTab === 'ema-scanner' ? (
+          <div className="lg:hidden flex items-center justify-between py-2 border-t border-[#232E47]/50">
+            <span className="text-xs font-mono font-bold text-amber-300 flex items-center space-x-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>EMA 9/21 Scanner</span>
+            </span>
+            <button
+              onClick={() => onTabChange('overview')}
+              className="px-2.5 py-1 rounded text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40"
+            >
+              &larr; Back to DMA
+            </button>
+          </div>
+        ) : (
+          <div className="lg:hidden flex space-x-1 overflow-x-auto py-2 border-t border-[#232E47]/50 no-scrollbar">
+            {navItems.map((item) => {
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                  }`}
+                >
+                  {item.icon}
+                  <span>{t(item.label)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </nav>
   );
