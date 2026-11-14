@@ -1,42 +1,115 @@
 import React, { useState, useMemo } from 'react';
-import type { DailyScanResponse } from '../types';
+import type { DailyScanResponse, LiveScanResponse } from '../types';
 import { 
   Activity, 
   Search, 
-  ArrowUpDown 
+  ArrowUpDown,
+  RefreshCw,
+  BarChart2,
+  Radio
 } from 'lucide-react';
 
 interface AllVolumeDashboardProps {
   dailyScan: DailyScanResponse | null;
+  liveScan: LiveScanResponse | null;
   loading: boolean;
   onSelectStock: (symbol: string) => void;
+  onRefreshLive?: () => Promise<void>;
 }
 
-type SortField = 'volume' | 'rvol' | 'weightage' | 'score' | 'price_change_pct' | 'latest_close';
+type SortField = 'volume' | 'rvol' | 'weightage' | 'score' | 'price_change_pct' | 'price';
 type SortOrder = 'asc' | 'desc';
+
+interface UnifiedStockVolume {
+  symbol: string;
+  company_name: string;
+  sector: string;
+  weightage: number;
+  price: number;
+  price_change_pct: number;
+  volume: number;
+  six_session_avg_volume: number | null;
+  rvol: number | null;
+  volume_trend: string;
+  volume_classification: string;
+  score: number;
+  price_volume_confirmation?: { signal: string; label: string; detail?: string };
+  isLive: boolean;
+  update_timestamp?: string;
+}
 
 export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
   dailyScan,
+  liveScan,
   loading: _loading,
-  onSelectStock
+  onSelectStock,
+  onRefreshLive
 }) => {
+  const [feedMode, setFeedMode] = useState<'LIVE' | 'COMPLETED'>('LIVE');
+  const [showTopChart, setShowTopChart] = useState<boolean>(true);
+  const [chartMetric, setChartMetric] = useState<'VOLUME' | 'RVOL'>('VOLUME');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [dmaFilter, setDmaFilter] = useState('ALL');
   const [volumeFilter, setVolumeFilter] = useState('ALL');
-  const [sortField, setSortField] = useState<SortField>('rvol');
+  const [sortField, setSortField] = useState<SortField>('volume');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const stocks = dailyScan?.all_results || [];
+  // Normalize stocks based on feed mode
+  const unifiedStocks: UnifiedStockVolume[] = useMemo(() => {
+    if (feedMode === 'LIVE' && liveScan && liveScan.all_results && liveScan.all_results.length > 0) {
+      return liveScan.all_results.map(s => ({
+        symbol: s.symbol,
+        company_name: s.company_name,
+        sector: s.sector || s.industry || 'Unknown',
+        weightage: s.weightage,
+        price: s.live_price,
+        price_change_pct: s.price_change_pct || 0,
+        volume: s.cumulative_volume || 0,
+        six_session_avg_volume: s.six_session_avg_volume || null,
+        rvol: s.rvol || null,
+        volume_trend: s.volume_trend || 'STEADY',
+        volume_classification: s.volume_classification || 'NORMAL_VOLUME',
+        score: s.live_score,
+        price_volume_confirmation: s.price_volume_confirmation,
+        isLive: true,
+        update_timestamp: s.update_timestamp
+      }));
+    }
+
+    const completed = dailyScan?.all_results || [];
+    return completed.map(s => ({
+      symbol: s.symbol,
+      company_name: s.company_name,
+      sector: s.sector || s.industry || 'Unknown',
+      weightage: s.weightage,
+      price: s.latest_close,
+      price_change_pct: s.price_change_pct || 0,
+      volume: s.volume || 0,
+      six_session_avg_volume: s.six_session_avg_volume || null,
+      rvol: s.rvol || null,
+      volume_trend: s.volume_trend || 'STEADY',
+      volume_classification: s.volume_classification || 'NORMAL_VOLUME',
+      score: s.score,
+      price_volume_confirmation: s.price_volume_confirmation,
+      isLive: false,
+      update_timestamp: s.latest_trading_date
+    }));
+  }, [feedMode, liveScan, dailyScan]);
 
   // Distinct sectors
   const sectors = useMemo(() => {
     const set = new Set<string>();
-    stocks.forEach(s => {
+    unifiedStocks.forEach(s => {
       if (s.sector) set.add(s.sector);
     });
     return Array.from(set).sort();
-  }, [stocks]);
+  }, [unifiedStocks]);
+
+  const maxVolume = useMemo(() => {
+    return Math.max(...unifiedStocks.map(s => s.volume), 1);
+  }, [unifiedStocks]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -47,8 +120,19 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
     }
   };
 
+  const handleRefreshClick = async () => {
+    if (!onRefreshLive) return;
+    setRefreshing(true);
+    try {
+      await onRefreshLive();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Filtered and sorted stocks
   const filteredStocks = useMemo(() => {
-    return stocks.filter(stock => {
+    return unifiedStocks.filter(stock => {
       // Search
       const q = searchQuery.toLowerCase();
       const matchesSearch = 
@@ -62,7 +146,6 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
       let matchesDma = true;
       if (dmaFilter === '6_6') matchesDma = stock.score === 6;
       else if (dmaFilter === '5_6') matchesDma = stock.score === 5;
-      else if (dmaFilter === 'CROSSOVERS') matchesDma = (stock.fresh_crossovers?.length || 0) > 0;
 
       // Volume class
       let matchesVolume = true;
@@ -72,101 +155,305 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
 
       return matchesSearch && matchesSector && matchesDma && matchesVolume;
     }).sort((a, b) => {
-      let valA: any = a[sortField] ?? 0;
-      let valB: any = b[sortField] ?? 0;
-
-      if (sortField === 'score') {
-        valA = a.score;
-        valB = b.score;
-      }
+      const valA = a[sortField] ?? 0;
+      const valB = b[sortField] ?? 0;
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [stocks, searchQuery, sectorFilter, dmaFilter, volumeFilter, sortField, sortOrder]);
+  }, [unifiedStocks, searchQuery, sectorFilter, dmaFilter, volumeFilter, sortField, sortOrder]);
+
+  // Top 10 stocks for the bar chart
+  const topStocksForChart = useMemo(() => {
+    const copy = [...unifiedStocks];
+    if (chartMetric === 'VOLUME') {
+      return copy.sort((a, b) => b.volume - a.volume).slice(0, 10);
+    } else {
+      return copy.sort((a, b) => (b.rvol || 0) - (a.rvol || 0)).slice(0, 10);
+    }
+  }, [unifiedStocks, chartMetric]);
+
+  const chartMaxVal = useMemo(() => {
+    if (chartMetric === 'VOLUME') {
+      return Math.max(...topStocksForChart.map(s => s.volume), 1);
+    }
+    return Math.max(...topStocksForChart.map(s => s.rvol || 0), 1);
+  }, [topStocksForChart, chartMetric]);
 
   return (
     <div className="space-y-5">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 rounded-xl bg-[#121824] border border-[#232E47]">
+      {/* Page Header with Mode Selector */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 rounded-xl bg-[#121824] border border-[#232E47]">
         <div>
           <div className="flex items-center space-x-2">
             <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
               <Activity className="w-5 h-5" />
             </span>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              Page 3 — All 50 Stocks Volume &amp; RVOL Dashboard
+              Page 3 — All 50 Stocks Live Traded Volume &amp; Bar Graph Engine
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time cumulative volume tracking, 6-session historical averages, RVOL, and price-volume confirmation across all 50 constituents.
+            Real-time live volume streaming, 6-session volume benchmarks, RVOL metrics, and interactive volume bar graphs for all 50 NIFTY constituents.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs text-slate-400">
-          <span>Showing <strong className="text-white">{filteredStocks.length}</strong> of 50 stocks</span>
+        {/* Live Controls & Mode Toggle */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Feed Mode Switcher */}
+          <div className="flex items-center bg-[#0B0E14] p-1 rounded-lg border border-[#232E47] text-xs">
+            <button
+              onClick={() => setFeedMode('LIVE')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-bold transition-all ${
+                feedMode === 'LIVE'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Live Volume Feed</span>
+            </button>
+            <button
+              onClick={() => setFeedMode('COMPLETED')}
+              className={`px-3 py-1.5 rounded-md font-bold transition-all ${
+                feedMode === 'COMPLETED'
+                  ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Completed Daily
+            </button>
+          </div>
+
+          {/* Refresh Button */}
+          {onRefreshLive && (
+            <button
+              onClick={handleRefreshClick}
+              disabled={refreshing}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-[#1A2234] hover:bg-slate-700/60 text-slate-200 text-xs font-semibold border border-[#232E47] transition-all disabled:opacity-50"
+              title="Refresh live volume from exchange feed"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh Feed'}</span>
+            </button>
+          )}
+
+          {/* Toggle Top Bar Chart */}
+          <button
+            onClick={() => setShowTopChart(!showTopChart)}
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+              showTopChart 
+                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' 
+                : 'bg-[#1A2234] text-slate-400 border-[#232E47]'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>{showTopChart ? 'Hide Bar Graph' : 'Show Bar Graph'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Filter and Control Bar */}
-      <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+      {/* Live Feed Status Banner */}
+      <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-[#0E131F] border border-[#232E47] text-xs">
+        <div className="flex items-center space-x-2">
+          <Radio className={`w-4 h-4 ${feedMode === 'LIVE' ? 'text-emerald-400 animate-pulse' : 'text-sky-400'}`} />
+          <span className="text-slate-400">DATA SOURCE:</span>
+          <span className="font-bold text-white font-mono">
+            {feedMode === 'LIVE' 
+              ? (liveScan?.feed_status || 'UPSTOX V3 STREAMING FEED')
+              : 'COMPLETED DAILY BHAVCOPY / NSE HISTORICAL'}
+          </span>
+        </div>
+        <div className="text-slate-400 text-[11px] font-mono">
+          Last Synced: {liveScan?.feed_timestamp ? new Date(liveScan.feed_timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}
+        </div>
+      </div>
+
+      {/* Top 10 Stocks Volume Bar Graph Section */}
+      {showTopChart && (
+        <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47]/70 gap-2 mb-4">
+            <div className="flex items-center space-x-2">
+              <span className="p-1 rounded bg-purple-500/20 text-purple-400">
+                <BarChart2 className="w-4 h-4" />
+              </span>
+              <h3 className="text-sm font-bold text-white">
+                Top 10 Most Active Stocks — {chartMetric === 'VOLUME' ? 'Traded Volume Bar Graph' : 'Relative Volume (RVOL) Leaderboard'}
+              </h3>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <div className="flex bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-[11px]">
+                <button
+                  onClick={() => setChartMetric('VOLUME')}
+                  className={`px-2.5 py-1 rounded font-bold transition-all ${
+                    chartMetric === 'VOLUME' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  By Volume
+                </button>
+                <button
+                  onClick={() => setChartMetric('RVOL')}
+                  className={`px-2.5 py-1 rounded font-bold transition-all ${
+                    chartMetric === 'RVOL' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  By RVOL
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bar Graph Rows */}
+          <div className="space-y-3">
+            {topStocksForChart.map((s, idx) => {
+              const isPos = s.price_change_pct >= 0;
+              const barVal = chartMetric === 'VOLUME' ? s.volume : (s.rvol || 0);
+              const barWidthPct = Math.min(100, Math.max(5, (barVal / chartMaxVal) * 100));
+
+              // Benchmark marker calculation for volume mode
+              const avgVol = s.six_session_avg_volume || 0;
+              const avgPct = chartMetric === 'VOLUME' && chartMaxVal > 0 
+                ? Math.min(100, (avgVol / chartMaxVal) * 100) 
+                : null;
+
+              return (
+                <div 
+                  key={s.symbol}
+                  onClick={() => onSelectStock(s.symbol)}
+                  className="group p-2.5 rounded-lg bg-[#0B0E14]/70 hover:bg-[#1A2234] border border-[#232E47]/50 cursor-pointer transition-all"
+                >
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono text-slate-500 text-[10px] w-4">{idx + 1}.</span>
+                      <strong className="text-white font-bold group-hover:text-sky-400 transition-colors">
+                        {s.symbol}
+                      </strong>
+                      <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                        {s.company_name}
+                      </span>
+                      <span className="text-[10px] text-slate-500">({s.weightage.toFixed(2)}%)</span>
+                    </div>
+
+                    <div className="flex items-center space-x-3 font-mono">
+                      <span className={`text-[11px] font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {isPos ? '+' : ''}{s.price_change_pct.toFixed(2)}%
+                      </span>
+                      <span className="text-slate-200 font-bold">
+                        {chartMetric === 'VOLUME' ? `${(s.volume / 1000000).toFixed(2)}M` : `${s.rvol?.toFixed(2)}x RVOL`}
+                      </span>
+                      {chartMetric === 'VOLUME' && s.six_session_avg_volume && (
+                        <span className="text-slate-500 text-[10px]">
+                          (Avg: {(s.six_session_avg_volume / 1000000).toFixed(2)}M)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Horizontal Bar Canvas */}
+                  <div className="relative w-full h-4 bg-[#121824] rounded-full overflow-hidden border border-[#232E47]/60">
+                    {/* The Volume Bar */}
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        isPos
+                          ? 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400'
+                          : 'bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400'
+                      }`}
+                      style={{ width: `${barWidthPct}%` }}
+                    />
+
+                    {/* Benchmark Average Line Marker */}
+                    {avgPct !== null && avgPct > 0 && (
+                      <div 
+                        className="absolute top-0 bottom-0 w-1 bg-amber-400 shadow-sm"
+                        style={{ left: `${avgPct}%` }}
+                        title={`6-Session Avg: ${(avgVol / 1000000).toFixed(2)}M`}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-3 pt-2 border-t border-[#232E47]/40">
+            <span>Bars indicate traded volume intensity. Color: Emerald = Up session, Rose = Down session.</span>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 bg-amber-400 rounded-sm inline-block"></span>
+              <span className="text-amber-400 font-mono">Amber Marker = 6-Session Average Benchmark</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter and Search Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search stock symbol or company..."
+            placeholder="Search stock symbol or name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#1A2234] border border-[#232E47] rounded-lg pl-9 pr-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
           />
         </div>
 
-        {/* Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Sector */}
-          <select
-            value={sectorFilter}
-            onChange={(e) => setSectorFilter(e.target.value)}
-            className="bg-[#1A2234] border border-[#232E47] rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-sky-500"
-          >
-            <option value="ALL">All Sectors</option>
-            {sectors.map(sec => (
-              <option key={sec} value={sec}>{sec}</option>
-            ))}
-          </select>
+        {/* Sector Filter */}
+        <select
+          value={sectorFilter}
+          onChange={(e) => setSectorFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
+        >
+          <option value="ALL">All Sectors ({unifiedStocks.length})</option>
+          {sectors.map(sec => (
+            <option key={sec} value={sec}>{sec}</option>
+          ))}
+        </select>
 
-          {/* DMA Score Filter */}
-          <select
-            value={dmaFilter}
-            onChange={(e) => setDmaFilter(e.target.value)}
-            className="bg-[#1A2234] border border-[#232E47] rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-sky-500"
-          >
-            <option value="ALL">All DMA Scores</option>
-            <option value="6_6">Category A: 6/6 Bullish Only</option>
-            <option value="5_6">Category B: 5/6 Watchlist Only</option>
-            <option value="CROSSOVERS">Fresh Crossovers Only</option>
-          </select>
+        {/* DMA Score Filter */}
+        <select
+          value={dmaFilter}
+          onChange={(e) => setDmaFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
+        >
+          <option value="ALL">All DMA Scores</option>
+          <option value="6_6">6/6 Bullish Alignment</option>
+          <option value="5_6">5/6 Bullish Alignment</option>
+        </select>
 
-          {/* Volume Classification Filter */}
-          <select
-            value={volumeFilter}
-            onChange={(e) => setVolumeFilter(e.target.value)}
-            className="bg-[#1A2234] border border-[#232E47] rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-sky-500"
-          >
-            <option value="ALL">All Volume Classes</option>
-            <option value="VERY_HIGH_VOLUME">Very High Volume (RVOL &ge; 2.0x)</option>
-            <option value="HIGH_VOLUME">High Volume (1.25x - 2.0x)</option>
-            <option value="NORMAL_VOLUME">Normal Volume (0.75x - 1.25x)</option>
-            <option value="LOW_VOLUME">Low Volume (0.50x - 0.75x)</option>
-            <option value="DECLINING_VOLUME">Declining Volume (&lt; 0.50x)</option>
-          </select>
-        </div>
+        {/* Volume Classification Filter */}
+        <select
+          value={volumeFilter}
+          onChange={(e) => setVolumeFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors"
+        >
+          <option value="ALL">All Volume Tiers</option>
+          <option value="VERY_HIGH_VOLUME">Very High Volume (&ge; 2.0x RVOL)</option>
+          <option value="HIGH_VOLUME">High Volume (1.25x - 2.0x RVOL)</option>
+          <option value="NORMAL_VOLUME">Normal Volume</option>
+          <option value="LOW_VOLUME">Low Volume</option>
+          <option value="DECLINING_VOLUME">Declining Volume</option>
+        </select>
       </div>
 
-      {/* Main Quantitative Table */}
-      <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] overflow-hidden shadow-sm">
+      {/* Main Table with Inline Bar Meters */}
+      <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between pb-3 border-b border-[#232E47]/70 text-xs text-slate-400">
+          <div>
+            Showing <strong className="text-white">{filteredStocks.length}</strong> of 50 constituents
+            {feedMode === 'LIVE' && <span className="text-emerald-400 font-bold ml-1.5">(Live Intraday Mode)</span>}
+          </div>
+          <div className="text-[11px] text-slate-500">
+            Click any column header to sort &bull; Click row to view stock chart
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
@@ -177,16 +464,16 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   onClick={() => handleSort('weightage')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Weight %</span>
+                    <span>Weight</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
                 <th 
                   className="py-3 px-3 text-right cursor-pointer hover:text-white"
-                  onClick={() => handleSort('latest_close')}
+                  onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>LTP</span>
+                    <span>{feedMode === 'LIVE' ? 'Live LTP' : 'Close'}</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -195,17 +482,21 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                   onClick={() => handleSort('price_change_pct')}
                 >
                   <div className="flex items-center justify-end space-x-1">
-                    <span>Chg %</span>
+                    <span>Change %</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
+                {/* Volume with Visual Meter */}
                 <th 
-                  className="py-3 px-3 text-right cursor-pointer hover:text-white"
+                  className="py-3 px-3 cursor-pointer hover:text-white min-w-[200px]"
                   onClick={() => handleSort('volume')}
                 >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Cumulative Vol</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                  <div className="flex items-center justify-between space-x-1">
+                    <span>{feedMode === 'LIVE' ? 'Live Cumulative Vol' : 'Traded Volume'}</span>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-[9px] text-purple-400 lowercase font-normal">(bar meter)</span>
+                      <ArrowUpDown className="w-3 h-3 text-purple-400" />
+                    </div>
                   </div>
                 </th>
                 <th className="py-3 px-3 text-right">6-Day Avg Vol</th>
@@ -229,14 +520,15 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
-                <th className="py-3 px-3">Price-Volume Conviction</th>
+                <th className="py-3 px-3">Price-Volume Signal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#232E47]/60">
               {filteredStocks.map((stock) => {
-                const isPositive = (stock.price_change_pct || 0) >= 0;
+                const isPositive = stock.price_change_pct >= 0;
                 const rvol = stock.rvol;
                 const pv = stock.price_volume_confirmation;
+                const volPct = Math.min(100, Math.max(3, (stock.volume / maxVolume) * 100));
 
                 return (
                   <tr 
@@ -248,7 +540,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                     <td className="py-3 px-3">
                       <div className="font-bold text-white text-sm">{stock.symbol}</div>
                       <div className="text-[11px] text-slate-400 truncate max-w-[170px]">{stock.company_name}</div>
-                      <div className="text-[10px] text-slate-500">{stock.sector || stock.industry}</div>
+                      <div className="text-[10px] text-slate-500">{stock.sector}</div>
                     </td>
 
                     {/* Weight % */}
@@ -256,19 +548,39 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                       {stock.weightage ? `${stock.weightage.toFixed(2)}%` : '-'}
                     </td>
 
-                    {/* LTP */}
+                    {/* Price */}
                     <td className="py-3 px-3 text-right font-mono font-bold text-white">
-                      ₹{stock.latest_close?.toFixed(2)}
+                      ₹{stock.price.toFixed(2)}
                     </td>
 
                     {/* Price Change % */}
                     <td className={`py-3 px-3 text-right font-mono font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {isPositive ? '+' : ''}{(stock.price_change_pct || 0).toFixed(2)}%
+                      {isPositive ? '+' : ''}{stock.price_change_pct.toFixed(2)}%
                     </td>
 
-                    {/* Cumulative Volume */}
-                    <td className="py-3 px-3 text-right font-mono font-semibold text-slate-100">
-                      {(stock.volume || 0).toLocaleString()}
+                    {/* Traded Volume + Embedded Bar Meter */}
+                    <td className="py-3 px-3">
+                      <div className="flex items-center justify-between text-xs font-mono mb-1">
+                        <span className="font-semibold text-slate-100">
+                          {stock.volume.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {(stock.volume / 1000000).toFixed(2)}M
+                        </span>
+                      </div>
+                      {/* Mini Bar Meter */}
+                      <div className="w-full h-1.5 bg-[#0B0E14] rounded-full overflow-hidden border border-[#232E47]/60">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            (rvol || 0) >= 2.0 
+                              ? 'bg-gradient-to-r from-purple-500 to-purple-400'
+                              : isPositive 
+                              ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' 
+                              : 'bg-gradient-to-r from-rose-600 to-rose-400'
+                          }`}
+                          style={{ width: `${volPct}%` }}
+                        />
+                      </div>
                     </td>
 
                     {/* 6-Day Avg Volume */}

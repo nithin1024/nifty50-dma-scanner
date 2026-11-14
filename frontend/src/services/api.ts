@@ -50,6 +50,14 @@ export async function fetchLiveScan(): Promise<LiveScanResponse> {
   return response.json();
 }
 
+export async function triggerLiveScanRefresh(): Promise<LiveScanResponse> {
+  const response = await fetch(`${API_BASE}/scanner/live/refresh`, { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function fetchStockDetails(symbol: string): Promise<StockDetailsResponse> {
   const response = await fetch(`${API_BASE}/stock-details/${encodeURIComponent(symbol)}`);
   if (!response.ok) {

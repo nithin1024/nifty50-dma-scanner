@@ -36,50 +36,87 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
     s.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Simple clean SVG line chart representation of closes & 20 DMA
+  // Clean SVG technical analysis chart: Daily Closes, 20 DMA & Synchronized Volume Bar Graph
   const renderChart = () => {
     if (!data || !data.chart_data || data.chart_data.length === 0) return null;
     const candles = data.chart_data.slice(-90); // Last 90 sessions
     const closes = candles.map(c => c.close);
     const dma20s = candles.map(c => c.dma20).filter((v): v is number => v !== null);
+    const volumes = candles.map(c => c.volume);
 
     const minVal = Math.min(...closes, ...(dma20s.length ? dma20s : [closes[0]])) * 0.98;
     const maxVal = Math.max(...closes, ...(dma20s.length ? dma20s : [closes[0]])) * 1.02;
     const range = maxVal - minVal || 1;
 
+    const maxVol = Math.max(...volumes, 1) * 1.1;
+
+    // Calculate 20-session volume average for overlay line
+    const volSma20: (number | null)[] = candles.map((_, i) => {
+      if (i < 19) return null;
+      const slice = volumes.slice(i - 19, i + 1);
+      return slice.reduce((a, b) => a + b, 0) / 20;
+    });
+
     const width = 800;
-    const height = 260;
+    const priceHeight = 180;
+    const volHeight = 70;
+    const totalHeight = priceHeight + volHeight + 20;
 
     const getX = (i: number) => (i / (candles.length - 1)) * width;
-    const getY = (val: number) => height - ((val - minVal) / range) * height;
+    const getPriceY = (val: number) => priceHeight - ((val - minVal) / range) * priceHeight;
+    const getVolY = (vol: number) => totalHeight - ((vol / maxVol) * volHeight);
 
-    const closePoints = candles.map((c, i) => `${getX(i)},${getY(c.close)}`).join(' ');
+    const closePoints = candles.map((c, i) => `${getX(i)},${getPriceY(c.close)}`).join(' ');
     const dma20Points = candles
-      .map((c, i) => (c.dma20 !== null ? `${getX(i)},${getY(c.dma20)}` : null))
+      .map((c, i) => (c.dma20 !== null ? `${getX(i)},${getPriceY(c.dma20)}` : null))
       .filter(Boolean)
       .join(' ');
 
+    const volMaPoints = volSma20
+      .map((v, i) => (v !== null ? `${getX(i)},${getVolY(v)}` : null))
+      .filter(Boolean)
+      .join(' ');
+
+    const barWidth = Math.max(2, (width / candles.length) * 0.7);
+
     return (
-      <div className="relative w-full h-[280px] bg-[#0B0E14] rounded-lg p-2 border border-[#232E47]/60 overflow-hidden">
-        <div className="absolute top-3 left-4 flex space-x-4 text-xs font-mono z-10">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2.5 h-0.5 bg-sky-400" />
-            <span className="text-slate-300">Daily Close</span>
+      <div className="relative w-full bg-[#0B0E14] rounded-lg p-2 border border-[#232E47]/60 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between text-xs font-mono px-2 pt-1 pb-2 border-b border-[#232E47]/40 gap-2">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-0.5 bg-sky-400" />
+              <span className="text-slate-300">Daily Close</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-0.5 bg-amber-400" />
+              <span className="text-slate-300">20 DMA</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/80" />
+              <span className="text-slate-300">Vol (Up)</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/80" />
+              <span className="text-slate-300">Vol (Down)</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-0.5 bg-purple-400" />
+              <span className="text-slate-300">20 Vol SMA</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2.5 h-0.5 bg-amber-400" />
-            <span className="text-slate-300">20 DMA</span>
-          </div>
-          <div className="text-slate-500">Last 90 Sessions</div>
+          <div className="text-slate-500 text-[11px]">Last 90 Sessions</div>
         </div>
 
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full pt-6" preserveAspectRatio="none">
-          {/* Grid lines */}
-          <line x1="0" y1={height * 0.25} x2={width} y2={height * 0.25} stroke="#232E47" strokeDasharray="3 3" />
-          <line x1="0" y1={height * 0.5} x2={width} y2={height * 0.5} stroke="#232E47" strokeDasharray="3 3" />
-          <line x1="0" y1={height * 0.75} x2={width} y2={height * 0.75} stroke="#232E47" strokeDasharray="3 3" />
+        <svg viewBox={`0 0 ${width} ${totalHeight}`} className="w-full h-[320px] pt-2" preserveAspectRatio="none">
+          {/* Price Grid lines */}
+          <line x1="0" y1={priceHeight * 0.25} x2={width} y2={priceHeight * 0.25} stroke="#232E47" strokeDasharray="3 3" />
+          <line x1="0" y1={priceHeight * 0.5} x2={width} y2={priceHeight * 0.5} stroke="#232E47" strokeDasharray="3 3" />
+          <line x1="0" y1={priceHeight * 0.75} x2={width} y2={priceHeight * 0.75} stroke="#232E47" strokeDasharray="3 3" />
 
-          {/* Close line */}
+          {/* Separator line between price and volume */}
+          <line x1="0" y1={priceHeight + 10} x2={width} y2={priceHeight + 10} stroke="#232E47" strokeWidth="1" />
+
+          {/* Price Close line */}
           <polyline
             fill="none"
             stroke="#38BDF8"
@@ -96,10 +133,41 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
               points={dma20Points}
             />
           )}
+
+          {/* Volume Bars */}
+          {candles.map((c, i) => {
+            const isUp = c.close >= c.open;
+            const x = getX(i) - (barWidth / 2);
+            const barH = Math.max(1, (c.volume / maxVol) * volHeight);
+            const y = totalHeight - barH;
+            return (
+              <rect
+                key={c.time}
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barH}
+                fill={isUp ? '#10B981' : '#F43F5E'}
+                opacity="0.8"
+              />
+            );
+          })}
+
+          {/* 20 Volume SMA line */}
+          {volMaPoints && (
+            <polyline
+              fill="none"
+              stroke="#C084FC"
+              strokeWidth="1.5"
+              strokeDasharray="3 2"
+              points={volMaPoints}
+            />
+          )}
         </svg>
 
-        <div className="absolute bottom-1 right-3 text-[10px] font-mono text-slate-500">
-          Range: ₹{minVal.toFixed(1)} - ₹{maxVal.toFixed(1)}
+        <div className="flex justify-between text-[10px] font-mono text-slate-500 px-2 pt-1">
+          <span>Range: ₹{minVal.toFixed(1)} - ₹{maxVal.toFixed(1)}</span>
+          <span>Max Volume: {(maxVol / 1000000).toFixed(2)}M</span>
         </div>
       </div>
     );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse, HeavyweightsReport } from './types';
-import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights } from './services/api';
+import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights, triggerLiveScanRefresh } from './services/api';
 import { Navbar } from './components/Navbar';
 import { MarketOverview } from './pages/MarketOverview';
 import { DailyScanner } from './pages/DailyScanner';
@@ -15,7 +15,7 @@ export const App: React.FC = () => {
   const [health, setHealth] = useState<BackendHealth | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatusReport | null>(null);
   const [dailyScan, setDailyScan] = useState<DailyScanResponse | null>(null);
-  const [, setLiveScan] = useState<LiveScanResponse | null>(null);
+  const [liveScan, setLiveScan] = useState<LiveScanResponse | null>(null);
   const [heavyweights, setHeavyweights] = useState<HeavyweightsReport | null>(null);
   const [selectedStock, setSelectedStock] = useState<string>('RELIANCE');
   const [loading, setLoading] = useState<boolean>(true);
@@ -45,6 +45,28 @@ export const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleRefreshLive = useCallback(async () => {
+    try {
+      const refreshed = await triggerLiveScanRefresh();
+      setLiveScan(refreshed);
+    } catch (err) {
+      console.error('Error refreshing live scan:', err);
+    }
+  }, []);
+
+  // Periodic background live volume poll every 15s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const live = await fetchLiveScan();
+        setLiveScan(live);
+      } catch {
+        // Silently ignore background polling errors
+      }
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   // Initial load
@@ -137,8 +159,10 @@ export const App: React.FC = () => {
         {activeTab === 'all-volume' && (
           <AllVolumeDashboard 
             dailyScan={dailyScan}
+            liveScan={liveScan}
             loading={loading}
             onSelectStock={handleSelectStock}
+            onRefreshLive={handleRefreshLive}
           />
         )}
 
@@ -153,6 +177,7 @@ export const App: React.FC = () => {
         {activeTab === 'volume-analytics' && (
           <VolumeAnalyticsPage 
             dailyScan={dailyScan}
+            liveScan={liveScan}
             loading={loading}
             onSelectStock={handleSelectStock}
           />
