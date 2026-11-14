@@ -91,3 +91,14 @@ async def test_market_intelligence_endpoint():
         assert data["cpi_inflation_breakdown"]["categories"][0]["category"] == "Personal care, social protection & miscellaneous"
         assert data["cpi_inflation_breakdown"]["categories"][0]["yoy_inflation_pct"] == 10.14
 
+        # Check Macroeconomic Glossary (all 21 terms from official cheat sheet)
+        assert "macro_glossary" in data
+        assert len(data["macro_glossary"]) == 21
+        terms = [t["term"] for t in data["macro_glossary"]]
+        assert "GDP" in terms
+        assert "GVA" in terms
+        assert "PFCE" in terms
+        assert "GFCF" in terms
+        assert "GDP Surprise" in terms
+
+

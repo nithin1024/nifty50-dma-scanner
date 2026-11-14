@@ -306,6 +306,13 @@ export interface CpiInflationCategory {
   severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
 }
 
+export interface MacroGlossaryTerm {
+  term: string;
+  definition: string;
+  remember_this: string;
+  group: string;
+}
+
 export interface MarketIntelligenceReport {
   timestamp: string;
   report_date: string;
@@ -344,4 +351,5 @@ export interface MarketIntelligenceReport {
     key_highlights: string[];
     categories: CpiInflationCategory[];
   };
+  macro_glossary: MacroGlossaryTerm[];
 }

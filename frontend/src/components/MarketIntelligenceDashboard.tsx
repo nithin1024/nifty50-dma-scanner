@@ -9,7 +9,9 @@ import {
   AlertTriangle, 
   ShieldAlert, 
   ChevronDown, 
-  ChevronUp 
+  ChevronUp,
+  BookOpen,
+  Search
 } from 'lucide-react';
 
 interface MarketIntelligenceDashboardProps {
@@ -22,11 +24,29 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   className = ''
 }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'MACRO' | 'FLOWS' | 'INFLATION'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'MACRO' | 'FLOWS' | 'INFLATION' | 'GLOSSARY'>('ALL');
+  const [glossarySearch, setGlossarySearch] = useState('');
 
   if (!intelligence) return null;
 
-  const { market_closing_levels, fii_dii_cash_activity, fii_derivatives_positioning, cpi_inflation_breakdown } = intelligence;
+  const { 
+    market_closing_levels, 
+    fii_dii_cash_activity, 
+    fii_derivatives_positioning, 
+    cpi_inflation_breakdown,
+    macro_glossary = []
+  } = intelligence;
+
+  // Filtered glossary terms
+  const filteredGlossary = macro_glossary.filter(item => {
+    const q = glossarySearch.toLowerCase();
+    return (
+      item.term.toLowerCase().includes(q) ||
+      item.definition.toLowerCase().includes(q) ||
+      item.remember_this.toLowerCase().includes(q) ||
+      item.group.toLowerCase().includes(q)
+    );
+  });
 
   // Max inflation value for horizontal bar graph scaling (peak is 10.14%)
   const maxInflation = 12.0;
@@ -81,6 +101,14 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               }`}
             >
               CPI Inflation
+            </button>
+            <button
+              onClick={() => setActiveTab('GLOSSARY')}
+              className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                activeTab === 'GLOSSARY' ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Macro Glossary (21)
             </button>
           </div>
 
@@ -423,6 +451,87 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="text-slate-500 font-mono">
                   Scale: 0% to 12.0% YoY
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 5: MACROECONOMIC & NATIONAL ACCOUNTS GLOSSARY (21 Core Terms from Cheat Sheet) */}
+          {(activeTab === 'ALL' || activeTab === 'GLOSSARY') && (
+            <div className="p-5 rounded-xl bg-[#0B0E14] border border-[#232E47]">
+              {/* Header with Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47]/70 gap-3 mb-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="p-1 rounded bg-sky-500/20 text-sky-400">
+                      <BookOpen className="w-4 h-4" />
+                    </span>
+                    <h3 className="text-sm font-bold text-white">
+                      5. Macroeconomic Intelligence &amp; National Accounts Cheat Sheet (21 Core Terms)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Essential institutional national accounts terminology, definitions, and key takeaways (GDP, GVA, PFCE, GFCF, Output Gap, etc.)
+                  </p>
+                </div>
+
+                {/* Instant Search Bar */}
+                <div className="relative min-w-[220px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search term or definition..."
+                    value={glossarySearch}
+                    onChange={(e) => setGlossarySearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#121824] border border-[#232E47] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-[#1A2234] text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-3 min-w-[130px]">Term</th>
+                      <th className="py-2.5 px-3">One-Sentence Definition</th>
+                      <th className="py-2.5 px-3 min-w-[180px]">Remember This</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#232E47]/60">
+                    {filteredGlossary.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-white font-mono text-xs">{item.term}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                              {item.group}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-300">
+                          {item.definition}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 font-medium text-[11px] border border-purple-500/20 inline-block">
+                            {item.remember_this}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredGlossary.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="py-6 text-center text-slate-500 italic">
+                          No macroeconomic terms match &quot;{glossarySearch}&quot;.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center text-[11px] text-slate-500 pt-3 border-t border-[#232E47]/40 mt-3 font-mono">
+                <span>Showing {filteredGlossary.length} of {macro_glossary.length} core macroeconomic definitions</span>
+                <span>Institutional Reference Guide</span>
               </div>
             </div>
           )}

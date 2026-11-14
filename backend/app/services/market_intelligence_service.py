@@ -154,7 +154,30 @@ class MarketIntelligenceService:
                         "severity": "LOW"
                     }
                 ]
-            }
+            },
+            "macro_glossary": [
+                {"term": "GDP", "definition": "Value of domestic final production", "remember_this": "Whole economy's output", "group": "National Output"},
+                {"term": "GVA", "definition": "Output minus intermediate consumption", "remember_this": "Where value is created", "group": "National Output"},
+                {"term": "Nominal GDP", "definition": "GDP at current prices", "remember_this": "Prices + volumes", "group": "Prices & Adjustments"},
+                {"term": "Real GDP", "definition": "GDP adjusted for price changes", "remember_this": "Production volume growth", "group": "Prices & Adjustments"},
+                {"term": "GDP Deflator", "definition": "Broad domestic-output price index", "remember_this": "Separates prices from volumes", "group": "Prices & Adjustments"},
+                {"term": "NDP", "definition": "GDP minus consumption of fixed capital", "remember_this": "Domestic net output", "group": "National Output"},
+                {"term": "GNI", "definition": "GDP plus net primary income from abroad", "remember_this": "Residents' gross income", "group": "Income Accounts"},
+                {"term": "NNI", "definition": "GNI minus consumption of fixed capital", "remember_this": "National Income", "group": "Income Accounts"},
+                {"term": "GDP per capita", "definition": "GDP divided by population", "remember_this": "Average output per person", "group": "Income Accounts"},
+                {"term": "PFCE", "definition": "Private final consumption", "remember_this": "Consumer spending", "group": "Demand Components"},
+                {"term": "GFCE", "definition": "Government final consumption", "remember_this": "Government services/current consumption", "group": "Demand Components"},
+                {"term": "GFCF", "definition": "Gross fixed capital formation", "remember_this": "Investment in fixed assets", "group": "Demand Components"},
+                {"term": "Net Exports", "definition": "Exports minus imports", "remember_this": "External-demand component", "group": "Demand Components"},
+                {"term": "YoY", "definition": "Same period compared with previous year", "remember_this": "Annual comparison", "group": "Comparisons"},
+                {"term": "QoQ", "definition": "Compared with preceding quarter", "remember_this": "Sequential comparison", "group": "Comparisons"},
+                {"term": "Base Effect", "definition": "Growth influenced by comparison level", "remember_this": "Read the base", "group": "Comparisons"},
+                {"term": "Potential GDP", "definition": "Estimated sustainable output", "remember_this": "Productive capacity", "group": "Economic Capacity"},
+                {"term": "Output Gap", "definition": "Actual versus potential output", "remember_this": "Economic slack/pressure", "group": "Economic Capacity"},
+                {"term": "World GDP", "definition": "Combined global economic output", "remember_this": "Global economic activity", "group": "Global Macro"},
+                {"term": "GDP Forecast", "definition": "Expected future GDP outcome", "remember_this": "Not actual data", "group": "Projections"},
+                {"term": "GDP Surprise", "definition": "Actual minus consensus expectation", "remember_this": "May shift market pricing", "group": "Projections"}
+            ]
         }
 
 
