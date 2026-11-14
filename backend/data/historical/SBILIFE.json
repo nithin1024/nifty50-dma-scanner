@@ -3,29 +3,13 @@
   "ticker_used": "SBILIFE.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:01.684736+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:20.324255+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1994.9,
-      "high": 2002.2,
-      "low": 1982.3,
-      "close": 1997.3,
-      "volume": 901898
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1997.3,
-      "high": 2009.0,
-      "low": 1983.8,
-      "close": 1996.7,
-      "volume": 1006737
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1980.6,
@@ -1992,7 +1976,23 @@
       "high": 1800.0,
       "low": 1748.2,
       "close": 1767.0,
-      "volume": 2699150
+      "volume": 2699339
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1765.0,
+      "high": 1820.0,
+      "low": 1756.2,
+      "close": 1819.5,
+      "volume": 1744782
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1820.0,
+      "high": 1820.0,
+      "low": 1781.0,
+      "close": 1789.9,
+      "volume": 528231
     }
   ]
 }

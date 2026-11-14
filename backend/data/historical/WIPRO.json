@@ -3,29 +3,13 @@
   "ticker_used": "WIPRO.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:20.808558+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:21.647591+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 241.1,
-      "high": 242.05,
-      "low": 238.81,
-      "close": 241.69,
-      "volume": 8831094
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 242.75,
-      "high": 246.3,
-      "low": 242.1,
-      "close": 245.22,
-      "volume": 13152546
-    },
     {
       "trading_date": "2025-11-13",
       "open": 246.0,
@@ -1992,7 +1976,23 @@
       "high": 202.0,
       "low": 196.18,
       "close": 197.99,
-      "volume": 14636110
+      "volume": 14637613
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 196.4,
+      "high": 197.4,
+      "low": 194.43,
+      "close": 196.2,
+      "volume": 4829371
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 195.56,
+      "high": 197.45,
+      "low": 194.1,
+      "close": 194.6,
+      "volume": 4918972
     }
   ]
 }

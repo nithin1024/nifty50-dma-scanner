@@ -3,29 +3,13 @@
   "ticker_used": "SUNPHARMA.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:06.240886+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:01.721677+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1701.6,
-      "high": 1719.0,
-      "low": 1695.0,
-      "close": 1716.1,
-      "volume": 1315353
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1721.4,
-      "high": 1744.1,
-      "low": 1710.2,
-      "close": 1732.1,
-      "volume": 1833097
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1734.5,
@@ -1992,7 +1976,23 @@
       "high": 1939.0,
       "low": 1890.0,
       "close": 1902.3,
-      "volume": 2261962
+      "volume": 2262492
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1891.1,
+      "high": 1896.8,
+      "low": 1874.4,
+      "close": 1885.0,
+      "volume": 2464003
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1887.0,
+      "high": 1915.0,
+      "low": 1869.8,
+      "close": 1880.0,
+      "volume": 2037762
     }
   ]
 }

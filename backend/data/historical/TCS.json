@@ -3,29 +3,13 @@
   "ticker_used": "TCS.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:13.370461+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:55.722632+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 3045.0,
-      "high": 3055.7,
-      "low": 3018.0,
-      "close": 3047.0,
-      "volume": 2806868
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 3060.0,
-      "high": 3136.4,
-      "low": 3057.1,
-      "close": 3131.8,
-      "volume": 4460315
-    },
     {
       "trading_date": "2025-11-13",
       "open": 3131.8,
@@ -1992,7 +1976,23 @@
       "high": 2506.0,
       "low": 2442.0,
       "close": 2472.1,
-      "volume": 4011617
+      "volume": 4013371
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 2442.0,
+      "high": 2472.0,
+      "low": 2422.5,
+      "close": 2442.4,
+      "volume": 2138619
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 2438.6,
+      "high": 2450.3,
+      "low": 2400.2,
+      "close": 2407.5,
+      "volume": 3344738
     }
   ]
 }

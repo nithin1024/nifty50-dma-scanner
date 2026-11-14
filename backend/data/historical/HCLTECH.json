@@ -3,29 +3,13 @@
   "ticker_used": "HCLTECH.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:30.997610+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:07.083376+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1547.8,
-      "high": 1572.5,
-      "low": 1541.2,
-      "close": 1570.0,
-      "volume": 2270763
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1575.0,
-      "high": 1600.0,
-      "low": 1573.5,
-      "close": 1594.0,
-      "volume": 2331564
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1599.4,
@@ -1992,7 +1976,23 @@
       "high": 1431.2,
       "low": 1389.2,
       "close": 1395.0,
-      "volume": 3607414
+      "volume": 3607726
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1388.0,
+      "high": 1399.0,
+      "low": 1372.4,
+      "close": 1380.8,
+      "volume": 1830276
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1380.7,
+      "high": 1396.7,
+      "low": 1368.5,
+      "close": 1378.0,
+      "volume": 2089627
     }
   ]
 }

@@ -3,29 +3,13 @@
   "ticker_used": "ADANIENT.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:05.291896+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:05.885905+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 2295.74,
-      "high": 2306.31,
-      "low": 2267.14,
-      "close": 2294.58,
-      "volume": 654132
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 2311.25,
-      "high": 2440.68,
-      "low": 2288.95,
-      "close": 2408.69,
-      "volume": 6895852
-    },
     {
       "trading_date": "2025-11-13",
       "open": 2425.65,
@@ -1992,7 +1976,23 @@
       "high": 2776.5,
       "low": 2696.2,
       "close": 2714.5,
-      "volume": 1442224
+      "volume": 1443111
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 2720.0,
+      "high": 2758.1,
+      "low": 2719.5,
+      "close": 2741.5,
+      "volume": 1003572
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 2736.0,
+      "high": 2750.0,
+      "low": 2677.0,
+      "close": 2688.0,
+      "volume": 940356
     }
   ]
 }

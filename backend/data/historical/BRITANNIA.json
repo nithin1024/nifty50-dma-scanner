@@ -3,29 +3,13 @@
   "ticker_used": "BRITANNIA.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:22.269173+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:46:26.094709+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 5950.0,
-      "high": 5965.0,
-      "low": 5723.0,
-      "close": 5950.5,
-      "volume": 2154927
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 5950.5,
-      "high": 5970.0,
-      "low": 5841.0,
-      "close": 5880.0,
-      "volume": 609987
-    },
     {
       "trading_date": "2025-11-13",
       "open": 5902.0,
@@ -1992,7 +1976,15 @@
       "high": 4874.0,
       "low": 4805.0,
       "close": 4820.0,
-      "volume": 252241
+      "volume": 252285
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 4838.0,
+      "high": 4845.0,
+      "low": 4783.3,
+      "close": 4796.9,
+      "volume": 80156
     }
   ]
 }

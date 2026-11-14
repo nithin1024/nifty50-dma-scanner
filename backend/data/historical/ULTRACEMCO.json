@@ -3,29 +3,13 @@
   "ticker_used": "ULTRACEMCO.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:19.309027+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:22.478809+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 11750.0,
-      "high": 11849.0,
-      "low": 11720.0,
-      "close": 11825.0,
-      "volume": 125847
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 11861.0,
-      "high": 11949.0,
-      "low": 11831.0,
-      "close": 11921.0,
-      "volume": 184542
-    },
     {
       "trading_date": "2025-11-13",
       "open": 11921.0,
@@ -1992,7 +1976,23 @@
       "high": 12460.0,
       "low": 12217.0,
       "close": 12362.0,
-      "volume": 275864
+      "volume": 275931
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 12350.0,
+      "high": 12381.0,
+      "low": 12279.0,
+      "close": 12337.0,
+      "volume": 154772
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 12280.0,
+      "high": 12285.0,
+      "low": 12062.0,
+      "close": 12100.0,
+      "volume": 171017
     }
   ]
 }

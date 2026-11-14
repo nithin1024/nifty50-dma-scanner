@@ -3,29 +3,13 @@
   "ticker_used": "POWERGRID.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:58.697127+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:03.517370+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 268.25,
-      "high": 269.15,
-      "low": 264.65,
-      "close": 267.65,
-      "volume": 11154806
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 269.0,
-      "high": 270.25,
-      "low": 266.5,
-      "close": 267.1,
-      "volume": 16444701
-    },
     {
       "trading_date": "2025-11-13",
       "open": 267.1,
@@ -1992,7 +1976,23 @@
       "high": 266.5,
       "low": 261.25,
       "close": 263.75,
-      "volume": 13547405
+      "volume": 13549332
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 264.05,
+      "high": 264.5,
+      "low": 258.5,
+      "close": 259.45,
+      "volume": 7725280
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 259.5,
+      "high": 260.1,
+      "low": 256.0,
+      "close": 257.45,
+      "volume": 4947984
     }
   ]
 }

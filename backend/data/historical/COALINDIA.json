@@ -3,29 +3,13 @@
   "ticker_used": "COALINDIA.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:25.202532+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:08.916103+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 381.45,
-      "high": 383.0,
-      "low": 378.6,
-      "close": 382.8,
-      "volume": 3299015
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 384.25,
-      "high": 387.6,
-      "low": 382.7,
-      "close": 386.5,
-      "volume": 4326520
-    },
     {
       "trading_date": "2025-11-13",
       "open": 386.5,
@@ -1992,7 +1976,23 @@
       "high": 408.2,
       "low": 402.1,
       "close": 406.3,
-      "volume": 10754626
+      "volume": 10755794
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 406.4,
+      "high": 406.5,
+      "low": 402.65,
+      "close": 404.3,
+      "volume": 5552779
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 404.6,
+      "high": 406.2,
+      "low": 402.3,
+      "close": 403.5,
+      "volume": 4674518
     }
   ]
 }

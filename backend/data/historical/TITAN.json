@@ -3,29 +3,13 @@
   "ticker_used": "TITAN.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:16.429869+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:04.648566+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 3810.5,
-      "high": 3820.0,
-      "low": 3752.1,
-      "close": 3812.4,
-      "volume": 668789
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 3838.0,
-      "high": 3877.0,
-      "low": 3804.2,
-      "close": 3851.1,
-      "volume": 805025
-    },
     {
       "trading_date": "2025-11-13",
       "open": 3860.0,
@@ -1992,7 +1976,23 @@
       "high": 5056.6,
       "low": 4951.9,
       "close": 4970.0,
-      "volume": 1716435
+      "volume": 1716837
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 4970.0,
+      "high": 5030.0,
+      "low": 4896.0,
+      "close": 4921.9,
+      "volume": 732932
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 4935.0,
+      "high": 4947.8,
+      "low": 4837.1,
+      "close": 4844.9,
+      "volume": 624040
     }
   ]
 }

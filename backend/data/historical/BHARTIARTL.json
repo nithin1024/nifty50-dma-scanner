@@ -3,29 +3,13 @@
   "ticker_used": "BHARTIARTL.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:19.169156+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:54.402504+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 2020.1,
-      "high": 2056.9,
-      "low": 2017.4,
-      "close": 2042.3,
-      "volume": 14825625
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 2060.0,
-      "high": 2079.8,
-      "low": 2054.9,
-      "close": 2073.8,
-      "volume": 8210277
-    },
     {
       "trading_date": "2025-11-13",
       "open": 2099.9,
@@ -1992,7 +1976,23 @@
       "high": 2116.3,
       "low": 2079.2,
       "close": 2109.0,
-      "volume": 8951037
+      "volume": 8969920
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 2094.0,
+      "high": 2104.0,
+      "low": 2070.5,
+      "close": 2096.0,
+      "volume": 7646984
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 2082.0,
+      "high": 2122.9,
+      "low": 2082.0,
+      "close": 2106.0,
+      "volume": 6106256
     }
   ]
 }

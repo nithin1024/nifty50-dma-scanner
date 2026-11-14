@@ -3,29 +3,13 @@
   "ticker_used": "HINDALCO.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:37.548155+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:25.434792+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 790.8,
-      "high": 794.7,
-      "low": 778.1,
-      "close": 793.75,
-      "volume": 5411465
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 798.0,
-      "high": 809.0,
-      "low": 791.75,
-      "close": 794.4,
-      "volume": 7589035
-    },
     {
       "trading_date": "2025-11-13",
       "open": 803.0,
@@ -1992,7 +1976,23 @@
       "high": 965.25,
       "low": 946.0,
       "close": 962.3,
-      "volume": 9840970
+      "volume": 9841589
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 959.0,
+      "high": 971.0,
+      "low": 953.7,
+      "close": 964.0,
+      "volume": 12785033
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 954.0,
+      "high": 963.0,
+      "low": 941.5,
+      "close": 943.6,
+      "volume": 8856292
     }
   ]
 }

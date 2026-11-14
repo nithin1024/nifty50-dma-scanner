@@ -3,29 +3,13 @@
   "ticker_used": "EICHERMOT.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:28.147492+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:18.400529+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 6871.5,
-      "high": 6890.0,
-      "low": 6754.0,
-      "close": 6873.0,
-      "volume": 409676
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 6906.5,
-      "high": 6925.0,
-      "low": 6838.5,
-      "close": 6879.0,
-      "volume": 300606
-    },
     {
       "trading_date": "2025-11-13",
       "open": 6875.0,
@@ -1992,7 +1976,23 @@
       "high": 7837.0,
       "low": 7510.0,
       "close": 7592.0,
-      "volume": 689731
+      "volume": 689851
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 7594.0,
+      "high": 7696.0,
+      "low": 7455.0,
+      "close": 7549.0,
+      "volume": 726200
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 7548.5,
+      "high": 7654.0,
+      "low": 7451.5,
+      "close": 7650.0,
+      "volume": 523543
     }
   ]
 }

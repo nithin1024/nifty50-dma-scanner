@@ -3,29 +3,13 @@
   "ticker_used": "APOLLOHOSP.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:08.362539+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:17.196237+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 7501.5,
-      "high": 7569.0,
-      "low": 7441.0,
-      "close": 7501.0,
-      "volume": 306736
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 7520.0,
-      "high": 7539.0,
-      "low": 7458.0,
-      "close": 7498.0,
-      "volume": 420561
-    },
     {
       "trading_date": "2025-11-13",
       "open": 7480.0,
@@ -1992,7 +1976,23 @@
       "high": 8604.0,
       "low": 8477.0,
       "close": 8604.0,
-      "volume": 427328
+      "volume": 427359
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 8537.5,
+      "high": 8537.5,
+      "low": 8454.5,
+      "close": 8515.0,
+      "volume": 347669
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 8515.0,
+      "high": 8640.0,
+      "low": 8490.0,
+      "close": 8526.0,
+      "volume": 556204
     }
   ]
 }

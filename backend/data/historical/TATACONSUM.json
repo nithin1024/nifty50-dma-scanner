@@ -3,29 +3,13 @@
   "ticker_used": "TATACONSUM.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:07.659197+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:46:23.128257+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1148.0,
-      "high": 1159.0,
-      "low": 1134.0,
-      "close": 1156.2,
-      "volume": 1177071
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1156.3,
-      "high": 1165.8,
-      "low": 1153.1,
-      "close": 1162.0,
-      "volume": 1168588
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1168.0,
@@ -1992,7 +1976,15 @@
       "high": 1099.9,
       "low": 1082.2,
       "close": 1093.0,
-      "volume": 1516418
+      "volume": 1516607
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1087.5,
+      "high": 1096.4,
+      "low": 1077.4,
+      "close": 1085.3,
+      "volume": 750118
     }
   ]
 }

@@ -3,29 +3,13 @@
   "ticker_used": "ONGC.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:57.266664+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:10.443557+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 254.2,
-      "high": 254.2,
-      "low": 246.0,
-      "close": 249.45,
-      "volume": 16183880
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 252.6,
-      "high": 255.6,
-      "low": 249.9,
-      "close": 253.85,
-      "volume": 11917811
-    },
     {
       "trading_date": "2025-11-13",
       "open": 253.7,
@@ -1992,7 +1976,23 @@
       "high": 236.0,
       "low": 233.8,
       "close": 234.8,
-      "volume": 26338469
+      "volume": 26359073
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 227.6,
+      "high": 227.75,
+      "low": 224.01,
+      "close": 224.5,
+      "volume": 24520547
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 225.5,
+      "high": 226.8,
+      "low": 225.0,
+      "close": 225.0,
+      "volume": 8935063
     }
   ]
 }

@@ -3,29 +3,13 @@
   "ticker_used": "BEL.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:17.720919+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:11.666649+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 417.15,
-      "high": 427.9,
-      "low": 417.15,
-      "close": 427.3,
-      "volume": 24889361
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 428.15,
-      "high": 429.4,
-      "low": 421.8,
-      "close": 424.75,
-      "volume": 15221773
-    },
     {
       "trading_date": "2025-11-13",
       "open": 423.15,
@@ -1992,7 +1976,23 @@
       "high": 402.0,
       "low": 394.95,
       "close": 399.0,
-      "volume": 14291022
+      "volume": 14294787
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 401.4,
+      "high": 406.7,
+      "low": 398.6,
+      "close": 404.8,
+      "volume": 11407527
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 404.4,
+      "high": 406.0,
+      "low": 397.65,
+      "close": 400.85,
+      "volume": 7533948
     }
   ]
 }

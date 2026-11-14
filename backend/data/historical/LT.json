@@ -3,29 +3,13 @@
   "ticker_used": "LT.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:49.403256+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:55.069131+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 3929.0,
-      "high": 3966.8,
-      "low": 3897.0,
-      "close": 3955.0,
-      "volume": 1775462
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 3970.0,
-      "high": 3973.8,
-      "low": 3936.9,
-      "close": 3954.6,
-      "volume": 981350
-    },
     {
       "trading_date": "2025-11-13",
       "open": 3954.6,
@@ -1992,7 +1976,23 @@
       "high": 4259.0,
       "low": 4187.4,
       "close": 4212.0,
-      "volume": 2832332
+      "volume": 2833382
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 4210.0,
+      "high": 4213.7,
+      "low": 4158.0,
+      "close": 4159.2,
+      "volume": 2448016
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 4145.1,
+      "high": 4193.6,
+      "low": 4127.6,
+      "close": 4143.8,
+      "volume": 1585695
     }
   ]
 }

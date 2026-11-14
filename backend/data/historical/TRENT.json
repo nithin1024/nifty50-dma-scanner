@@ -3,29 +3,13 @@
   "ticker_used": "TRENT.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:17.862119+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:46:05.229367+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 4295.0,
-      "high": 4365.0,
-      "low": 4263.1,
-      "close": 4315.8,
-      "volume": 1802510
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 4330.0,
-      "high": 4396.7,
-      "low": 4295.0,
-      "close": 4375.8,
-      "volume": 937925
-    },
     {
       "trading_date": "2025-11-13",
       "open": 4378.0,
@@ -1992,7 +1976,15 @@
       "high": 3238.0,
       "low": 3135.0,
       "close": 3222.7,
-      "volume": 1563801
+      "volume": 1564231
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 3210.0,
+      "high": 3235.0,
+      "low": 3172.5,
+      "close": 3180.0,
+      "volume": 611416
     }
   ]
 }

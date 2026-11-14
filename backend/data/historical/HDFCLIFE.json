@@ -3,29 +3,13 @@
   "ticker_used": "HDFCLIFE.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:34.012331+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:19.029442+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 754.4,
-      "high": 765.0,
-      "low": 747.35,
-      "close": 763.9,
-      "volume": 2303525
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 765.0,
-      "high": 786.0,
-      "low": 764.45,
-      "close": 783.1,
-      "volume": 3996339
-    },
     {
       "trading_date": "2025-11-13",
       "open": 782.9,
@@ -1992,7 +1976,23 @@
       "high": 579.8,
       "low": 569.15,
       "close": 573.55,
-      "volume": 2110106
+      "volume": 2110578
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 575.0,
+      "high": 599.05,
+      "low": 575.0,
+      "close": 597.8,
+      "volume": 6593698
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 602.0,
+      "high": 602.3,
+      "low": 587.0,
+      "close": 592.25,
+      "volume": 2996551
     }
   ]
 }

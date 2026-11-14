@@ -3,29 +3,13 @@
   "ticker_used": "INDUSINDBK.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:41.957696+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:24.922882+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 799.7,
-      "high": 828.2,
-      "low": 792.8,
-      "close": 826.1,
-      "volume": 7150449
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 830.05,
-      "high": 873.0,
-      "low": 827.0,
-      "close": 864.4,
-      "volume": 11714519
-    },
     {
       "trading_date": "2025-11-13",
       "open": 862.0,
@@ -1992,7 +1976,23 @@
       "high": 916.95,
       "low": 899.7,
       "close": 900.0,
-      "volume": 7852557
+      "volume": 7852807
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 903.7,
+      "high": 931.9,
+      "low": 898.55,
+      "close": 931.35,
+      "volume": 3072650
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 930.0,
+      "high": 930.0,
+      "low": 911.35,
+      "close": 914.4,
+      "volume": 2303205
     }
   ]
 }

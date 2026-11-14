@@ -3,29 +3,13 @@
   "ticker_used": "RELIANCE.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T14:10:29.179862+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:52.430327+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1497.0,
-      "high": 1498.8,
-      "low": 1480.2,
-      "close": 1493.4,
-      "volume": 7127506
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1505.0,
-      "high": 1524.7,
-      "low": 1500.0,
-      "close": 1511.5,
-      "volume": 12384459
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1515.0,
@@ -1992,7 +1976,23 @@
       "high": 1349.4,
       "low": 1327.0,
       "close": 1335.4,
-      "volume": 17550840
+      "volume": 17554310
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1335.4,
+      "high": 1342.5,
+      "low": 1330.9,
+      "close": 1339.7,
+      "volume": 13807921
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1336.6,
+      "high": 1350.7,
+      "low": 1324.0,
+      "close": 1339.7,
+      "volume": 13756247
     }
   ]
 }

@@ -3,29 +3,13 @@
   "ticker_used": "GRASIM.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:29.550295+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:12.566825+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 2775.0,
-      "high": 2780.1,
-      "low": 2737.5,
-      "close": 2775.8,
-      "volume": 399693
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 2788.4,
-      "high": 2793.7,
-      "low": 2755.0,
-      "close": 2767.4,
-      "volume": 531304
-    },
     {
       "trading_date": "2025-11-13",
       "open": 2766.6,
@@ -1992,7 +1976,23 @@
       "high": 3239.0,
       "low": 3131.4,
       "close": 3156.7,
-      "volume": 830112
+      "volume": 830476
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 3148.5,
+      "high": 3148.5,
+      "low": 3105.6,
+      "close": 3114.9,
+      "volume": 972714
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 3125.0,
+      "high": 3125.0,
+      "low": 3009.0,
+      "close": 3034.0,
+      "volume": 1510159
     }
   ]
 }

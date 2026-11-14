@@ -3,29 +3,13 @@
   "ticker_used": "ASIANPAINT.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:10.207919+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:46:17.711008+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 2650.4,
-      "high": 2664.9,
-      "low": 2633.4,
-      "close": 2657.2,
-      "volume": 776404
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 2660.0,
-      "high": 2838.7,
-      "low": 2642.1,
-      "close": 2769.8,
-      "volume": 2859196
-    },
     {
       "trading_date": "2025-11-13",
       "open": 2858.9,
@@ -1992,7 +1976,15 @@
       "high": 2574.9,
       "low": 2535.1,
       "close": 2550.3,
-      "volume": 1260623
+      "volume": 1260836
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 2550.3,
+      "high": 2567.3,
+      "low": 2521.0,
+      "close": 2536.5,
+      "volume": 817076
     }
   ]
 }

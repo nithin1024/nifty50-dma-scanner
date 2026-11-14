@@ -3,29 +3,13 @@
   "ticker_used": "MARUTI.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:52.329044+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:01.029771+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 15640.0,
-      "high": 15680.0,
-      "low": 15512.0,
-      "close": 15645.0,
-      "volume": 181524
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 15674.0,
-      "high": 15731.0,
-      "low": 15555.0,
-      "close": 15696.0,
-      "volume": 244015
-    },
     {
       "trading_date": "2025-11-13",
       "open": 15661.0,
@@ -1992,7 +1976,23 @@
       "high": 13205.0,
       "low": 12992.0,
       "close": 13185.0,
-      "volume": 963423
+      "volume": 963516
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 13184.0,
+      "high": 13215.0,
+      "low": 12900.0,
+      "close": 13024.0,
+      "volume": 720496
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 12901.0,
+      "high": 12978.0,
+      "low": 12786.0,
+      "close": 12854.0,
+      "volume": 492029
     }
   ]
 }

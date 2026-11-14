@@ -3,29 +3,13 @@
   "ticker_used": "TMPV.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:33:10.406666+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:08.389107+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 412.55,
-      "high": 413.7,
-      "low": 402.65,
-      "close": 407.6,
-      "volume": 8120946
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 407.6,
-      "high": 411.4,
-      "low": 401.9,
-      "close": 402.15,
-      "volume": 12940220
-    },
     {
       "trading_date": "2025-11-13",
       "open": 404.0,
@@ -1992,7 +1976,23 @@
       "high": 301.0,
       "low": 296.2,
       "close": 299.25,
-      "volume": 7987931
+      "volume": 7993192
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 300.0,
+      "high": 301.85,
+      "low": 293.6,
+      "close": 297.25,
+      "volume": 6989265
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 297.25,
+      "high": 297.3,
+      "low": 287.25,
+      "close": 287.4,
+      "volume": 9462724
     }
   ]
 }

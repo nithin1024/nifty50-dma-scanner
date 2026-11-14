@@ -3,29 +3,13 @@
   "ticker_used": "DRREDDY.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:26.715841+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:16.480712+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1203.6,
-      "high": 1214.8,
-      "low": 1198.6,
-      "close": 1211.5,
-      "volume": 1048552
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1220.1,
-      "high": 1235.0,
-      "low": 1215.0,
-      "close": 1229.6,
-      "volume": 1222295
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1235.8,
@@ -1992,7 +1976,23 @@
       "high": 1399.0,
       "low": 1372.4,
       "close": 1377.0,
-      "volume": 1687263
+      "volume": 1687351
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1377.0,
+      "high": 1389.8,
+      "low": 1371.9,
+      "close": 1386.6,
+      "volume": 1222604
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1380.0,
+      "high": 1404.0,
+      "low": 1375.8,
+      "close": 1380.0,
+      "volume": 1308089
     }
   ]
 }

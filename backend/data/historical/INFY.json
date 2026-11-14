@@ -3,29 +3,13 @@
   "ticker_used": "INFY.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:43.405705+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:53.761407+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1525.0,
-      "high": 1533.4,
-      "low": 1511.1,
-      "close": 1530.3,
-      "volume": 13692989
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1540.0,
-      "high": 1559.2,
-      "low": 1538.1,
-      "close": 1551.7,
-      "volume": 14635417
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1557.1,
@@ -1992,7 +1976,23 @@
       "high": 1170.6,
       "low": 1143.9,
       "close": 1155.0,
-      "volume": 9143739
+      "volume": 9148933
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1145.0,
+      "high": 1154.8,
+      "low": 1134.8,
+      "close": 1151.2,
+      "volume": 7562749
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1147.5,
+      "high": 1155.0,
+      "low": 1135.5,
+      "close": 1141.5,
+      "volume": 5936229
     }
   ]
 }

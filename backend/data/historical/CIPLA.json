@@ -3,29 +3,13 @@
   "ticker_used": "CIPLA.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:23.731939+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:15.977710+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1511.3,
-      "high": 1517.5,
-      "low": 1506.1,
-      "close": 1514.9,
-      "volume": 850772
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1514.9,
-      "high": 1528.1,
-      "low": 1514.1,
-      "close": 1519.3,
-      "volume": 1179131
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1520.0,
@@ -1992,7 +1976,23 @@
       "high": 1420.2,
       "low": 1406.1,
       "close": 1419.9,
-      "volume": 1723027
+      "volume": 1723204
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1413.6,
+      "high": 1420.0,
+      "low": 1399.5,
+      "close": 1408.3,
+      "volume": 1683740
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1407.0,
+      "high": 1418.7,
+      "low": 1391.8,
+      "close": 1391.8,
+      "volume": 1022855
     }
   ]
 }

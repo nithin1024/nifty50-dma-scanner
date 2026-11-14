@@ -3,29 +3,13 @@
   "ticker_used": "KOTAKBANK.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:47.815678+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:58.521618+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 420.0,
-      "high": 420.6,
-      "low": 414.98,
-      "close": 417.38,
-      "volume": 10814210
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 420.02,
-      "high": 420.02,
-      "low": 416.0,
-      "close": 416.9,
-      "volume": 9035425
-    },
     {
       "trading_date": "2025-11-13",
       "open": 417.9,
@@ -1992,7 +1976,23 @@
       "high": 491.05,
       "low": 481.45,
       "close": 487.7,
-      "volume": 23451216
+      "volume": 23453403
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 485.95,
+      "high": 494.05,
+      "low": 484.35,
+      "close": 490.4,
+      "volume": 27158499
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 490.4,
+      "high": 490.4,
+      "low": 483.95,
+      "close": 488.55,
+      "volume": 11257492
     }
   ]
 }

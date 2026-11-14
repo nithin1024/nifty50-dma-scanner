@@ -3,29 +3,13 @@
   "ticker_used": "BAJAJ-AUTO.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:13.180455+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:46:09.901345+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 8819.0,
-      "high": 8945.0,
-      "low": 8726.0,
-      "close": 8895.0,
-      "volume": 380748
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 8935.0,
-      "high": 8935.0,
-      "low": 8800.0,
-      "close": 8868.0,
-      "volume": 439922
-    },
     {
       "trading_date": "2025-11-13",
       "open": 8888.0,
@@ -1992,7 +1976,15 @@
       "high": 11120.0,
       "low": 10939.0,
       "close": 11040.0,
-      "volume": 449067
+      "volume": 449112
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 11040.0,
+      "high": 11173.0,
+      "low": 10889.0,
+      "close": 10945.0,
+      "volume": 356938
     }
   ]
 }

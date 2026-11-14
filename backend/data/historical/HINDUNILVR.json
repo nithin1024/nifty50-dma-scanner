@@ -3,29 +3,13 @@
   "ticker_used": "HINDUNILVR.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:39.017441+00:00",
-  "total_sessions": 248,
-  "min_required_sessions": 200,
+  "retrieval_timestamp": "2026-11-14T06:45:59.684398+00:00",
+  "total_sessions": 247,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-12",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 2422.2,
-      "high": 2433.7,
-      "low": 2403.1,
-      "close": 2427.5,
-      "volume": 1422399
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 2430.6,
-      "high": 2434.8,
-      "low": 2416.2,
-      "close": 2424.5,
-      "volume": 1680827
-    },
     {
       "trading_date": "2025-11-13",
       "open": 2429.0,
@@ -1992,7 +1976,15 @@
       "high": 2027.0,
       "low": 2001.0,
       "close": 2022.4,
-      "volume": 1700460
+      "volume": 1701295
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 2004.0,
+      "high": 2011.1,
+      "low": 1969.0,
+      "close": 1974.0,
+      "volume": 1804468
     }
   ]
 }

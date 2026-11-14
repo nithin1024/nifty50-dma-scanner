@@ -3,29 +3,13 @@
   "ticker_used": "AXISBANK.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:11.727791+00:00",
+  "retrieval_timestamp": "2026-11-14T06:45:58.000244+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1218.1,
-      "high": 1225.0,
-      "low": 1209.4,
-      "close": 1222.5,
-      "volume": 5615453
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1227.9,
-      "high": 1232.7,
-      "low": 1216.5,
-      "close": 1221.6,
-      "volume": 6782513
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1219.0,
@@ -1992,7 +1976,23 @@
       "high": 1360.4,
       "low": 1322.2,
       "close": 1336.4,
-      "volume": 12261774
+      "volume": 12262001
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1338.5,
+      "high": 1354.1,
+      "low": 1334.0,
+      "close": 1342.9,
+      "volume": 7842954
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1338.0,
+      "high": 1340.0,
+      "low": 1325.8,
+      "close": 1331.0,
+      "volume": 4277775
     }
   ]
 }

@@ -3,29 +3,13 @@
   "ticker_used": "BAJFINANCE.NS",
   "provider": "YAHOO_FINANCE_NSE",
   "price_adjustment": "UNADJUSTED_CLOSE",
-  "retrieval_timestamp": "2026-11-11T10:32:14.713915+00:00",
+  "retrieval_timestamp": "2026-11-14T06:46:00.327322+00:00",
   "total_sessions": 248,
-  "min_required_sessions": 200,
+  "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-11",
-  "latest_trading_date": "2026-11-11",
+  "first_trading_date": "2025-11-13",
+  "latest_trading_date": "2026-11-13",
   "candles": [
-    {
-      "trading_date": "2025-11-11",
-      "open": 1043.7,
-      "high": 1043.7,
-      "low": 997.0,
-      "close": 1005.2,
-      "volume": 23762890
-    },
-    {
-      "trading_date": "2025-11-12",
-      "open": 1011.0,
-      "high": 1018.4,
-      "low": 1008.8,
-      "close": 1013.2,
-      "volume": 11131278
-    },
     {
       "trading_date": "2025-11-13",
       "open": 1012.5,
@@ -1992,7 +1976,23 @@
       "high": 1090.0,
       "low": 1065.0,
       "close": 1078.8,
-      "volume": 9275317
+      "volume": 9276361
+    },
+    {
+      "trading_date": "2026-11-12",
+      "open": 1078.8,
+      "high": 1118.0,
+      "low": 1076.6,
+      "close": 1115.0,
+      "volume": 11872744
+    },
+    {
+      "trading_date": "2026-11-13",
+      "open": 1100.0,
+      "high": 1118.0,
+      "low": 1087.85,
+      "close": 1117.0,
+      "volume": 11898219
     }
   ]
 }
