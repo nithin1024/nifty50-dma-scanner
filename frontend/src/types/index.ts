@@ -5,7 +5,8 @@ export type NavTab =
   | 'heavyweights' 
   | 'volume-analytics' 
   | 'historical' 
-  | 'data-quality';
+  | 'data-quality'
+  | 'global-events';
 
 export type DataStatusLevel = 
   | 'VERIFIED' 
@@ -353,3 +354,78 @@ export interface MarketIntelligenceReport {
   };
   macro_glossary: MacroGlossaryTerm[];
 }
+
+export interface EventCountdown {
+  status: 'UPCOMING' | 'ONGOING' | 'RELEASED';
+  countdown_label_en: string;
+  countdown_label_te: string;
+  is_imminent: boolean;
+  seconds_remaining: number;
+  hours_remaining: number;
+  days_remaining: number;
+}
+
+export interface EventKeyTerm {
+  term: string;
+  term_te: string;
+  def_en: string;
+  def_te: string;
+}
+
+export interface GlobalEvent {
+  id: string;
+  event_name: string;
+  event_name_te: string;
+  country: string;
+  country_code: string;
+  country_flag: string;
+  category: 'ECONOMIC_DATA' | 'CENTRAL_BANK' | 'GOVERNMENT_FISCAL' | 'GEOPOLITICAL' | 'COMMODITIES_ENERGY' | 'FINANCIAL_MARKETS' | 'CORPORATE_TECH';
+  start_time_utc: string;
+  original_timezone: string;
+  original_time_str: string;
+  start_time_ist: string;
+  start_time_ist_str: string;
+  importance: 'HIGH' | 'MEDIUM' | 'LOW';
+  currency: string;
+  previous_value: string | null;
+  forecast_value: string | null;
+  actual_value: string | null;
+  revision_value: string | null;
+  surprise_value: number | null;
+  surprise_direction: 'POSITIVE' | 'NEGATIVE' | 'IN_LINE' | 'PENDING';
+  status: 'UPCOMING' | 'ONGOING' | 'RELEASED' | 'POSTPONED' | 'CANCELLED';
+  countdown: EventCountdown;
+  source_name: string;
+  source_url: string;
+  description_en: string;
+  description_te: string;
+  why_it_matters_en: string;
+  why_it_matters_te: string;
+  india_market_impact_en: string;
+  india_market_impact_te: string;
+  key_terms: EventKeyTerm[];
+  last_verified_timestamp: string;
+}
+
+export interface GlobalEventsSummary {
+  current_ist_timestamp: string;
+  current_ist_formatted: string;
+  current_ist_date: string;
+  total_events_tracked: number;
+  high_impact_total: number;
+  events_today_count: number;
+  next_event: GlobalEvent | null;
+  recently_released_count: number;
+  categories_breakdown: Record<string, number>;
+}
+
+export interface UserEventPreference {
+  alert_24h: boolean;
+  alert_1h: boolean;
+  alert_15m: boolean;
+  alert_results: boolean;
+  alert_postponed: boolean;
+  preferred_countries: string;
+  preferred_categories: string;
+}
+

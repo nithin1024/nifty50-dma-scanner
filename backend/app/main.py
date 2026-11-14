@@ -6,8 +6,9 @@ from pathlib import Path
 import logging
 
 from app.config import get_settings
-from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events
 from app.services.db_service import db_service
+from app.services.global_events_service import global_events_service
 from app import __version__
 
 # Set up logging
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
     try:
         db_service.init_db()
         db_service.sync_constituents_to_db()
+        global_events_service.init_database_events()
     except Exception as e:
         logger.warning(f"Database startup sync warning: {e}")
     yield
@@ -68,6 +70,7 @@ app.include_router(volume_analytics.router, prefix="/api/v1")
 app.include_router(heavyweights.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
 app.include_router(market_intelligence.router, prefix="/api/v1")
+app.include_router(global_events.router, prefix="/api/v1")
 
 
 @app.websocket("/ws/live-scanner")

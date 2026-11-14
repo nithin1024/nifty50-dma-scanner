@@ -6,6 +6,11 @@ from app.models.stock import (
     DailyScanRecordModel,
     CrossoverEventModel
 )
+from app.models.global_event import (
+    GlobalEventModel,
+    EventUpdateHistoryModel,
+    UserEventPreferenceModel
+)
 
 __all__ = [
     "Base",
@@ -13,5 +18,8 @@ __all__ = [
     "HistoricalOHLCModel",
     "DailyDMAModel",
     "DailyScanRecordModel",
-    "CrossoverEventModel"
+    "CrossoverEventModel",
+    "GlobalEventModel",
+    "EventUpdateHistoryModel",
+    "UserEventPreferenceModel"
 ]

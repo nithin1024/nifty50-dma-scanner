@@ -109,3 +109,72 @@ export async function triggerExcelGeneration(): Promise<any> {
 export function getExcelDownloadUrl(): string {
   return `${API_BASE}/export/download/latest`;
 }
+
+// Global Events Calendar APIs
+export async function fetchGlobalEvents(params?: {
+  category?: string;
+  country_code?: string;
+  importance?: string;
+  search_query?: string;
+  timeframe?: string;
+}): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params?.category && params.category !== 'ALL') query.append('category', params.category);
+  if (params?.country_code && params.country_code !== 'ALL') query.append('country_code', params.country_code);
+  if (params?.importance && params.importance !== 'ALL') query.append('importance', params.importance);
+  if (params?.search_query) query.append('search_query', params.search_query);
+  if (params?.timeframe) query.append('timeframe', params.timeframe);
+
+  const qs = query.toString();
+  const url = `${API_BASE}/global-events${qs ? `?${qs}` : ''}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchGlobalEventsSummary(): Promise<any> {
+  const response = await fetch(`${API_BASE}/global-events/summary`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSubCalendar(subType: string): Promise<any[]> {
+  const response = await fetch(`${API_BASE}/global-events/${subType}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function triggerGlobalEventsRefresh(): Promise<any> {
+  const response = await fetch(`${API_BASE}/global-events/refresh`, { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchUserPreferences(): Promise<any> {
+  const response = await fetch(`${API_BASE}/global-events/preferences`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function saveUserPreferences(prefs: any): Promise<any> {
+  const response = await fetch(`${API_BASE}/global-events/preferences`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs)
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+

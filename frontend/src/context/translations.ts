@@ -22,6 +22,7 @@ export const teluguTranslations: Record<string, string> = {
   '5. Volume Analytics': '5. వాల్యూమ్ అనలిటిక్స్',
   '6. Historical Charts': '6. హిస్టారికల్ చార్ట్‌లు',
   '7. Data Quality': '7. డేటా నాణ్యత',
+  '8. Global Events 🌍': '8. గ్లోబల్ ఈవెంట్స్ 🌍',
   'Excel (12-Sheet)': 'ఎక్సెల్ (12 షీట్లు)',
   'Daily Excel (12 Sheets)': 'రోజువారీ ఎక్సెల్ (12 షీట్లు)',
   'Live 50/50': 'లైవ్ 50/50',

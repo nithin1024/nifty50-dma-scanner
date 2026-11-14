@@ -9,6 +9,7 @@ import { Top7Heavyweights } from './pages/Top7Heavyweights';
 import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
 import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
+import { GlobalEventsPage } from './pages/GlobalEventsPage';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -197,6 +198,10 @@ export const App: React.FC = () => {
 
         {activeTab === 'data-quality' && (
           <DataStatus dataStatus={dataStatus} />
+        )}
+
+        {activeTab === 'global-events' && (
+          <GlobalEventsPage />
         )}
       </main>
 

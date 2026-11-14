@@ -10,7 +10,8 @@ import {
   ShieldCheck, 
   TrendingUp, 
   Download,
-  Languages
+  Languages,
+  Globe
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -32,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
     { id: 'volume-analytics', label: '5. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
     { id: 'historical', label: '6. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
     { id: 'data-quality', label: '7. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'global-events', label: '8. Global Events 🌍', icon: <Globe className="w-4 h-4" /> },
   ];
 
   return (
