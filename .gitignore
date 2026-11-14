@@ -43,3 +43,9 @@ Desktop.ini
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Generated Exports & Caches
+*.xlsx
+data/cache/
+backend/data/cache/
+

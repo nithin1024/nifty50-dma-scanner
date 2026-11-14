@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse } from './types';
-import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan } from './services/api';
+import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse, HeavyweightsReport } from './types';
+import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights } from './services/api';
 import { Navbar } from './components/Navbar';
-import { Dashboard } from './pages/Dashboard';
+import { MarketOverview } from './pages/MarketOverview';
 import { DailyScanner } from './pages/DailyScanner';
-import { LiveScanner } from './pages/LiveScanner';
+import { AllVolumeDashboard } from './pages/AllVolumeDashboard';
+import { Top7Heavyweights } from './pages/Top7Heavyweights';
+import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
 import { StockDetails } from './pages/StockDetails';
-import { ScanHistory } from './pages/ScanHistory';
 import { DataStatus } from './pages/DataStatus';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [health, setHealth] = useState<BackendHealth | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatusReport | null>(null);
   const [dailyScan, setDailyScan] = useState<DailyScanResponse | null>(null);
-  const [liveScan, setLiveScan] = useState<LiveScanResponse | null>(null);
+  const [, setLiveScan] = useState<LiveScanResponse | null>(null);
+  const [heavyweights, setHeavyweights] = useState<HeavyweightsReport | null>(null);
   const [selectedStock, setSelectedStock] = useState<string>('RELIANCE');
   const [loading, setLoading] = useState<boolean>(true);
   const [backendOnline, setBackendOnline] = useState<boolean>(false);
@@ -24,16 +26,18 @@ export const App: React.FC = () => {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [h, ds, daily, live] = await Promise.all([
+      const [h, ds, daily, live, hw] = await Promise.all([
         fetchHealth(),
         fetchDataStatus(),
         fetchDailyScan(),
-        fetchLiveScan()
+        fetchLiveScan(),
+        fetchTopHeavyweights()
       ]);
       setHealth(h);
       setDataStatus(ds);
       setDailyScan(daily);
       setLiveScan(live);
+      setHeavyweights(hw);
       setBackendOnline(true);
     } catch (err) {
       console.error('Failed to connect to backend service:', err);
@@ -93,7 +97,7 @@ export const App: React.FC = () => {
 
   const handleSelectStock = (symbol: string) => {
     setSelectedStock(symbol);
-    setActiveTab('stock-details');
+    setActiveTab('historical');
   };
 
   const availableSymbols = dailyScan 
@@ -109,11 +113,12 @@ export const App: React.FC = () => {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'dashboard' && (
-          <Dashboard 
+        {activeTab === 'overview' && (
+          <MarketOverview 
             health={health}
             dataStatus={dataStatus}
             dailyScan={dailyScan}
+            heavyweights={heavyweights}
             loading={loading}
             onRefresh={loadAllData}
             onNavigate={setActiveTab}
@@ -121,7 +126,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'daily-scanner' && (
+        {activeTab === 'dma-scanner' && (
           <DailyScanner 
             dailyScan={dailyScan}
             loading={loading}
@@ -129,16 +134,31 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'live-scanner' && (
-          <LiveScanner 
-            liveScan={liveScan}
+        {activeTab === 'all-volume' && (
+          <AllVolumeDashboard 
+            dailyScan={dailyScan}
             loading={loading}
-            onRefresh={loadAllData}
             onSelectStock={handleSelectStock}
           />
         )}
 
-        {activeTab === 'stock-details' && (
+        {activeTab === 'heavyweights' && (
+          <Top7Heavyweights 
+            heavyweights={heavyweights}
+            loading={loading}
+            onSelectStock={handleSelectStock}
+          />
+        )}
+
+        {activeTab === 'volume-analytics' && (
+          <VolumeAnalyticsPage 
+            dailyScan={dailyScan}
+            loading={loading}
+            onSelectStock={handleSelectStock}
+          />
+        )}
+
+        {activeTab === 'historical' && (
           <StockDetails 
             selectedSymbol={selectedStock}
             onSymbolChange={setSelectedStock}
@@ -146,18 +166,18 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'scan-history' && <ScanHistory />}
-
-        {activeTab === 'data-status' && <DataStatus dataStatus={dataStatus} />}
+        {activeTab === 'data-quality' && (
+          <DataStatus dataStatus={dataStatus} />
+        )}
       </main>
 
       <footer className="bg-[#121824] border-t border-[#232E47] py-4 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            NIFTY 50 DMA Scanner &bull; 6-DMA Simple Moving Average Screening Engine
+            NIFTY 50 Institutional DMA &amp; Live Volume Platform &bull; Pure SMA Engine &amp; RVOL Analytics
           </div>
           <div className="text-[11px] text-slate-400">
-            Levels 1–11 Production Build &bull; FastAPI, PostgreSQL &amp; React (TypeScript)
+            Institutional Build &bull; FastAPI, PostgreSQL, SQLAlchemy &amp; React (TypeScript)
           </div>
         </div>
       </footer>

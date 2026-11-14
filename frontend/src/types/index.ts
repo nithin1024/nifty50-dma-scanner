@@ -1,10 +1,11 @@
 export type NavTab = 
-  | 'dashboard' 
-  | 'daily-scanner' 
-  | 'live-scanner' 
-  | 'stock-details' 
-  | 'scan-history' 
-  | 'data-status';
+  | 'overview' 
+  | 'dma-scanner' 
+  | 'all-volume' 
+  | 'heavyweights' 
+  | 'volume-analytics' 
+  | 'historical' 
+  | 'data-quality';
 
 export type DataStatusLevel = 
   | 'VERIFIED' 
@@ -49,21 +50,61 @@ export interface CrossoverItem {
   is_fresh: boolean;
 }
 
+export interface SixSessionVolumeRecord {
+  session_index: number;
+  trading_date: string;
+  traded_volume: number;
+  close_price: number;
+  price_change_pct: number;
+}
+
+export interface CombinedSignal {
+  signal: 'STRONG_BULLISH' | 'BULLISH_WATCHLIST' | 'FRESH_BREAKOUT' | 'WEAKENING' | 'NO_CONFIRMED_SIGNAL';
+  label: string;
+  badge_color: string;
+  description: string;
+  confidence: string;
+}
+
 export interface StockScanResult {
   symbol: string;
   company_name: string;
+  sector?: string;
   industry: string;
+  weightage: number;
   status: string;
   latest_close: number;
+  price_change_pct?: number;
   latest_trading_date: string;
   score: number;
   classification: string;
   is_6_6: boolean;
   is_5_6: boolean;
+  transition_type?: string;
+  transition_description?: string;
+  prev_score?: number;
+  failed_dma?: string | null;
+  failed_dma_label?: string | null;
+  failed_dma_value?: number | null;
+  failed_dma_distance_pct?: number | null;
+  closest_support_dma?: string | null;
+  closest_support_value?: number | null;
+  closest_resistance_dma?: string | null;
+  closest_resistance_value?: number | null;
+  volume?: number;
+  six_session_avg_volume?: number | null;
+  rvol?: number | null;
+  volume_change_pct?: number | null;
+  volume_trend?: string;
+  volume_classification?: string;
+  price_volume_confirmation?: { signal: string; label: string; detail?: string };
+  six_session_history?: SixSessionVolumeRecord[];
+  combined_signal?: CombinedSignal;
   comparisons: Record<string, boolean>;
   smas: Record<string, number | null>;
   distances: Record<string, number | null>;
   fresh_crossovers: CrossoverItem[];
+  approaching_crossovers?: any[];
 }
 
 export interface DailyScanResponse {
@@ -75,6 +116,16 @@ export interface DailyScanResponse {
   count_5_6: number;
   stocks_6_6: StockScanResult[];
   stocks_5_6: StockScanResult[];
+  strong_bullish_stocks?: StockScanResult[];
+  bullish_watchlist_stocks?: StockScanResult[];
+  fresh_breakout_stocks?: StockScanResult[];
+  weakening_stocks?: StockScanResult[];
+  no_signal_stocks?: StockScanResult[];
+  maintaining_6_6?: StockScanResult[];
+  upgraded_5_to_6?: StockScanResult[];
+  downgraded_6_to_5?: StockScanResult[];
+  lost_alignment?: StockScanResult[];
+  approaching_crossovers?: any[];
   fresh_crossovers: CrossoverItem[];
   all_results: StockScanResult[];
 }
@@ -82,17 +133,34 @@ export interface DailyScanResponse {
 export interface LiveScanResult {
   symbol: string;
   company_name: string;
+  sector?: string;
   industry: string;
+  weightage: number;
   live_price: number;
   completed_close: number;
+  price_change_pct: number;
   live_score: number;
   live_classification: string;
   is_6_6: boolean;
   is_5_6: boolean;
   is_provisional: boolean;
   status: string;
+  feed_status?: string;
+  update_timestamp?: string;
   completed_smas: Record<string, number | null>;
   live_distances: Record<string, number | null>;
+  failed_dma?: string | null;
+  failed_dma_label?: string | null;
+  cumulative_volume?: number;
+  previous_session_volume?: number;
+  previous_five_volumes?: number[];
+  six_session_avg_volume?: number | null;
+  volume_change_pct?: number | null;
+  rvol?: number | null;
+  volume_trend?: string;
+  volume_classification?: string;
+  price_volume_confirmation?: { signal: string; label: string; detail?: string };
+  six_session_history?: SixSessionVolumeRecord[];
 }
 
 export interface LiveScanResponse {
@@ -105,8 +173,84 @@ export interface LiveScanResponse {
   live_count_5_6: number;
   stocks_6_6: LiveScanResult[];
   stocks_5_6: LiveScanResult[];
+  provisional_crossings: any[];
   all_results: LiveScanResult[];
   notice: string;
+}
+
+export interface HeavyweightStock {
+  symbol: string;
+  company_name: string;
+  sector: string;
+  industry: string;
+  isin: string;
+  weightage: number;
+  market_data: {
+    ltp: number;
+    open: number;
+    high: number;
+    low: number;
+    previous_close: number;
+    price_change: number;
+    price_change_pct: number;
+    cumulative_volume: number;
+    traded_value_rupees: number;
+    update_timestamp: string;
+  };
+  six_session_history: SixSessionVolumeRecord[];
+  volume_analytics: {
+    six_session_avg_volume: number | null;
+    latest_volume: number;
+    rvol: number | null;
+    volume_change_pct: number | null;
+    volume_trend: string;
+    volume_classification: string;
+    price_volume_confirmation: { signal: string; label: string; detail?: string };
+  };
+  technical_analytics: {
+    smas: Record<string, number | null>;
+    distances: Record<string, number | null>;
+    score: number;
+    classification: string;
+    is_6_6: boolean;
+    is_5_6: boolean;
+    failed_dma: string | null;
+    failed_dma_label: string | null;
+    closest_support_dma: string | null;
+    closest_support_value: number | null;
+    fresh_crossovers: CrossoverItem[];
+  };
+  weightage_impact: {
+    index_weightage_pct: number;
+    stock_price_change_pct: number;
+    approx_index_contribution_pts: number;
+    label: string;
+    impact_status: 'SUPPORTING' | 'DRAGGING' | 'NEUTRAL';
+  };
+}
+
+export interface HeavyweightsReport {
+  timestamp: string;
+  heavyweight_count: number;
+  combined_weightage_pct: number;
+  combined_estimated_contribution_pts: number;
+  top_supporter: {
+    symbol: string;
+    company_name: string;
+    contribution_pts: number;
+    price_change_pct: number;
+  } | null;
+  top_dragger: {
+    symbol: string;
+    company_name: string;
+    contribution_pts: number;
+    price_change_pct: number;
+  } | null;
+  concentration_ratio_top2_pct: number;
+  concentration_analysis: string;
+  supporters_count: number;
+  draggers_count: number;
+  heavyweights: HeavyweightStock[];
 }
 
 export interface ChartCandle {

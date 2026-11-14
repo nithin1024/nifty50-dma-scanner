@@ -4,7 +4,8 @@ import type {
   DailyScanResponse, 
   LiveScanResponse, 
   StockDetailsResponse, 
-  ScanHistoryRecord 
+  ScanHistoryRecord,
+  HeavyweightsReport
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -63,4 +64,32 @@ export async function fetchScanHistory(): Promise<ScanHistoryRecord[]> {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
   }
   return response.json();
+}
+
+export async function fetchTopHeavyweights(): Promise<HeavyweightsReport> {
+  const response = await fetch(`${API_BASE}/heavyweights`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchAllVolumeAnalytics(): Promise<any> {
+  const response = await fetch(`${API_BASE}/volume/all-50`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function triggerExcelGeneration(): Promise<any> {
+  const response = await fetch(`${API_BASE}/export/generate`, { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export function getExcelDownloadUrl(): string {
+  return `${API_BASE}/export/download/latest`;
 }
