@@ -12,6 +12,8 @@ from app.services.constituents_service import constituents_service
 from app.services.scanner_service import scanner_service
 from app.services.dma_service import dma_engine, DMA_PERIODS
 from app.services.crossover_service import crossover_engine
+from app.services.volume_service import volume_engine
+from app.services.historical_data_service import historical_data_service
 
 logger = logging.getLogger("upstox_service")
 
@@ -144,7 +146,7 @@ class LiveMarketFeedManager:
 
     async def compute_live_intraday_scan(self) -> Dict[str, Any]:
         """
-        Compare latest eligible live price against completed daily SMAs.
+        Compare latest eligible live price against completed daily SMAs with full volume analytics.
         Rule: Completed daily SMAs are NEVER recalculated from incomplete intraday candles!
         Live signals are labeled explicitly as PROVISIONAL.
         """
@@ -165,9 +167,15 @@ class LiveMarketFeedManager:
             completed_smas = stock.get("smas", {})
             completed_close = stock.get("latest_close")
             status = stock.get("status", "VERIFIED")
+            weightage = stock.get("weightage", 0.0)
 
             if not completed_close or status != "VERIFIED":
                 continue
+
+            # Fetch historical candles for 6-session volume analytics
+            hist = historical_data_service.get_cached_history(symbol)
+            candles = hist.get("candles", []) if hist else []
+            vol_metrics = volume_engine.analyze_stock_volume(symbol, candles)
 
             # In intraday mode, live price is compared against completed daily SMAs
             live_price = completed_close  # Default to latest session close when market closed
@@ -175,23 +183,52 @@ class LiveMarketFeedManager:
             # Classify live price strictly against completed daily SMAs
             classification = dma_engine.classify_stock(live_price, completed_smas)
 
+            # Check provisional crossings
+            if candles and len(candles) >= 2:
+                completed_closes = [c["close"] for c in candles]
+                crossings = crossover_engine.detect_intraday_provisional_crossing(live_price, completed_closes)
+                for cx in crossings:
+                    cx["symbol"] = symbol
+                    cx["company_name"] = stock.get("company_name")
+                    provisional_crossings.append(cx)
+
             entry = {
                 "symbol": symbol,
                 "company_name": stock.get("company_name"),
+                "sector": stock.get("sector", stock.get("industry")),
                 "industry": stock.get("industry"),
+                "weightage": weightage,
                 "live_price": round(live_price, 2),
                 "completed_close": round(completed_close, 2),
+                "price_change_pct": vol_metrics.get("price_change_pct", 0.0),
                 "live_score": classification["score"],
                 "live_classification": classification["classification"],
                 "is_6_6": classification["is_6_6"],
                 "is_5_6": classification["is_5_6"],
                 "is_provisional": True,
                 "status": status,
+                "feed_status": "UPSTOX_V3_ACTIVE" if upstox_auth_service.access_token else "COMPLETED_SESSION_SNAPSHOT",
+                "update_timestamp": now_utc,
                 "completed_smas": completed_smas,
                 "live_distances": {
                     k: round(v, 2) if v is not None else None 
                     for k, v in classification["distances"].items()
-                }
+                },
+                "failed_dma": classification.get("failed_dma"),
+                "failed_dma_label": classification.get("failed_dma_label"),
+                # Volume Analytics fields (Phase 5)
+                "cumulative_volume": vol_metrics.get("latest_volume", 0),
+                "previous_session_volume": vol_metrics.get("previous_session_volume", 0),
+                "previous_five_volumes": vol_metrics.get("previous_five_volumes", []),
+                "six_session_avg_volume": vol_metrics.get("six_session_avg_volume"),
+                "volume_change_pct": vol_metrics.get("volume_change_pct"),
+                "rvol": vol_metrics.get("rvol"),
+                "intraday_rvol": None,
+                "intraday_rvol_notice": "Intraday RVOL requires same-time-of-day cumulative benchmark. Direct comparison of partial session to full day is mathematically prohibited.",
+                "volume_trend": vol_metrics.get("volume_trend", "STEADY"),
+                "volume_classification": vol_metrics.get("volume_classification", "NORMAL_VOLUME"),
+                "price_volume_confirmation": vol_metrics.get("price_volume_confirmation", {"signal": "NEUTRAL", "label": "Neutral"}),
+                "six_session_history": vol_metrics.get("six_session_history", [])
             }
 
             live_results.append(entry)
@@ -201,10 +238,10 @@ class LiveMarketFeedManager:
             elif classification["is_5_6"]:
                 stocks_5_6.append(entry)
 
-        # Sort by live score
-        live_results.sort(key=lambda x: (x["live_score"], x["live_distances"].get("dist_dma20") or -999), reverse=True)
-        stocks_6_6.sort(key=lambda x: x["live_distances"].get("dist_dma20") or -999, reverse=True)
-        stocks_5_6.sort(key=lambda x: x["live_distances"].get("dist_dma20") or -999, reverse=True)
+        # Sort by live score, then RVOL
+        live_results.sort(key=lambda x: (x["live_score"], x.get("rvol") or 0.0), reverse=True)
+        stocks_6_6.sort(key=lambda x: (x.get("rvol") or 0.0, x["live_distances"].get("dist_dma20") or -999), reverse=True)
+        stocks_5_6.sort(key=lambda x: (x.get("rvol") or 0.0, x["live_distances"].get("dist_dma20") or -999), reverse=True)
 
         payload = {
             "type": "LIVE_SCAN_SNAPSHOT",
@@ -218,7 +255,7 @@ class LiveMarketFeedManager:
             "stocks_5_6": stocks_5_6,
             "provisional_crossings": provisional_crossings,
             "all_results": live_results,
-            "notice": "Live signals are provisional intraday comparisons against completed daily SMAs."
+            "notice": "Live signals are provisional intraday comparisons against completed daily SMAs. Intraday volume is displayed cumulatively."
         }
 
         self.latest_intraday_data = payload
