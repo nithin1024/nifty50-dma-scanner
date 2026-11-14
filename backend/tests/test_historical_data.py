@@ -45,14 +45,28 @@ def test_candle_validation_rules():
 
 @pytest.mark.asyncio
 async def test_fetch_reliance_history():
-    """Verify fetching authentic historical records with >= 200 sessions."""
+    """Verify fetching authentic historical records with >= 220 sessions."""
     res = await historical_data_service.fetch_symbol_history("RELIANCE")
     assert res["symbol"] == "RELIANCE"
     assert res["quality_status"] == "VERIFIED"
-    assert res["total_sessions"] >= 200
-    assert len(res["candles"]) >= 200
+    assert res["total_sessions"] >= 220
+    assert len(res["candles"]) >= 220
     assert res["price_adjustment"] == "UNADJUSTED_CLOSE"
 
     # Verify chronological ascending order
     dates = [c["trading_date"] for c in res["candles"]]
     assert dates == sorted(dates), "Candles are not sorted chronologically ascending"
+
+
+def test_verification_log_and_min_sessions():
+    """Verify source-level verification records and 220-session minimum."""
+    vlog = historical_data_service.get_verification_log()
+    assert vlog is not None, "Verification log was not created"
+    assert vlog["min_required_sessions"] == 220
+    assert vlog["total_constituents"] == 50
+    assert vlog["verified_count"] == 50
+    for record in vlog["records"]:
+        assert record["status"] == "VERIFIED"
+        assert record["sessions"] >= 220
+        assert record["price_adjustment"] == "UNADJUSTED_CLOSE"
+        assert record["provider"] == "YAHOO_FINANCE_NSE"

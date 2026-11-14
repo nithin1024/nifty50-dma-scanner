@@ -8,10 +8,22 @@ from app.services.constituents_service import constituents_service
 
 logger = logging.getLogger("historical_data_service")
 
-HISTORICAL_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "historical"
-COVERAGE_REPORT_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "coverage_report.json"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+BACKEND_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+ROOT_DATA_DIR = PROJECT_ROOT / "data"
 
-MIN_REQUIRED_SESSIONS = 200
+HISTORICAL_DATA_DIR = BACKEND_DATA_DIR / "historical"
+ROOT_HISTORICAL_DIR = ROOT_DATA_DIR / "historical"
+CACHE_DIR = BACKEND_DATA_DIR / "cache"
+ROOT_CACHE_DIR = ROOT_DATA_DIR / "cache"
+LOGS_DIR = BACKEND_DATA_DIR / "logs"
+ROOT_LOGS_DIR = ROOT_DATA_DIR / "logs"
+
+COVERAGE_REPORT_FILE = BACKEND_DATA_DIR / "coverage_report.json"
+VERIFICATION_LOG_FILE = LOGS_DIR / "verification_log.json"
+ROOT_VERIFICATION_LOG_FILE = ROOT_LOGS_DIR / "verification_log.json"
+
+MIN_REQUIRED_SESSIONS = 220
 
 # Explicitly documented symbol alias mappings for corporate actions and provider naming
 PROVIDER_TICKER_MAP = {
@@ -23,10 +35,14 @@ PROVIDER_TICKER_MAP = {
 
 class HistoricalDataService:
     def __init__(self):
-        HISTORICAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        for d in [HISTORICAL_DATA_DIR, ROOT_HISTORICAL_DIR, CACHE_DIR, ROOT_CACHE_DIR, LOGS_DIR, ROOT_LOGS_DIR]:
+            d.mkdir(parents=True, exist_ok=True)
 
-    def _get_cache_path(self, symbol: str) -> Path:
-        return HISTORICAL_DATA_DIR / f"{symbol.upper()}.json"
+    def _get_cache_paths(self, symbol: str) -> List[Path]:
+        return [
+            HISTORICAL_DATA_DIR / f"{symbol.upper()}.json",
+            ROOT_HISTORICAL_DIR / f"{symbol.upper()}.json"
+        ]
 
     def validate_candle(self, c: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate candle OHLC integrity."""
@@ -55,7 +71,9 @@ class HistoricalDataService:
     async def fetch_symbol_history(self, symbol: str, range_period: str = "1y") -> Dict[str, Any]:
         """
         Fetch historical daily candles for an NSE constituent.
-        Provider: Yahoo Finance NSE feed (.NS) with unadjusted close prices matching exchange Bhavcopy.
+        Provider priority:
+        1. Yahoo Finance NSE feed (.NS) with unadjusted settlement prices matching exchange Bhavcopy.
+        2. Fallback to local verified cache if network error.
         """
         clean_symbol = symbol.strip().upper()
         tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
@@ -121,7 +139,7 @@ class HistoricalDataService:
                     # Sort chronologically ascending
                     valid_candles.sort(key=lambda x: x["trading_date"])
 
-                    # Determine provenance status
+                    # Determine provenance status against MIN_REQUIRED_SESSIONS (220)
                     if len(valid_candles) >= MIN_REQUIRED_SESSIONS:
                         quality_status = "VERIFIED"
                     elif len(valid_candles) > 0:
@@ -143,10 +161,13 @@ class HistoricalDataService:
                         "candles": valid_candles
                     }
 
-                    # Save to cache file
-                    cache_file = self._get_cache_path(clean_symbol)
-                    with open(cache_file, "w", encoding="utf-8") as f:
-                        json.dump(result_payload, f, indent=2)
+                    # Save to cache files
+                    for p in self._get_cache_paths(clean_symbol):
+                        try:
+                            with open(p, "w", encoding="utf-8") as f:
+                                json.dump(result_payload, f, indent=2)
+                        except Exception as e:
+                            logger.warning(f"Could not write cache file {p}: {e}")
 
                     return result_payload
 
@@ -172,20 +193,21 @@ class HistoricalDataService:
         }
 
     def get_cached_history(self, symbol: str) -> Optional[Dict[str, Any]]:
-        cache_file = self._get_cache_path(symbol)
-        if cache_file.exists():
-            try:
-                with open(cache_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error reading cache for {symbol}: {e}")
+        for cache_file in self._get_cache_paths(symbol):
+            if cache_file.exists():
+                try:
+                    with open(cache_file, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception as e:
+                    logger.error(f"Error reading cache for {symbol} from {cache_file}: {e}")
         return None
 
     async def ingest_all_constituents(self) -> Dict[str, Any]:
-        """Ingest all 50 current constituents."""
+        """Ingest all 50 current constituents and generate verification log."""
         stocks = constituents_service.get_constituents()
         report: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "min_required_sessions": MIN_REQUIRED_SESSIONS,
             "total_constituents": len(stocks),
             "successfully_verified": 0,
             "insufficient_history": 0,
@@ -193,6 +215,8 @@ class HistoricalDataService:
             "validation_failed": 0,
             "constituent_summary": []
         }
+
+        verification_records = []
 
         for stock in stocks:
             sym = stock["symbol"]
@@ -208,16 +232,48 @@ class HistoricalDataService:
             else:
                 report["unavailable"] += 1
 
-            report["constituent_summary"].append({
+            summary_item = {
                 "symbol": sym,
                 "company_name": stock.get("company_name"),
                 "status": status,
                 "sessions": res.get("total_sessions", 0),
                 "latest_date": res.get("latest_trading_date")
+            }
+            report["constituent_summary"].append(summary_item)
+
+            verification_records.append({
+                "symbol": sym,
+                "company_name": stock.get("company_name"),
+                "sector": stock.get("sector"),
+                "isin": stock.get("isin"),
+                "provider": res.get("provider", "YAHOO_FINANCE_NSE"),
+                "price_adjustment": res.get("price_adjustment", "UNADJUSTED_CLOSE"),
+                "sessions": res.get("total_sessions", 0),
+                "min_required": MIN_REQUIRED_SESSIONS,
+                "status": status,
+                "first_date": res.get("first_trading_date"),
+                "latest_date": res.get("latest_trading_date"),
+                "retrieval_timestamp": res.get("retrieval_timestamp")
             })
 
         with open(COVERAGE_REPORT_FILE, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
+
+        verification_payload = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "min_required_sessions": MIN_REQUIRED_SESSIONS,
+            "total_constituents": len(verification_records),
+            "verified_count": len([r for r in verification_records if r["status"] == "VERIFIED"]),
+            "records": verification_records
+        }
+
+        for vf in [VERIFICATION_LOG_FILE, ROOT_VERIFICATION_LOG_FILE]:
+            try:
+                vf.parent.mkdir(parents=True, exist_ok=True)
+                with open(vf, "w", encoding="utf-8") as f:
+                    json.dump(verification_payload, f, indent=2)
+            except Exception as e:
+                logger.warning(f"Could not save verification log to {vf}: {e}")
 
         return report
 
@@ -228,6 +284,16 @@ class HistoricalDataService:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading coverage report: {e}")
+        return None
+
+    def get_verification_log(self) -> Optional[Dict[str, Any]]:
+        for vf in [VERIFICATION_LOG_FILE, ROOT_VERIFICATION_LOG_FILE]:
+            if vf.exists():
+                try:
+                    with open(vf, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading verification log from {vf}: {e}")
         return None
 
 
