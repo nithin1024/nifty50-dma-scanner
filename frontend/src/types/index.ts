@@ -298,3 +298,50 @@ export interface ScanHistoryRecord {
   count_6_6: number;
   count_5_6: number;
 }
+
+export interface CpiInflationCategory {
+  category: string;
+  yoy_inflation_pct: number;
+  breaches_rbi_ceiling: boolean;
+  severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+}
+
+export interface MarketIntelligenceReport {
+  timestamp: string;
+  report_date: string;
+  market_closing_levels: {
+    nifty_50: { level: number; change_pct: number; date: string };
+    sensex: { level: number; change_pct: number; date: string };
+    usd_inr: { rate: number; source: string };
+    crude_oil_brent: { price_usd: number; source: string; geopolitical_context: string };
+    market_read_between_lines: string;
+  };
+  fii_dii_cash_activity: {
+    session_date: string;
+    fii_net_crores: number;
+    fii_sentiment: string;
+    dii_net_crores: number;
+    dii_sentiment: string;
+    net_institutional_crores: number;
+    recent_fii_history: { date: string; fii_net_cr: number; status: string }[];
+    source: string;
+  };
+  fii_derivatives_positioning: {
+    session_date: string;
+    net_index_futures_contracts: number;
+    contracts_change: number;
+    change_description: string;
+    sentiment: string;
+    status: string;
+    historical_peak_shorts: number;
+    trend_analysis: string;
+    instrument_coverage: string;
+  };
+  cpi_inflation_breakdown: {
+    headline: string;
+    rbi_tolerance_ceiling_pct: number;
+    source: string;
+    key_highlights: string[];
+    categories: CpiInflationCategory[];
+  };
+}

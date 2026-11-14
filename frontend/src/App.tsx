@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse, HeavyweightsReport } from './types';
-import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights, triggerLiveScanRefresh } from './services/api';
+import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse, HeavyweightsReport, MarketIntelligenceReport } from './types';
+import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights, triggerLiveScanRefresh, fetchMarketIntelligence } from './services/api';
 import { Navbar } from './components/Navbar';
 import { MarketOverview } from './pages/MarketOverview';
 import { DailyScanner } from './pages/DailyScanner';
@@ -17,6 +17,7 @@ export const App: React.FC = () => {
   const [dailyScan, setDailyScan] = useState<DailyScanResponse | null>(null);
   const [liveScan, setLiveScan] = useState<LiveScanResponse | null>(null);
   const [heavyweights, setHeavyweights] = useState<HeavyweightsReport | null>(null);
+  const [intelligence, setIntelligence] = useState<MarketIntelligenceReport | null>(null);
   const [selectedStock, setSelectedStock] = useState<string>('RELIANCE');
   const [loading, setLoading] = useState<boolean>(true);
   const [backendOnline, setBackendOnline] = useState<boolean>(false);
@@ -26,18 +27,20 @@ export const App: React.FC = () => {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [h, ds, daily, live, hw] = await Promise.all([
+      const [h, ds, daily, live, hw, intel] = await Promise.all([
         fetchHealth(),
         fetchDataStatus(),
         fetchDailyScan(),
         fetchLiveScan(),
-        fetchTopHeavyweights()
+        fetchTopHeavyweights(),
+        fetchMarketIntelligence()
       ]);
       setHealth(h);
       setDataStatus(ds);
       setDailyScan(daily);
       setLiveScan(live);
       setHeavyweights(hw);
+      setIntelligence(intel);
       setBackendOnline(true);
     } catch (err) {
       console.error('Failed to connect to backend service:', err);
@@ -141,6 +144,7 @@ export const App: React.FC = () => {
             dataStatus={dataStatus}
             dailyScan={dailyScan}
             heavyweights={heavyweights}
+            intelligence={intelligence}
             loading={loading}
             onRefresh={loadAllData}
             onNavigate={setActiveTab}

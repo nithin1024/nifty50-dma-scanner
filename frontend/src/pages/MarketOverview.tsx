@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BackendHealth, DataStatusReport, DailyScanResponse, HeavyweightsReport, NavTab } from '../types';
+import type { BackendHealth, DataStatusReport, DailyScanResponse, HeavyweightsReport, NavTab, MarketIntelligenceReport } from '../types';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -11,12 +11,14 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
+import { MarketIntelligenceDashboard } from '../components/MarketIntelligenceDashboard';
 
 interface MarketOverviewProps {
   health: BackendHealth | null;
   dataStatus: DataStatusReport | null;
   dailyScan: DailyScanResponse | null;
   heavyweights: HeavyweightsReport | null;
+  intelligence?: MarketIntelligenceReport | null;
   loading: boolean;
   onRefresh: () => void;
   onNavigate: (tab: NavTab) => void;
@@ -28,6 +30,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
   dataStatus,
   dailyScan,
   heavyweights,
+  intelligence,
   loading,
   onRefresh,
   onNavigate,
@@ -160,6 +163,9 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Institutional Market Intelligence & Inflation Suite */}
+      <MarketIntelligenceDashboard intelligence={intelligence || null} />
 
       {/* Heavyweight Impact Banner */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

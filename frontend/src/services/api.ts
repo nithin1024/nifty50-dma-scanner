@@ -90,6 +90,14 @@ export async function fetchAllVolumeAnalytics(): Promise<any> {
   return response.json();
 }
 
+export async function fetchMarketIntelligence(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function triggerExcelGeneration(): Promise<any> {
   const response = await fetch(`${API_BASE}/export/generate`, { method: 'POST' });
   if (!response.ok) {

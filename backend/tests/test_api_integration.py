@@ -63,3 +63,31 @@ async def test_export_generate_and_download_endpoints():
         assert dl_resp.status_code == 200
         assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in dl_resp.headers["content-type"]
         assert len(dl_resp.content) > 5000
+
+
+@pytest.mark.asyncio
+async def test_market_intelligence_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/market-intelligence")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "market_closing_levels" in data
+        assert data["market_closing_levels"]["nifty_50"]["level"] == 25255.05
+        assert data["market_closing_levels"]["sensex"]["level"] == 81879.40
+
+        # Check FII/DII cash
+        assert "fii_dii_cash_activity" in data
+        assert data["fii_dii_cash_activity"]["fii_net_crores"] == 12563.0
+        assert data["fii_dii_cash_activity"]["dii_net_crores"] == -8435.0
+
+        # Check FII derivatives short covering
+        assert "fii_derivatives_positioning" in data
+        assert data["fii_derivatives_positioning"]["net_index_futures_contracts"] == -70413
+
+        # Check CPI inflation 12 categories
+        assert "cpi_inflation_breakdown" in data
+        assert len(data["cpi_inflation_breakdown"]["categories"]) == 12
+        assert data["cpi_inflation_breakdown"]["categories"][0]["category"] == "Personal care, social protection & miscellaneous"
+        assert data["cpi_inflation_breakdown"]["categories"][0]["yoy_inflation_pct"] == 10.14
+
