@@ -8,6 +8,8 @@ from app.services.constituents_service import constituents_service
 from app.services.historical_data_service import historical_data_service
 from app.services.dma_service import dma_engine, DMA_PERIODS
 from app.services.crossover_service import crossover_engine
+from app.services.volume_service import volume_engine
+from app.services.signal_service import signal_engine
 from app.services.db_service import db_service
 
 logger = logging.getLogger("scanner_service")
@@ -90,6 +92,23 @@ class DailyScannerService:
                 app_item["symbol"] = symbol
                 app_item["company_name"] = company_name
 
+            # 6. Volume Analytics
+            vol_metrics = volume_engine.analyze_stock_volume(symbol, candles)
+            price_change_pct = vol_metrics.get("price_change_pct", 0.0)
+            rvol = vol_metrics.get("rvol")
+
+            # 7. Combined Technical + Volume Signal Engine (Phase 7)
+            comb_signal = signal_engine.classify_combined_signal(
+                score=classification["score"],
+                is_6_6=classification["is_6_6"],
+                is_5_6=classification["is_5_6"],
+                price_change_pct=price_change_pct,
+                rvol=rvol,
+                fresh_crossovers=fresh_crossovers,
+                transition_type=transition["transition_type"],
+                status="VERIFIED"
+            )
+
             # Build enriched constituent result
             entry = {
                 "symbol": symbol,
@@ -99,6 +118,7 @@ class DailyScannerService:
                 "weightage": stock.get("weightage", 0.0),
                 "status": "VERIFIED",
                 "latest_close": round(latest_close, 2),
+                "price_change_pct": price_change_pct,
                 "latest_trading_date": latest_date,
                 "score": classification["score"],
                 "classification": classification["classification"],
@@ -115,6 +135,17 @@ class DailyScannerService:
                 "closest_support_value": classification.get("closest_support_value"),
                 "closest_resistance_dma": classification.get("closest_resistance_dma"),
                 "closest_resistance_value": classification.get("closest_resistance_value"),
+                # Volume Analytics fields
+                "volume": vol_metrics.get("latest_volume", 0),
+                "six_session_avg_volume": vol_metrics.get("six_session_avg_volume"),
+                "rvol": rvol,
+                "volume_change_pct": vol_metrics.get("volume_change_pct"),
+                "volume_trend": vol_metrics.get("volume_trend", "STEADY"),
+                "volume_classification": vol_metrics.get("volume_classification", "NORMAL_VOLUME"),
+                "price_volume_confirmation": vol_metrics.get("price_volume_confirmation"),
+                "six_session_history": vol_metrics.get("six_session_history", []),
+                # Combined Signal
+                "combined_signal": comb_signal,
                 "comparisons": classification["comparisons"],
                 "smas": {k: round(v, 2) if v is not None else None for k, v in smas.items()},
                 "distances": {k: round(v, 2) if v is not None else None for k, v in classification["distances"].items()},
@@ -147,6 +178,13 @@ class DailyScannerService:
             for app_item in r.get("approaching_crossovers", [])
         ]
 
+        # Aggregate Signal Categories (Phase 7)
+        strong_bullish_stocks = [r for r in all_results if r.get("combined_signal", {}).get("signal") == "STRONG_BULLISH"]
+        bullish_watchlist_stocks = [r for r in all_results if r.get("combined_signal", {}).get("signal") == "BULLISH_WATCHLIST"]
+        fresh_breakout_stocks = [r for r in all_results if r.get("combined_signal", {}).get("signal") == "FRESH_BREAKOUT"]
+        weakening_stocks = [r for r in all_results if r.get("combined_signal", {}).get("signal") == "WEAKENING"]
+        no_signal_stocks = [r for r in all_results if r.get("combined_signal", {}).get("signal") == "NO_CONFIRMED_SIGNAL"]
+
         scan_payload = {
             "scan_timestamp": scan_time,
             "completed_session_date": completed_session_date,
@@ -156,6 +194,13 @@ class DailyScannerService:
             "count_5_6": len(stocks_5_6),
             "stocks_6_6": stocks_6_6,
             "stocks_5_6": stocks_5_6,
+            # Signal Category Lists
+            "strong_bullish_stocks": strong_bullish_stocks,
+            "bullish_watchlist_stocks": bullish_watchlist_stocks,
+            "fresh_breakout_stocks": fresh_breakout_stocks,
+            "weakening_stocks": weakening_stocks,
+            "no_signal_stocks": no_signal_stocks,
+            # Transitions
             "maintaining_6_6": maintaining_6_6,
             "upgraded_5_to_6": upgraded_5_to_6,
             "downgraded_6_to_5": downgraded_6_to_5,
