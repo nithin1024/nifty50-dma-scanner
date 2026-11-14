@@ -96,6 +96,28 @@ class DMACalculationEngine:
         is_6_6 = (score == 6)
         is_5_6 = (score == 5)
 
+        # Clearly identify the exact one DMA above which price has NOT moved
+        failed_dma = None
+        failed_dma_label = None
+        failed_dma_value = None
+        failed_dma_distance_pct = None
+
+        if is_5_6:
+            for p in DMA_PERIODS:
+                if not comparisons.get(f"above_dma{p}"):
+                    failed_dma = f"dma{p}"
+                    failed_dma_label = f"{p} DMA"
+                    failed_dma_value = smas.get(f"dma{p}")
+                    failed_dma_distance_pct = distances.get(f"dist_dma{p}")
+                    break
+
+        # Identify closest support and resistance DMAs
+        support_candidates = [(p, smas[f"dma{p}"]) for p in DMA_PERIODS if smas.get(f"dma{p}") is not None and price > smas[f"dma{p}"]]
+        resistance_candidates = [(p, smas[f"dma{p}"]) for p in DMA_PERIODS if smas.get(f"dma{p}") is not None and price <= smas[f"dma{p}"]]
+
+        closest_support = max(support_candidates, key=lambda x: x[1]) if support_candidates else None
+        closest_resistance = min(resistance_candidates, key=lambda x: x[1]) if resistance_candidates else None
+
         if is_6_6:
             classification = "BULLISH_6_6"
         elif is_5_6:
@@ -108,6 +130,14 @@ class DMACalculationEngine:
             "classification": classification,
             "is_6_6": is_6_6,
             "is_5_6": is_5_6,
+            "failed_dma": failed_dma,
+            "failed_dma_label": failed_dma_label,
+            "failed_dma_value": round(failed_dma_value, 2) if failed_dma_value is not None else None,
+            "failed_dma_distance_pct": round(failed_dma_distance_pct, 2) if failed_dma_distance_pct is not None else None,
+            "closest_support_dma": f"{closest_support[0]} DMA" if closest_support else None,
+            "closest_support_value": round(closest_support[1], 2) if closest_support else None,
+            "closest_resistance_dma": f"{closest_resistance[0]} DMA" if closest_resistance else None,
+            "closest_resistance_value": round(closest_resistance[1], 2) if closest_resistance else None,
             "comparisons": comparisons,
             "distances": distances
         }

@@ -81,6 +81,11 @@ def test_exactly_5_of_6_bullish_classification():
     assert res["is_6_6"] is False
     assert res["is_5_6"] is True
     assert res["classification"] == "BULLISH_5_6"
+    assert res["failed_dma"] == "dma200"
+    assert res["failed_dma_label"] == "200 DMA"
+    assert res["failed_dma_value"] == 120.0
+    assert res["closest_support_dma"] == "100 DMA"
+    assert res["closest_resistance_dma"] == "200 DMA"
     assert res["comparisons"]["above_dma200"] is False
     assert res["comparisons"]["above_dma100"] is True
 
