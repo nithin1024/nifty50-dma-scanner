@@ -8,7 +8,6 @@ import {
   Layers, 
   RefreshCw, 
   BarChart3, 
-  Zap, 
   AlertCircle,
   CheckCircle2,
   PieChart
@@ -21,7 +20,6 @@ import {
   fetchOptionsAlerts, 
   fetchDataQualityReport 
 } from '../services/api';
-import { ProfessionalTradingChart } from './ProfessionalTradingChart';
 
 type OptionsTab = 
   | 'CHAIN'
@@ -31,8 +29,7 @@ type OptionsTab =
   | 'GREEKS_VOLATILITY'
   | 'STRATEGY_SIMULATOR'
   | 'REGIME_PRICE_ACTION'
-  | 'ALERTS_MONITOR'
-  | 'CHART';
+  | 'ALERTS_MONITOR';
 
 const displayMetric = (value: unknown, suffix = ''): string => {
   if (value === null || value === undefined || value === '') return 'N/A';
@@ -49,7 +46,6 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [universe, setUniverse] = useState<any[]>([]);
   const [expiries, setExpiries] = useState<string[]>([]);
   const [chainData, setChainData] = useState<any>(null);
-  const [chartInstrumentKey, setChartInstrumentKey] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [feedStatus, setFeedStatus] = useState<string>('WAITING');
@@ -199,17 +195,8 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
     { id: 'GREEKS_VOLATILITY', label: '5. Greeks & Volatility', icon: <Activity className="w-4 h-4" /> },
     { id: 'STRATEGY_SIMULATOR', label: '6. Strategy Simulator', icon: <PieChart className="w-4 h-4" /> },
     { id: 'REGIME_PRICE_ACTION', label: '7. Regime & VWAP', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'CHART', label: '8. Professional Chart', icon: <Zap className="w-4 h-4" /> },
-    { id: 'ALERTS_MONITOR', label: '9. Monitor & Alerts', icon: <AlertCircle className="w-4 h-4" /> }
+    { id: 'ALERTS_MONITOR', label: '8. Monitor & Alerts', icon: <AlertCircle className="w-4 h-4" /> }
   ];
-
-  const optionChartChoices = (chainData?.rows || []).flatMap((row: any) =>
-    ([['ce', 'CE'], ['pe', 'PE']] as const).map(([side, label]) => ({
-      key: row[side]?.instrument_key,
-      label: `${symbol} ${row.strike_price} ${label} ${chainData.expiry || ''}`
-    })).filter((choice: any) => Boolean(choice.key))
-  );
-  const chartDisplayName = optionChartChoices.find((choice: any) => choice.key === chartInstrumentKey)?.label || symbol;
 
   const foSymbols = universe.filter(u => u.is_fo_eligible || u.is_index).map(u => u.symbol);
 
@@ -413,34 +400,38 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             <table className="w-full text-xs font-mono text-center border-collapse">
               <thead>
                 <tr className="bg-[#121824] text-slate-400 border-b border-[#232E47]">
-                  <th colSpan={7} className="py-2 px-2 text-emerald-400 uppercase tracking-wider border-r border-[#232E47]">
+                  <th colSpan={9} className="py-2 px-2 text-emerald-400 uppercase tracking-wider border-r border-[#232E47]">
                     CALLS (CE)
                   </th>
                   <th className="py-2 px-3 text-white uppercase tracking-wider bg-[#171F32]">
                     STRIKE
                   </th>
-                  <th colSpan={7} className="py-2 px-2 text-rose-400 uppercase tracking-wider border-l border-[#232E47]">
+                  <th colSpan={9} className="py-2 px-2 text-rose-400 uppercase tracking-wider border-l border-[#232E47]">
                     PUTS (PE)
                   </th>
                 </tr>
                 <tr className="bg-[#0B0E14] text-slate-400 border-b border-[#232E47]/70 text-[10px]">
                   {/* CE Columns */}
                   <th className="py-1 px-1.5 text-left">Buildup</th>
+                  <th className="py-1 px-1.5 text-right">Prev OI</th>
                   <th className="py-1 px-1.5 text-right">OI</th>
                   <th className="py-1 px-1.5 text-right">OI Chg</th>
                   <th className="py-1 px-1.5 text-right">Volume</th>
                   <th className="py-1 px-1.5 text-right">IV</th>
                   <th className="py-1 px-1.5 text-right">Delta</th>
+                  <th className="py-1 px-1.5 text-right">Prev Close</th>
                   <th className="py-1 px-2 text-right border-r border-[#232E47] text-white">LTP</th>
                   {/* Strike */}
                   <th className="py-1 px-3 bg-[#171F32] text-amber-300 font-bold">Strike</th>
                   {/* PE Columns */}
                   <th className="py-1 px-2 text-left border-l border-[#232E47] text-white">LTP</th>
+                  <th className="py-1 px-1.5 text-left">Prev Close</th>
                   <th className="py-1 px-1.5 text-left">Delta</th>
                   <th className="py-1 px-1.5 text-left">IV</th>
                   <th className="py-1 px-1.5 text-left">Volume</th>
                   <th className="py-1 px-1.5 text-left">OI Chg</th>
                   <th className="py-1 px-1.5 text-left">OI</th>
+                  <th className="py-1 px-1.5 text-left">Prev OI</th>
                   <th className="py-1 px-1.5 text-right">Buildup</th>
                 </tr>
               </thead>
@@ -467,6 +458,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                           {row.ce.buildup}
                         </span>
                       </td>
+                      <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                        {displayMetric(row.ce.previous_oi)}
+                      </td>
                       <td className={`py-1.5 px-1.5 text-right font-medium text-slate-300 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                         {displayMetric(row.ce.oi)}
                       </td>
@@ -484,6 +478,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                       <td className={`py-1.5 px-1.5 text-right text-sky-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                         {displayMetric(row.ce.delta)}
                       </td>
+                      <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                        {row.ce.previous_close == null ? 'N/A' : `₹${displayMetric(row.ce.previous_close)}`}
+                      </td>
                       <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
                         {row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
                       </td>
@@ -498,6 +495,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                       {/* PE Cells */}
                       <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
                         {row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
+                      </td>
+                      <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                        {row.pe.previous_close == null ? 'N/A' : `₹${displayMetric(row.pe.previous_close)}`}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left text-sky-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
                         {displayMetric(row.pe.delta)}
@@ -515,6 +515,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                       </td>
                       <td className={`py-1.5 px-1.5 text-left font-medium text-slate-300 ${peItm ? 'bg-rose-950/20' : ''}`}>
                         {displayMetric(row.pe.oi)}
+                      </td>
+                      <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                        {displayMetric(row.pe.previous_oi)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
                         <span className={`px-1 py-0.5 rounded ${
@@ -629,9 +632,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
               <thead className="sticky top-0 bg-[#121824] text-slate-400 border-b border-[#232E47]">
                 <tr>
                   <th className="py-2 px-3">Hypothetical Expiry Price</th>
-                  <th className="py-2 px-3 text-right">Call Payout (₹)</th>
-                  <th className="py-2 px-3 text-right">Put Payout (₹)</th>
-                  <th className="py-2 px-3 text-right">Total Payout (₹)</th>
+                  <th className="py-2 px-3 text-right">Call OI-Weighted Payout</th>
+                  <th className="py-2 px-3 text-right">Put OI-Weighted Payout</th>
+                  <th className="py-2 px-3 text-right">Total OI-Weighted Payout</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232E47]/40 text-slate-300">
@@ -643,12 +646,15 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                       className={isMaxPain ? 'bg-rose-500/15 font-bold text-rose-300' : 'hover:bg-[#1a2334]'}
                     >
                       <td className="py-2 px-3">{item.hypothetical_expiry_price.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right text-emerald-400 font-medium">₹{item.ce_payout.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right text-sky-400 font-medium">₹{item.pe_payout.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right font-black">₹{item.total_payout.toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right text-emerald-400 font-medium">{item.ce_payout?.toLocaleString() ?? 'N/A'}</td>
+                      <td className="py-2 px-3 text-right text-sky-400 font-medium">{item.pe_payout?.toLocaleString() ?? 'N/A'}</td>
+                      <td className="py-2 px-3 text-right font-black">{item.total_payout?.toLocaleString() ?? 'N/A'}</td>
                     </tr>
                   );
                 })}
+                {!(chainData.max_pain?.payout_table || []).length && (
+                  <tr><td colSpan={4} className="py-6 text-center text-slate-400">Max Pain is unavailable because this chain has no observed open interest.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -895,26 +901,6 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
               <strong className="text-emerald-400">₹{marketRegime.pivots?.s2?.toLocaleString()}</strong>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 8: PROFESSIONAL INTERACTIVE TRADINGVIEW CHART */}
-      {/* ========================================================================= */}
-      {activeTab === 'CHART' && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#232E47] bg-[#0B0E14] p-3">
-            <label htmlFor="option-chart-instrument" className="text-xs font-mono text-slate-400">Chart instrument</label>
-            <select id="option-chart-instrument" value={chartInstrumentKey}
-              onChange={event => setChartInstrumentKey(event.target.value)}
-              className="max-w-full rounded-lg border border-[#232E47] bg-[#121824] px-3 py-2 text-xs text-white">
-              <option value="">{symbol} underlying index</option>
-              {optionChartChoices.map((choice: any) => <option key={choice.key} value={choice.key}>{choice.label}</option>)}
-            </select>
-            <span className="text-[11px] text-slate-500">Historical candles and any live ticks use the selected Upstox instrument key.</span>
-          </div>
-          <ProfessionalTradingChart symbol={symbol} height={520}
-            instrumentKey={chartInstrumentKey || undefined} displayName={chartDisplayName} />
         </div>
       )}
 

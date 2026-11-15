@@ -6,7 +6,6 @@ import {
   Activity, 
   Crown, 
   Layers, 
-  LineChart, 
   ShieldCheck, 
   TrendingUp, 
   Download,
@@ -48,9 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
     { id: 'all-volume', label: '5. All 50 Volume', icon: <Activity className="w-4 h-4" /> },
     { id: 'heavyweights', label: '6. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
     { id: 'volume-analytics', label: '7. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
-    { id: 'historical', label: '8. Stock Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'data-quality', label: '9. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
-    { id: 'global-events', label: '10. Global Events 🌍', icon: <Globe className="w-4 h-4" /> },
+    { id: 'data-quality', label: '8. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'global-events', label: '9. Global Events 🌍', icon: <Globe className="w-4 h-4" /> },
   ];
 
   return (

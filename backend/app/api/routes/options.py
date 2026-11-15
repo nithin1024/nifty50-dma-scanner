@@ -152,7 +152,8 @@ async def get_option_chain(
                 row[name] = {"instrument_key": option.get("instrument_key"), "ltp": ltp,
                     "change": price_change,
                     "change_pct": (price_change / float(close) * 100) if close not in (None, 0) and price_change is not None else None,
-                    "oi": oi, "oi_change": oi_change, "volume": volume,
+                    "previous_close": close, "oi": oi, "previous_oi": prev_oi,
+                    "oi_change": oi_change, "volume": volume,
                     "iv": greeks.get("iv"), "delta": greeks.get("delta"), "gamma": greeks.get("gamma"),
                     "theta": greeks.get("theta"), "vega": greeks.get("vega"),
                     "bid_price": market.get("bid_price"), "ask_price": market.get("ask_price"),
@@ -163,13 +164,20 @@ async def get_option_chain(
         requested_keys = [leg.get("instrument_key") for row in rows for leg in (row.get("ce"), row.get("pe")) if leg and leg.get("instrument_key")]
         await subscription_manager.set_subscriptions([key, *requested_keys], mode="full")
         max_pain_rows = []
+        observed_oi = 0.0
+        for item in raw:
+            for side in ("call_options", "put_options"):
+                market = (item.get(side) or {}).get("market_data") or {}
+                if market.get("oi") is not None:
+                    observed_oi += float(market["oi"])
         for settle in strikes:
-            payout = sum(float((r.get("call_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, settle - float(r["strike_price"])) +
-                         float((r.get("put_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, float(r["strike_price"]) - settle) for r in raw)
-            max_pain_rows.append({"hypothetical_expiry_price": settle, "total_payout": payout})
-        max_pain = min(max_pain_rows, key=lambda x: x["total_payout"])["hypothetical_expiry_price"] if max_pain_rows else None
-        put_candidates = [r for r in rows if r["strike_price"] <= spot and r["pe"].get("oi") is not None]
-        call_candidates = [r for r in rows if r["strike_price"] >= spot and r["ce"].get("oi") is not None]
+            call_payout = sum(float((r.get("call_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, settle - float(r["strike_price"])) for r in raw)
+            put_payout = sum(float((r.get("put_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, float(r["strike_price"]) - settle) for r in raw)
+            max_pain_rows.append({"hypothetical_expiry_price": settle, "ce_payout": call_payout,
+                                  "pe_payout": put_payout, "total_payout": call_payout + put_payout})
+        max_pain = min(max_pain_rows, key=lambda x: x["total_payout"])["hypothetical_expiry_price"] if observed_oi > 0 and max_pain_rows else None
+        put_candidates = [r for r in rows if r["strike_price"] <= spot and (r["pe"].get("oi") or 0) > 0]
+        call_candidates = [r for r in rows if r["strike_price"] >= spot and (r["ce"].get("oi") or 0) > 0]
         support = max(put_candidates, key=lambda r: r["pe"]["oi"]) if put_candidates else None
         resistance = max(call_candidates, key=lambda r: r["ce"]["oi"]) if call_candidates else None
         atm_row = next((item for item in raw if float(item["strike_price"]) == strikes[atm_index]), {})
@@ -187,7 +195,8 @@ async def get_option_chain(
                 "oi_change_pcr": total_put_change / total_call_change if total_call_change else None,
                 "total_call_oi_change": total_call_change, "total_put_oi_change": total_put_change},
             "exposures": {"atm_iv_pct": round(sum(atm_ivs) / len(atm_ivs), 2) if atm_ivs else None},
-            "max_pain": {"max_pain_strike": max_pain, "payout_table": max_pain_rows},
+            "max_pain": {"max_pain_strike": max_pain, "payout_table": max_pain_rows if observed_oi > 0 else [],
+                         "observed_oi": observed_oi},
             "support_resistance": {
                 "strong_support": {"strike": support["strike_price"], "reason": "Highest observed put OI at or below spot"} if support else None,
                 "strong_resistance": {"strike": resistance["strike_price"], "reason": "Highest observed call OI at or above spot"} if resistance else None},

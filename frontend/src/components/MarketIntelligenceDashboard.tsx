@@ -106,9 +106,10 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
     }
   };
 
-  if (upstoxReport?.data_source === 'UPSTOX') {
-    const chain = upstoxReport.option_chain;
-    const status = String(chain?.data_status || upstoxReport.feed_status || 'WAITING').toUpperCase();
+  if (upstoxReport || !intelligence) {
+    const verified = upstoxReport?.data_source === 'UPSTOX';
+    const chain = verified ? upstoxReport.option_chain : null;
+    const status = String(chain?.data_status || upstoxReport?.feed_status || 'WAITING').toUpperCase();
     const statusStyle = status === 'LIVE'
       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
       : status === 'STALE'
@@ -124,48 +125,165 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
       </div>
     );
     const spot = typeof chain?.spot_price === 'number' ? chain.spot_price : null;
-    const levelNote = (strike: number | undefined) => spot != null && typeof strike === 'number'
+    const levelNote = (strike?: number) => spot != null && typeof strike === 'number'
       ? `${strike > spot ? '+' : ''}${displayMarketValue(strike - spot)} pts from spot`
       : undefined;
     const support = chain?.support_resistance?.strong_support?.strike;
     const resistance = chain?.support_resistance?.strong_resistance?.strike;
+    const restoredTabs: { id: MacroTab; label: string; icon: React.ReactNode }[] = [
+      { id: 'ALL', label: 'All Intelligence', icon: <Globe className="w-3.5 h-3.5" /> },
+      { id: 'CASH_FLOWS', label: '1. FII/DII Cash Flow', icon: <DollarSign className="w-3.5 h-3.5" /> },
+      { id: 'DERIVATIVES', label: '2. Derivatives Positioning', icon: <TrendingDown className="w-3.5 h-3.5" /> },
+      { id: 'INFLATION', label: '3. Inflation (CPI/WPI)', icon: <Flame className="w-3.5 h-3.5" /> },
+      { id: 'GDP', label: '4. GDP & Accounts', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+      { id: 'RBI_POLICY', label: '5. RBI Policy Corridor', icon: <Percent className="w-3.5 h-3.5" /> },
+      { id: 'BOND_YIELDS', label: '6. 10Y Bond Yields', icon: <Activity className="w-3.5 h-3.5" /> },
+      { id: 'COMMODITIES', label: '7. Commodities & Crude', icon: <Coins className="w-3.5 h-3.5" /> },
+      { id: 'CURRENCY', label: '8. Currency (USD/INR)', icon: <DollarSign className="w-3.5 h-3.5" /> },
+      { id: 'PMI_IIP', label: '9. PMI & IIP Production', icon: <Factory className="w-3.5 h-3.5" /> },
+      { id: 'FISCAL_LABOUR', label: '10. Fiscal & Employment', icon: <Building2 className="w-3.5 h-3.5" /> },
+      { id: 'CALENDAR', label: '11. Economic Calendar', icon: <Calendar className="w-3.5 h-3.5" /> },
+      { id: 'MARKET_IMPACT', label: '12. Macro-to-NIFTY Impact', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+      { id: 'GLOSSARY', label: 'Macro Cheat Sheet', icon: <BookOpen className="w-3.5 h-3.5" /> },
+      { id: 'NEWS', label: 'Global Wire', icon: <Newspaper className="w-3.5 h-3.5" /> },
+    ];
+    const unavailable: Record<Exclude<MacroTab, 'ALL' | 'DERIVATIVES' | 'MARKET_IMPACT' | 'GLOSSARY' | 'NEWS'>, string> = {
+      CASH_FLOWS: 'FII/DII cash-market participant flows are not returned by the connected Upstox endpoints.',
+      INFLATION: 'CPI and WPI releases are not returned by the connected Upstox endpoints.',
+      GDP: 'GDP and national account releases are not returned by the connected Upstox endpoints.',
+      RBI_POLICY: 'RBI policy rates and meeting outcomes are not returned by the connected Upstox endpoints.',
+      BOND_YIELDS: 'Government bond yields are not returned by the connected Upstox endpoints.',
+      COMMODITIES: 'Crude and other commodity prices are not returned by the connected Upstox endpoints.',
+      CURRENCY: 'USD/INR reference rates are not returned by the connected Upstox endpoints.',
+      PMI_IIP: 'PMI and IIP releases are not returned by the connected Upstox endpoints.',
+      FISCAL_LABOUR: 'Fiscal and employment releases are not returned by the connected Upstox endpoints.',
+      CALENDAR: 'An economic release calendar is not returned by the connected Upstox endpoints.',
+    };
+    const unavailableCard = (title: string, detail: string) => (
+      <div key={title} className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-200"><ShieldAlert className="h-4 w-4 text-amber-400" />{title}</div>
+        <p className="mt-2 text-xs leading-relaxed text-slate-400">{detail}</p>
+        <div className="mt-3 text-[10px] font-mono uppercase tracking-wide text-slate-500">No verified source data</div>
+      </div>
+    );
 
     return (
-      <section className={`rounded-2xl border border-[#232E47] bg-[#0B0E14] p-5 shadow-xl ${className}`}>
-        <div className="flex flex-col gap-3 border-b border-[#232E47] pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-white">
-              <ShieldCheck className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-bold">Verified Upstox Market Data</h2>
+      <section className={`rounded-2xl bg-[#121824] border border-[#232E47] shadow-xl overflow-hidden ${className}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gradient-to-r from-[#171F32] via-[#121824] to-[#1A182E] border-b border-[#232E47]/70 gap-3">
+          <div className="flex items-center space-x-3">
+            <span className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20"><Globe className="w-5 h-5" /></span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-bold text-white tracking-tight">{t('Indian Market Intelligence & Institutional Macro Surveillance Suite')}</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-mono font-bold border border-sky-500/30">MODULES 32-39</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono font-bold ${statusStyle}`}>{verified ? `${status} FEED` : 'WAITING FOR VERIFIED DATA'}</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">FII/DII, derivatives, macro releases and market-impact modules. Verified Upstox option metrics are shown where available.</p>
             </div>
-            <p className="mt-1 text-xs text-slate-400">NIFTY option-chain metrics from Upstox. Refreshes every 30 seconds.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>
-              {status === 'LIVE' ? 'LIVE FEED' : `${status} FEED`}
-            </span>
-            <span className="rounded-lg border border-[#232E47] px-2.5 py-1 text-[10px] text-slate-300">REST snapshot • {chain?.expiry || 'N/A'}</span>
-            <span className="text-[10px] text-slate-500">{upstoxReport.observed_at ? new Date(upstoxReport.observed_at).toLocaleTimeString() : 'time unavailable'}</span>
+          <div className="flex items-center gap-2">
+            <span className="hidden md:inline text-[10px] text-slate-500">{upstoxReport?.observed_at ? new Date(upstoxReport.observed_at).toLocaleTimeString() : 'Waiting for snapshot'}</span>
+            <button onClick={() => setCollapsed(!collapsed)} className="p-1.5 rounded-lg bg-[#0B0E14] text-slate-400 hover:text-white border border-[#232E47]" title="Toggle dashboard visibility">
+              {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
           </div>
         </div>
-        {!chain && <p className="mt-4 text-sm text-amber-300">Waiting for a verified Upstox option-chain response.</p>}
-        {chain && <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {metric('NIFTY spot', displayMarketValue(chain.spot_price), `ATM ${displayMarketValue(chain.atm_strike, 0)}`)}
-          {metric('Put / call OI ratio', displayMarketValue(chain.totals?.oi_pcr, 3), 'From returned chain open interest')}
-          {metric('Max pain', displayMarketValue(chain.max_pain?.max_pain_strike, 0), 'Calculated from observed chain OI')}
-          {metric('ATM option IV', chain.exposures?.atm_iv_pct == null ? 'N/A' : `${displayMarketValue(chain.exposures.atm_iv_pct)}%`, 'CE/PE average; not India VIX')}
-          {metric('Put OI support', displayMarketValue(support, 0), levelNote(support))}
-          {metric('Call OI resistance', displayMarketValue(resistance, 0), levelNote(resistance))}
-          {metric('Call OI change', displayMarketValue(chain.totals?.total_call_oi_change, 0), 'Current OI minus previous OI')}
-          {metric('Put OI change', displayMarketValue(chain.totals?.total_put_oi_change, 0), 'Current OI minus previous OI')}
+
+        <div className="bg-[#0B0E14] px-4 py-2 border-b border-[#232E47] overflow-x-auto no-scrollbar flex items-center space-x-1.5 text-xs">
+          {restoredTabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all border ${activeTab === tab.id ? 'bg-purple-600/20 text-purple-300 border-purple-500/40 shadow-sm font-bold' : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800/60'}`}>
+              {tab.icon}<span>{t(tab.label)}</span>
+            </button>
+          ))}
+        </div>
+
+        {!collapsed && <div className="p-5 space-y-5">
+          {activeTab === 'ALL' && <>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div><h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Verified NIFTY market snapshot</h3><p className="mt-1 text-[11px] text-slate-500">Option-chain statistics from the selected Upstox expiry.</p></div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>{status}</span>
+                <span className="rounded-lg border border-[#232E47] px-2.5 py-1 text-[10px] text-slate-300">Expiry: {chain?.expiry || 'N/A'}</span>
+                <span className="rounded-lg border border-[#232E47] px-2.5 py-1 text-[10px] text-slate-300">REST: {chain?.source || 'waiting'}</span>
+              </div>
+            </div>
+            {!chain && <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">{upstoxReport?.detail || 'Waiting for the verified Upstox option-chain response. The overview sections remain available while data loads.'}</p>}
+            {chain && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {metric('NIFTY spot', displayMarketValue(chain.spot_price), `ATM ${displayMarketValue(chain.atm_strike, 0)}`)}
+              {metric('Put / call OI ratio', displayMarketValue(chain.totals?.oi_pcr, 3), 'From returned chain open interest')}
+              {metric('Max pain', displayMarketValue(chain.max_pain?.max_pain_strike, 0), 'Calculated from observed chain OI')}
+              {metric('ATM option IV', chain.exposures?.atm_iv_pct == null ? 'N/A' : `${displayMarketValue(chain.exposures.atm_iv_pct)}%`, 'CE/PE average; not India VIX')}
+              {metric('Put OI support', displayMarketValue(support, 0), levelNote(support))}
+              {metric('Call OI resistance', displayMarketValue(resistance, 0), levelNote(resistance))}
+              {metric('Call OI change', displayMarketValue(chain.totals?.total_call_oi_change, 0), 'Current OI minus previous OI')}
+              {metric('Put OI change', displayMarketValue(chain.totals?.total_put_oi_change, 0), 'Current OI minus previous OI')}
+              {metric('Call volume', displayMarketValue(chain.totals?.total_call_volume, 0), 'Observed across selected expiry')}
+              {metric('Put volume', displayMarketValue(chain.totals?.total_put_volume, 0), 'Observed across selected expiry')}
+              {metric('Volume PCR', displayMarketValue(chain.totals?.vol_pcr, 3), 'Put volume divided by call volume')}
+              {metric('OI change PCR', displayMarketValue(chain.totals?.oi_change_pcr, 3), 'Unavailable when call OI change is zero')}
+            </div>}
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+              {unavailableCard('FII/DII cash flows', 'The previous section is retained. Upstox market-data responses do not provide official participant net flows.')}
+              {unavailableCard('Inflation, GDP & RBI policy', 'CPI/WPI, GDP, policy rates and releases need an official macroeconomic data source.')}
+              {unavailableCard('Rates, commodities & currency', 'Government yields, USD/INR and crude prices are not part of the configured Upstox market-data feed.')}
+            </div>
+          </>}
+
+          {activeTab === 'DERIVATIVES' && <div className="space-y-4">
+            <div><h3 className="text-sm font-bold text-white">Derivatives positioning</h3><p className="mt-1 text-xs text-slate-400">Live option-chain metrics from the selected Upstox expiry.</p></div>
+            {chain ? <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {metric('Call OI', displayMarketValue(chain.totals?.total_call_oi, 0))}
+              {metric('Put OI', displayMarketValue(chain.totals?.total_put_oi, 0))}
+              {metric('OI PCR', displayMarketValue(chain.totals?.oi_pcr, 3))}
+              {metric('Call / put OI change', `${displayMarketValue(chain.totals?.total_call_oi_change, 0)} / ${displayMarketValue(chain.totals?.total_put_oi_change, 0)}`)}
+              {metric('Call / put volume', `${displayMarketValue(chain.totals?.total_call_volume, 0)} / ${displayMarketValue(chain.totals?.total_put_volume, 0)}`)}
+              {metric('Volume PCR', displayMarketValue(chain.totals?.vol_pcr, 3))}
+              {metric('Max pain', displayMarketValue(chain.max_pain?.max_pain_strike, 0))}
+              {metric('ATM IV', chain.exposures?.atm_iv_pct == null ? 'N/A' : `${displayMarketValue(chain.exposures.atm_iv_pct)}%`)}
+            </div> : <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">{upstoxReport?.detail || 'Waiting for verified Upstox option-chain data.'}</p>}
+            <p className="text-[11px] text-slate-500">Upstox option-chain OI is shown here. Participant-specific FII/DII derivatives positioning is not included in these responses.</p>
+          </div>}
+
+          {activeTab === 'MARKET_IMPACT' && <div className="space-y-4">
+            <div><h3 className="text-sm font-bold text-white">Macro to NIFTY impact</h3><p className="mt-1 text-xs text-slate-400">The section is restored with observed option-chain support and resistance; macro attribution is withheld until verified macro inputs are connected.</p></div>
+            {chain ? <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {metric('NIFTY spot', displayMarketValue(chain.spot_price))}
+              {metric('Observed put OI support', displayMarketValue(support, 0), levelNote(support))}
+              {metric('Observed call OI resistance', displayMarketValue(resistance, 0), levelNote(resistance))}
+            </div> : <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">Verified option-chain levels are waiting for Upstox data.</p>}
+            <div className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4 text-xs text-slate-400">No causal macro-to-index scenario is calculated without verified FII/DII, inflation, rates and event data.</div>
+          </div>}
+
+          {activeTab === 'GLOSSARY' && <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              ['Open interest (OI)', 'Outstanding option positions reported in the selected Upstox chain.'],
+              ['Put/call ratio (PCR)', 'Put OI divided by call OI for the same returned chain.'],
+              ['Implied volatility (IV)', 'Option-implied volatility from returned Upstox option Greeks; it is not India VIX.'],
+              ['Max Pain', 'Expiry strike with the lowest OI-weighted intrinsic payout across observed chain strikes.'],
+              ['Support / resistance', 'Highest observed put OI at/below spot and call OI at/above spot.'],
+              ['Feed status', 'LIVE means feed ticks were received; WAITING and STALE are shown as such.']
+            ].map(([term, definition]) => <div key={term} className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4"><div className="text-sm font-bold text-white">{term}</div><p className="mt-2 text-xs text-slate-400">{definition}</p></div>)}
+          </div>}
+
+          {activeTab === 'NEWS' && <div className="space-y-3">
+            <h3 className="text-sm font-bold text-white">Global Wire</h3>
+            {newsFeed.length ? newsFeed.slice(0, 12).map((item, index) => <div key={item.id || item.url || index} className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4"><div className="text-sm text-slate-200">{item.title || item.headline || 'News item'}</div><div className="mt-2 text-[10px] text-slate-500">{item.source || item.publisher || 'External news source'} {item.published_at ? `• ${item.published_at}` : ''}</div></div>) : <p className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4 text-sm text-slate-400">No global news items are available from the configured source right now.</p>}
+          </div>}
+
+          {activeTab !== 'ALL' && activeTab !== 'DERIVATIVES' && activeTab !== 'MARKET_IMPACT' && activeTab !== 'GLOSSARY' && activeTab !== 'NEWS' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">{restoredTabs.find(tab => tab.id === activeTab)?.icon}{restoredTabs.find(tab => tab.id === activeTab)?.label}</div>
+              {unavailableCard(restoredTabs.find(tab => tab.id === activeTab)?.label || 'Market module', unavailable[activeTab])}
+            </div>
+          )}
+
+          <p className="rounded-lg border border-[#232E47] bg-[#0B0E14] p-3 text-[11px] leading-relaxed text-slate-400">
+            Source: {upstoxReport?.source_endpoint || chain?.source || 'Upstox option-chain API'}. A REST snapshot can be available while the WebSocket feed is WAITING outside market hours. Unsupported macro figures remain unavailable instead of being filled with stale estimates.
+          </p>
         </div>}
-        <p className="mt-4 rounded-lg border border-[#232E47] bg-[#121824] p-3 text-[11px] leading-relaxed text-slate-400">
-          Source: {upstoxReport.source_endpoint || chain?.source || 'Upstox option-chain API'}. A REST snapshot can be available while the WebSocket feed is WAITING outside market hours. Upstox does not provide FII/DII participant flows, CPI, GDP, RBI releases, or India VIX through this option-chain endpoint; those figures are not presented here as Upstox data.
-        </p>
       </section>
     );
   }
-
   if (intelligence?.data_source !== 'UPSTOX') {
     return (
       <section className={`rounded-2xl border border-[#232E47] bg-[#121824] p-5 ${className}`}>

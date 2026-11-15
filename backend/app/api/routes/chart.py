@@ -55,15 +55,21 @@ async def get_chart_candles(
     candles = [parsed for row in raw if (parsed := upstox.parse_candle_row(row))]
     candles.sort(key=lambda candle: candle["time"])
     closes = [candle["close"] for candle in candles]
-    indicators = {"sma_20": [], "sma_50": [], "sma_100": [], "sma_200": [], "ema_9": []}
-    ema = closes[0] if closes else 0.0
-    alpha = 2 / 10
+    indicators = {"sma_20": [], "sma_50": [], "sma_100": [], "sma_200": [], "ema_9": [], "ema_21": []}
     for index, close in enumerate(closes):
         for period in (20, 50, 100, 200):
             indicators[f"sma_{period}"].append(
                 round(sum(closes[index - period + 1:index + 1]) / period, 2) if index >= period - 1 else None)
-        ema = close * alpha + ema * (1 - alpha)
-        indicators["ema_9"].append(round(ema, 2))
+    for period in (9, 21):
+        values = [None] * len(closes)
+        if len(closes) >= period:
+            ema = sum(closes[:period]) / period
+            values[period - 1] = round(ema, 2)
+            alpha = 2 / (period + 1)
+            for index in range(period, len(closes)):
+                ema = closes[index] * alpha + ema * (1 - alpha)
+                values[index] = round(ema, 2)
+        indicators[f"ema_{period}"] = values
     return {"symbol": symbol.upper(), "instrument_key": key, "timeframe": timeframe,
             "chart_type": chart_type, "timezone": "Asia/Kolkata", "source": "Upstox Historical Candle V3",
             "candles": candles, "indicators": indicators,

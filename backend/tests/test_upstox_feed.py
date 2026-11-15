@@ -1,6 +1,7 @@
 import pytest
 
 from app.api.routes.options import get_option_chain
+from app.api.routes.chart import get_chart_candles
 from app.proto import MarketDataFeed_pb2 as proto
 from app.services.upstox_feed_service import SubscriptionManager, decode_feed
 from app.services import upstox_market_client as upstox
@@ -65,4 +66,34 @@ async def test_option_chain_uses_official_response_fields(monkeypatch):
     assert result["totals"]["total_call_oi"] == 170
     assert result["totals"]["total_put_oi"] == 170
     assert result["rows"][0]["ce"]["oi_change"] == 20
+    assert result["rows"][0]["ce"]["previous_close"] == 3
+    assert result["rows"][0]["ce"]["previous_oi"] == 100
+    assert result["rows"][0]["pe"]["previous_close"] == 3
+    assert result["rows"][0]["pe"]["previous_oi"] == 100
     assert result["rows"][0]["ce"]["delta"] == 0.6
+    payouts = result["max_pain"]["payout_table"]
+    assert len(payouts) == 2
+    assert all({"ce_payout", "pe_payout", "total_payout"} <= payout.keys() for payout in payouts)
+    assert payouts[0]["total_payout"] == payouts[0]["ce_payout"] + payouts[0]["pe_payout"]
+
+
+@pytest.mark.asyncio
+async def test_historical_chart_returns_ema_9_and_ema_21_from_candles(monkeypatch):
+    rows = [[f"2026-01-{day:02d}T00:00:00Z", day, day, day, day, 100] for day in range(1, 23)]
+
+    async def historical(_key, _unit, _interval, _end, _start):
+        return rows
+
+    async def no_subscriptions(_keys, mode="full"):
+        return None
+
+    monkeypatch.setattr(upstox, "instrument_key_for_symbol", lambda _symbol: "NSE_INDEX|Nifty 50")
+    monkeypatch.setattr(upstox, "get_historical_candles_v3", historical)
+    monkeypatch.setattr("app.api.routes.chart.subscription_manager.set_subscriptions", no_subscriptions)
+
+    result = await get_chart_candles(symbol="NIFTY", timeframe="1D", chart_type="CANDLESTICK",
+                                    before=None, instrument_key=None)
+    assert result["source"] == "Upstox Historical Candle V3"
+    assert result["indicators"]["ema_9"][8] == 5.0
+    assert result["indicators"]["ema_21"][20] == 11.0
+    assert result["indicators"]["ema_21"][21] == 12.0

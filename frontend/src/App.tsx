@@ -7,7 +7,6 @@ import { DailyScanner } from './pages/DailyScanner';
 import { AllVolumeDashboard } from './pages/AllVolumeDashboard';
 import { Top7Heavyweights } from './pages/Top7Heavyweights';
 import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
-import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
@@ -126,7 +125,7 @@ export const App: React.FC = () => {
 
   const handleSelectStock = (symbol: string) => {
     setSelectedStock(symbol);
-    setActiveTab('historical');
+    setActiveTab('trading-chart');
   };
 
   const availableSymbols = dailyScan 
@@ -161,7 +160,12 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'trading-chart' && (
-          <ProfessionalTradingChart symbol={selectedStock || 'NIFTY'} height={560} />
+          <ProfessionalTradingChart
+            symbol={selectedStock || 'NIFTY'}
+            availableSymbols={availableSymbols}
+            onSymbolChange={setSelectedStock}
+            height={560}
+          />
         )}
 
         {activeTab === 'dma-scanner' && (
@@ -202,14 +206,6 @@ export const App: React.FC = () => {
             liveScan={liveScan}
             loading={loading}
             onSelectStock={handleSelectStock}
-          />
-        )}
-
-        {activeTab === 'historical' && (
-          <StockDetails 
-            selectedSymbol={selectedStock}
-            onSymbolChange={setSelectedStock}
-            availableSymbols={availableSymbols}
           />
         )}
 
