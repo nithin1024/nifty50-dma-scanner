@@ -22,11 +22,14 @@ async def upstox_auth_status() -> Dict[str, Any]:
         subscription_manager.authentication_status = "AUTHENTICATED" if profile.get("authenticated") else "DISCONNECTED"
         if profile.get("authenticated"):
             subscription_manager.start()
+        else:
+            subscription_manager.status = "DISCONNECTED"
         return {"authenticated": profile.get("authenticated", False), "is_active": profile.get("is_active"),
                 "broker": profile.get("broker"), "status": "CONNECTED" if profile.get("authenticated") else "DISCONNECTED",
                 "profile_endpoint": "/v2/user/profile", "feed_status": subscription_manager.get_status()}
     except UpstoxApiError as exc:
         subscription_manager.authentication_status = "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"
+        subscription_manager.status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
         raise HTTPException(status_code=exc.status_code or 503,
                             detail={"message": exc.message, "endpoint": exc.endpoint,
                                     "authentication": "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"})
