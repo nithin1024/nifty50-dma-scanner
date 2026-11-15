@@ -12,6 +12,7 @@ from app.models.global_event import (
     UserEventPreferenceModel
 )
 from app.models.option_snapshot import OptionOISnapshotModel
+from app.models.institutional_flow import InstitutionalCashFlowSnapshot
 
 __all__ = [
     "Base",
@@ -24,4 +25,5 @@ __all__ = [
     "EventUpdateHistoryModel",
     "UserEventPreferenceModel",
     "OptionOISnapshotModel",
+    "InstitutionalCashFlowSnapshot",
 ]

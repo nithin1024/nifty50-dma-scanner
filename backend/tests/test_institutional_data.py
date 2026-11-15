@@ -55,12 +55,34 @@ def test_participant_derivatives_positioning():
 
 
 @pytest.mark.asyncio
-async def test_fii_dii_api_routes():
-    """Upstox does not expose participant-wise FII/DII datasets."""
+async def test_fii_dii_api_routes(monkeypatch):
+    """Cash flows use NSE's independently sourced report; derivatives remain unavailable."""
+    async def cash_report_fixture():
+        return {
+            "status": "CURRENT",
+            "source": "NSE FII/FPI & DII cash-market report",
+            "data_date": "2026-11-13",
+            "provisional": True,
+            "unit": "INR_CRORE",
+            "latest": {
+                "fii_fpi": {"buy": 100.0, "sell": 75.0, "net": 25.0},
+                "dii": {"buy": 50.0, "sell": 60.0, "net": -10.0},
+            },
+            "history": [],
+            "history_sessions": 0,
+        }
+
+    monkeypatch.setattr(
+        "app.api.routes.market_intelligence.nse_fii_dii_service.get_report",
+        cash_report_fixture,
+    )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         cash_resp = await client.get("/api/v1/market-intelligence/fii-dii/cash")
         deriv_resp = await client.get("/api/v1/market-intelligence/fii-dii/derivatives")
-        assert cash_resp.status_code == deriv_resp.status_code == 503
-        assert cash_resp.json()["detail"]["status"] == "UNAVAILABLE"
+        assert cash_resp.status_code == 200
+        assert cash_resp.json()["source"].startswith("NSE")
+        assert cash_resp.json()["latest"]["fii_fpi"]["net"] == 25.0
+        assert cash_resp.json()["latest"]["dii"]["net"] == -10.0
+        assert deriv_resp.status_code == 503
         assert deriv_resp.json()["detail"]["status"] == "UNAVAILABLE"

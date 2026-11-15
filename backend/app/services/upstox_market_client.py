@@ -129,6 +129,30 @@ async def get_option_chain(instrument_key: str, expiry_date: str) -> List[Dict[s
     return data
 
 
+async def get_fii_activity(data_type: str = "NSE_EQ|CASH", interval: str = "1D") -> Dict[str, Any]:
+    """GET /v2/market/fii using the documented Market Information API schema."""
+    payload = await _get(
+        f"{API_V2}/market/fii",
+        params={"data_type": data_type, "interval": interval},
+    )
+    data = payload.get("data") or {}
+    if not isinstance(data, dict):
+        raise UpstoxApiError(200, "FII activity response data was not an object", "/v2/market/fii")
+    return data
+
+
+async def get_dii_activity(data_type: str = "NSE_EQ|CASH", interval: str = "1D") -> Dict[str, Any]:
+    """GET /v2/market/dii using the documented Market Information API schema."""
+    payload = await _get(
+        f"{API_V2}/market/dii",
+        params={"data_type": data_type, "interval": interval},
+    )
+    data = payload.get("data") or {}
+    if not isinstance(data, dict):
+        raise UpstoxApiError(200, "DII activity response data was not an object", "/v2/market/dii")
+    return data
+
+
 def _encode_key(instrument_key: str) -> str:
     return quote(instrument_key, safe="")
 

@@ -200,7 +200,6 @@ async def test_market_intelligence_api_only_returns_upstox_data(monkeypatch):
             assert response.json()["option_chain"]["spot_price"] == 25000.0
 
         unavailable_endpoints = [
-            "/api/v1/market-intelligence/fii-dii/cash",
             "/api/v1/market-intelligence/fii-dii/derivatives",
             "/api/v1/market-intelligence/inflation",
             "/api/v1/market-intelligence/gdp",

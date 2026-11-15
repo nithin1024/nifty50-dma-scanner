@@ -26,7 +26,7 @@ async def upstox_auth_status() -> Dict[str, Any]:
                 "broker": profile.get("broker"), "status": "CONNECTED" if profile.get("authenticated") else "DISCONNECTED",
                 "profile_endpoint": "/v2/user/profile", "feed_status": subscription_manager.get_status()}
     except UpstoxApiError as exc:
-        subscription_manager.authentication_status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
+        subscription_manager.authentication_status = "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"
         raise HTTPException(status_code=exc.status_code or 503,
                             detail={"message": exc.message, "endpoint": exc.endpoint,
                                     "authentication": "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"})
@@ -79,6 +79,9 @@ async def get_expiries(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
                 "expiries": upstox.unique_expiries(contracts),
                 "verified_contract_count": len(contracts), "source": "/v2/option/contract"}
     except UpstoxApiError as exc:
+        if exc.status_code in (401, 403):
+            subscription_manager.authentication_status = "FAILED"
+            subscription_manager.status = "DISCONNECTED"
         raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
 
 
@@ -202,6 +205,9 @@ async def get_option_chain(
                 "strong_resistance": {"strike": resistance["strike_price"], "reason": "Highest observed call OI at or above spot"} if resistance else None},
             "data_status": subscription_manager.get_status()["status"]}
     except UpstoxApiError as exc:
+        if exc.status_code in (401, 403):
+            subscription_manager.authentication_status = "FAILED"
+            subscription_manager.status = "DISCONNECTED"
         raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
 
 

@@ -63,6 +63,8 @@ async def test_ema_scanner_service_run():
         assert "ema_9" in stock
         assert "ema_21" in stock
         assert "rsi_14" in stock
+        assert len(stock["rsi_series"]) > 1
+        assert all(0.0 <= point["value"] <= 100.0 for point in stock["rsi_series"])
         assert stock["alignment"] in ("BULLISH", "BEARISH", "NEUTRAL")
         assert isinstance(stock["is_in_rsi_corridor"], bool)
         assert isinstance(stock["satisfies_ema_and_rsi"], bool)

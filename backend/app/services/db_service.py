@@ -13,6 +13,7 @@ from app.models.stock import (
     CrossoverEventModel
 )
 from app.models.option_snapshot import OptionOISnapshotModel
+from app.models.institutional_flow import InstitutionalCashFlowSnapshot
 from app.services.constituents_service import constituents_service
 
 logger = logging.getLogger("db_service")

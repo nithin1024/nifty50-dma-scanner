@@ -45,12 +45,14 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   // Data states
   const [universe, setUniverse] = useState<any[]>([]);
   const [expiries, setExpiries] = useState<string[]>([]);
+  const [expiriesForSymbol, setExpiriesForSymbol] = useState<string>('');
   const [chainData, setChainData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [feedStatus, setFeedStatus] = useState<string>('WAITING');
   const [chainError, setChainError] = useState<string | null>(null);
   const feedSocketRef = useRef<WebSocket | null>(null);
+  const chainRequestRef = useRef(0);
   
   // Strategy payoff state
   const [selectedStrategy, setSelectedStrategy] = useState<string>('BULL_CALL_SPREAD');
@@ -139,38 +141,68 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
 
   // When symbol changes, load valid expiries
   useEffect(() => {
+    let cancelled = false;
+    chainRequestRef.current += 1;
+    setExpiriesForSymbol('');
+    setExpiries([]);
+    setSelectedExpiry('');
+    setChainData(null);
+    setChainError(null);
+    setLoading(true);
     fetchExpiries(symbol).then(res => {
-      const validExps = res.expiries || [];
+      if (cancelled) return;
+      const validExps = Array.isArray(res.expiries) ? res.expiries : [];
       setExpiries(validExps);
-      if (validExps.length > 0) {
-        setSelectedExpiry(validExps[0]);
+      setSelectedExpiry(validExps[0] || '');
+      setExpiriesForSymbol(symbol);
+      if (!validExps.length) {
+        setChainError('Upstox did not return a valid option expiry for this underlying.');
+        setLoading(false);
       }
-    }).catch(err => console.error('Failed to load expiries:', err));
+    }).catch(err => {
+      if (cancelled) return;
+      setChainError(err instanceof Error ? err.message : 'Unable to retrieve valid option expiries.');
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
   }, [symbol]);
 
   // Load option chain when symbol, strike range, or expiry changes
   const loadOptionChain = async () => {
+    const requestId = ++chainRequestRef.current;
+    if (expiriesForSymbol !== symbol || !selectedExpiry) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     setLoading(true);
     setChainError(null);
     try {
       const data = await fetchOptionChain(symbol, strikeRange, selectedExpiry || undefined);
+      if (requestId !== chainRequestRef.current) return;
       setChainData(data);
       const instrumentKeys = (data.rows || []).flatMap((row: any) => [row.ce?.instrument_key, row.pe?.instrument_key]).filter(Boolean);
-      feedSocketRef.current?.send(JSON.stringify({ mode: 'full', instrumentKeys }));
+      if (feedSocketRef.current?.readyState === WebSocket.OPEN) {
+        feedSocketRef.current.send(JSON.stringify({ mode: 'full', instrumentKeys }));
+      }
       
       setMarketRegime(null);
     } catch (err) {
+      if (requestId !== chainRequestRef.current) return;
       console.error('Error fetching option chain:', err);
       setChainError(err instanceof Error ? err.message : 'Unable to retrieve verified Upstox option-chain data.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === chainRequestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
   useEffect(() => {
+    if (expiriesForSymbol !== symbol || !selectedExpiry) return;
     loadOptionChain();
-  }, [symbol, strikeRange, selectedExpiry]);
+  }, [symbol, strikeRange, selectedExpiry, expiriesForSymbol]);
 
   // Strategy payoff calculation
   useEffect(() => {
@@ -184,7 +216,24 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadOptionChain();
+    if (expiriesForSymbol === symbol && selectedExpiry) {
+      void loadOptionChain();
+      return;
+    }
+    setLoading(true);
+    setChainError(null);
+    fetchExpiries(symbol).then(res => {
+      const validExps = Array.isArray(res.expiries) ? res.expiries : [];
+      setExpiries(validExps);
+      setSelectedExpiry(validExps[0] || '');
+      setExpiriesForSymbol(symbol);
+      if (!validExps.length) setChainError('Upstox did not return a valid option expiry for this underlying.');
+    }).catch(err => {
+      setChainError(err instanceof Error ? err.message : 'Unable to retrieve valid option expiries.');
+    }).finally(() => {
+      setLoading(false);
+      setRefreshing(false);
+    });
   };
 
   const navItems: { id: OptionsTab; label: string; icon: any }[] = [
@@ -282,7 +331,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
           <span>Ingesting Live Option Chain &amp; Greeks for {symbol}...</span>
         </div>
       )}
-      {chainError && !chainData && <div role="status" className="p-4 rounded-xl bg-amber-950/30 border border-amber-700/40 text-amber-200 text-sm">{chainError}. Live quotes are not available until Upstox authentication succeeds.</div>}
+      {chainError && <div role="status" className="p-4 rounded-xl bg-amber-950/30 border border-amber-700/40 text-amber-200 text-sm">{chainError}. {chainData ? 'The last verified option-chain snapshot remains visible; live quotes need successful Upstox authentication.' : 'Live quotes are not available until Upstox authentication succeeds.'}</div>}
 
       {/* ========================================================================= */}
       {/* KEY OPTION CHAIN METRICS BAR (verified spot, ATM, PCR and Max Pain) */}

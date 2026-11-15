@@ -29,6 +29,7 @@ interface EmaRecord {
   fresh_bearish_crossover: boolean;
   rsi_14: number;
   prev_rsi_14: number | null;
+  rsi_series?: { trading_date: string; value: number }[];
   rsi_direction: 'RISING' | 'FALLING' | 'FLAT';
   rsi_status: string;
   is_in_rsi_corridor: boolean;
@@ -38,6 +39,57 @@ interface EmaRecord {
   volume_status: string;
   institutional_bias: string;
 }
+
+const RsiHistoryChart: React.FC<{ symbol: string; series: { trading_date: string; value: number }[] }> = ({ symbol, series }) => {
+  const width = 760;
+  const height = 220;
+  const left = 42;
+  const right = 12;
+  const top = 14;
+  const plotHeight = 162;
+  const plotWidth = width - left - right;
+  const points = series.map((item, index) => ({
+    ...item,
+    x: left + (series.length > 1 ? (index / (series.length - 1)) * plotWidth : plotWidth / 2),
+    y: top + ((100 - Math.max(0, Math.min(100, item.value))) / 100) * plotHeight,
+  }));
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+  const levels = [70, 60, 50, 40, 30];
+
+  return (
+    <div className="bg-[#0B0E14] rounded-xl border border-[#232E47] p-4 space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-white">RSI 14 history · {symbol}</h3>
+          <p className="mt-1 text-[11px] text-slate-400">Wilder RSI computed from the scanner's historical daily closes. Shaded band marks the 40–60 corridor.</p>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wide text-slate-500">Latest RSI</div>
+          <div className="font-mono text-lg font-bold text-purple-300">{series.length ? series[series.length - 1].value.toFixed(1) : '—'}</div>
+        </div>
+      </div>
+      {points.length > 1 ? <>
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${symbol} 14 period RSI history`} className="h-44 w-full overflow-visible">
+          <rect x={left} y={top + 0.4 * plotHeight} width={plotWidth} height={0.2 * plotHeight} fill="rgba(168,85,247,0.10)" />
+          {levels.map(level => {
+            const y = top + ((100 - level) / 100) * plotHeight;
+            return <g key={level}>
+              <line x1={left} y1={y} x2={width - right} y2={y} stroke={level === 40 || level === 60 ? '#7049a8' : '#263247'} strokeDasharray={level === 50 ? '0' : '4 5'} />
+              <text x={left - 8} y={y + 3} textAnchor="end" fill="#64748b" fontSize="9">{level}</text>
+            </g>;
+          })}
+          <path d={path} fill="none" stroke="#c084fc" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          {points.length > 0 && <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="4" fill="#e9d5ff" stroke="#a855f7" strokeWidth="2">
+            <title>{`${points[points.length - 1].trading_date}: RSI ${points[points.length - 1].value.toFixed(2)}`}</title>
+          </circle>}
+          <text x={left} y={height - 10} fill="#64748b" fontSize="9">{points[0].trading_date}</text>
+          <text x={width - right} y={height - 10} textAnchor="end" fill="#64748b" fontSize="9">{points[points.length - 1].trading_date}</text>
+        </svg>
+        <div className="flex items-center justify-between text-[10px] text-slate-500"><span>{series.length} daily observations</span><span>30 oversold · 40–60 corridor · 70 overbought</span></div>
+      </> : <div className="py-8 text-center text-xs text-slate-500">RSI history is not available for this selection yet.</div>}
+    </div>
+  );
+};
 
 export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> = ({ onSelectStock }) => {
   const { language } = useLanguage();
@@ -282,6 +334,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
           />
         </div>
         <p className="text-[10px] text-slate-500">Candles are retrieved from Upstox Historical Candle V3. Use the EMA 9 and EMA 21 overlays in the chart controls.</p>
+        <RsiHistoryChart symbol={selectedSymbol} series={selectedRecord?.rsi_series || []} />
       </div>
       {/* 3. Controls & Configurable RSI Corridor Toolbar */}
       <div className="bg-[#121824] rounded-xl border border-[#232E47] p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">

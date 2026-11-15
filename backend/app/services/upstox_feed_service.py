@@ -245,6 +245,7 @@ class SubscriptionManager:
             try:
                 await self.configure_nifty()
                 uri = await rest.authorize_market_data_feed()
+                self.authentication_status = "AUTHENTICATED"
                 async with websockets.connect(uri, ping_interval=20, ping_timeout=20, max_size=8 * 1024 * 1024) as socket:
                     self._socket = socket
                     self.status = "WAITING"
@@ -269,6 +270,13 @@ class SubscriptionManager:
                             await self.broadcast(decoded)
             except asyncio.CancelledError:
                 raise
+            except rest.UpstoxApiError as exc:
+                self.last_error = "UpstoxAuthenticationError" if exc.status_code in (401, 403) else "UpstoxApiError"
+                self.authentication_status = "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"
+                self.status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
+                logger.warning("Upstox V3 feed authorization failed (HTTP %s)", exc.status_code)
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 60)
             except Exception as exc:
                 self.last_error = type(exc).__name__
                 self.status = "WAITING" if self.last_message_at is None else "DISCONNECTED"
@@ -297,6 +305,7 @@ class SubscriptionManager:
             state = "STALE"
         return {"status": state, "active_subscriptions": len(self.active),
                 "waiting_subscriptions": len(self.waiting), "verified_nifty_contracts": self.contract_count,
+                "authentication_status": self.authentication_status,
                 "subscription_limit": settings.UPSTOX_MAX_COMBINED_SUBSCRIPTIONS,
                 "full_subscription_count": sum(mode == "full" for mode in self.active.values()),
                 "ltpc_subscription_count": sum(mode == "ltpc" for mode in self.active.values()),

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services.global_news_service import global_news_service
+from app.services.nse_fii_dii_service import nse_fii_dii_service
 
 router = APIRouter(prefix="/market-intelligence", tags=["Market Intelligence"])
 
@@ -33,7 +34,7 @@ def _unsupported(source: str) -> None:
 
 @router.get("", response_model=Dict[str, Any])
 async def get_market_intelligence() -> Dict[str, Any]:
-    """Return only verified NIFTY option-chain data available through Upstox."""
+    """Return verified Upstox option-chain data and declare independently sourced gaps."""
     chain = await _nifty_option_chain()
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -42,7 +43,7 @@ async def get_market_intelligence() -> Dict[str, Any]:
         "feed_status": chain.get("data_status", "WAITING"),
         "option_chain": chain,
         "unavailable_sections": [
-            "FII/DII cash flows and participant-wise positioning",
+            "Participant-wise derivatives positioning",
             "CPI/WPI, GDP, RBI policy, and economic calendar",
             "India VIX and cross-asset macro prices",
         ],
@@ -57,7 +58,8 @@ async def get_market_impact_analysis() -> Dict[str, Any]:
 
 @router.get("/fii-dii/cash", response_model=Dict[str, Any])
 async def get_fii_dii_cash_report() -> Dict[str, Any]:
-    _unsupported("Upstox does not expose FII/DII cash-market participant flows")
+    """Return daily FII/FPI and DII cash activity from Upstox or NSE fallback."""
+    return await nse_fii_dii_service.get_report()
 
 
 @router.get("/fii-dii/derivatives", response_model=Dict[str, Any])

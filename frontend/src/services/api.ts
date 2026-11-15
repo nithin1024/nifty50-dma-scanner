@@ -10,6 +10,18 @@ import type {
 
 const API_BASE = '/api/v1';
 
+async function readApiError(response: Response): Promise<string> {
+  const body = await response.json().catch(() => ({}));
+  if (response.status === 401 || response.status === 403) {
+    return `Upstox authentication failed (HTTP ${response.status}). Generate a valid read-only token and set UPSTOX_ACCESS_TOKEN on the backend service.`;
+  }
+  const detail = body?.detail;
+  if (typeof detail === 'string') return detail;
+  if (typeof detail?.message === 'string') return detail.message;
+  if (typeof body?.message === 'string') return body.message;
+  return `HTTP error ${response.status}: ${response.statusText}`;
+}
+
 export async function fetchHealth(): Promise<BackendHealth> {
   const response = await fetch(`${API_BASE}/health`);
   if (!response.ok) {
@@ -95,6 +107,9 @@ export async function fetchMarketIntelligence(): Promise<any> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const detail = typeof body.detail === 'string' ? body.detail : body.detail?.message;
+    if (response.status === 401 || response.status === 403) {
+      return { detail: `Upstox authentication failed (HTTP ${response.status}). Generate a valid read-only token and set UPSTOX_ACCESS_TOKEN on the backend service.` };
+    }
     return { detail: detail || `Upstox market data is unavailable (HTTP ${response.status}).` };
   }
   return response.json();
@@ -184,7 +199,7 @@ export async function saveUserPreferences(prefs: any): Promise<any> {
 export async function fetchFiiDiiCash(): Promise<any> {
   const response = await fetch(`${API_BASE}/market-intelligence/fii-dii/cash`);
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    throw new Error(await readApiError(response));
   }
   return response.json();
 }
@@ -301,7 +316,7 @@ export async function fetchOptionChain(
 
   const response = await fetch(`${API_BASE}/options/chain?${params.toString()}`);
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    throw new Error(await readApiError(response));
   }
   return response.json();
 }
@@ -309,7 +324,7 @@ export async function fetchOptionChain(
 export async function fetchExpiries(symbol: string = 'NIFTY'): Promise<any> {
   const response = await fetch(`${API_BASE}/options/expiries?symbol=${encodeURIComponent(symbol)}`);
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    throw new Error(await readApiError(response));
   }
   return response.json();
 }

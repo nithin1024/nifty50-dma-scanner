@@ -208,6 +208,11 @@ class TechnicalScannerService:
                 "fresh_bearish_crossover": fresh_bearish,
                 "rsi_14": round(latest_rsi, 2),
                 "prev_rsi_14": round(prev_rsi, 2) if prev_rsi else None,
+                "rsi_series": [
+                    {"trading_date": day, "value": round(value, 2)}
+                    for day, value in zip(dates, rsi14_series)
+                    if value is not None
+                ][-120:],
                 "rsi_direction": rsi_direction,
                 "rsi_status": rsi_status,
                 "is_in_rsi_corridor": is_in_corridor,

@@ -27,7 +27,8 @@ import {
   fetchMacroTopicDetail, 
   fetchGlobalNews, 
   getMacroCsvDownloadUrl,
-  fetchMarketIntelligence
+  fetchMarketIntelligence,
+  fetchFiiDiiCash
 } from '../services/api';
 import { MacroIndicatorModal } from './MacroIndicatorModal';
 
@@ -58,6 +59,68 @@ const displayMarketValue = (value: unknown, digits = 2): string => {
   return value.toLocaleString('en-IN', { maximumFractionDigits: digits, minimumFractionDigits: digits });
 };
 
+type CashFlowHistoryPoint = {
+  date: string;
+  fii_net?: number;
+  dii_net?: number;
+};
+
+const CashFlowHistoryGraph: React.FC<{
+  label: string;
+  net: number;
+  buy: number;
+  sell: number;
+  color: string;
+  series: CashFlowHistoryPoint[];
+}> = ({ label, net, buy, sell, color, series }) => {
+  const points = [...series].slice(0, 30).reverse();
+  const values = points.map(point => label === 'FII / FPI' ? point.fii_net ?? 0 : point.dii_net ?? 0);
+  const minValue = Math.min(0, ...values);
+  const maxValue = Math.max(0, ...values);
+  const range = Math.max(maxValue - minValue, 1);
+  const chartTop = 12;
+  const chartHeight = 104;
+  const baseline = chartTop + (maxValue / range) * chartHeight;
+  const barSlot = 640 / Math.max(values.length, 1);
+  const barWidth = Math.min(28, Math.max(8, barSlot * 0.56));
+  const positive = net > 0;
+
+  return (
+    <div className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-bold text-white">{label} cash flow</div>
+          <div className="mt-1 text-[10px] text-slate-500">Daily net · ₹ crore</div>
+        </div>
+        <div className={`font-mono text-base font-bold ${positive ? 'text-emerald-300' : 'text-rose-300'}`}>
+          {positive ? '+' : ''}{displayMarketValue(net)} Cr
+        </div>
+      </div>
+      {values.length > 0 ? <svg viewBox="0 0 680 146" role="img" aria-label={`${label} daily net cash flow graph`} className="mt-2 h-36 w-full">
+        <line x1="20" y1={baseline} x2="660" y2={baseline} stroke="#475569" strokeWidth="1" />
+        {values.map((value, index) => {
+          const x = 20 + (index + 0.5) * barSlot - barWidth / 2;
+          const yValue = chartTop + ((maxValue - value) / range) * chartHeight;
+          const y = Math.min(yValue, baseline);
+          const height = Math.max(Math.abs(baseline - yValue), 2);
+          return <g key={`${points[index].date}-${index}`}>
+            <rect x={x} y={y} width={barWidth} height={height} rx="2" fill={value >= 0 ? color : '#fb7185'} opacity="0.85">
+              <title>{`${points[index].date} · ${label} net ₹${displayMarketValue(value)} crore`}</title>
+            </rect>
+          </g>;
+        })}
+        <text x="20" y="139" fill="#64748b" fontSize="9">{new Date(`${points[0].date}T12:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</text>
+        {points.length > 1 && <text x="660" y="139" textAnchor="end" fill="#64748b" fontSize="9">{new Date(`${points[points.length - 1].date}T12:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</text>}
+      </svg> : <div className="py-8 text-center text-xs text-slate-500">No published daily observations are available to chart.</div>}
+      <div className="grid grid-cols-2 gap-2 border-t border-[#232E47] pt-3 text-xs sm:grid-cols-3">
+        <div><div className="text-[10px] uppercase tracking-wide text-slate-500">Gross buys</div><div className="mt-1 font-mono font-semibold text-white">₹{displayMarketValue(buy)} Cr</div></div>
+        <div><div className="text-[10px] uppercase tracking-wide text-slate-500">Gross sells</div><div className="mt-1 font-mono font-semibold text-white">₹{displayMarketValue(sell)} Cr</div></div>
+        <div className="col-span-2 sm:col-span-1"><div className="text-[10px] uppercase tracking-wide text-slate-500">Direction</div><div className={`mt-1 font-semibold ${positive ? 'text-emerald-300' : 'text-rose-300'}`}>{net === 0 ? 'Neutral' : positive ? 'Net buyer' : 'Net seller'}</div></div>
+      </div>
+    </div>
+  );
+};
+
 export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardProps> = ({
   intelligence,
   className = ''
@@ -75,6 +138,8 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   // Global News State
   const [newsFeed, setNewsFeed] = useState<any[]>([]);
   const [upstoxReport, setUpstoxReport] = useState<any>(intelligence);
+  const [cashReport, setCashReport] = useState<any>(null);
+  const [cashError, setCashError] = useState<string | null>(null);
 
   useEffect(() => setUpstoxReport(intelligence), [intelligence]);
 
@@ -86,6 +151,27 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
     };
     void refresh().catch(() => {});
     const timer = window.setInterval(() => void refresh().catch(() => {}), 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const refreshCashFlow = async () => {
+      try {
+        const next = await fetchFiiDiiCash();
+        if (active) {
+          setCashReport(next);
+          setCashError(null);
+        }
+      } catch (err) {
+        if (active) setCashError(err instanceof Error ? err.message : 'Verified FII/DII cash-flow data is unavailable.');
+      }
+    };
+    void refreshCashFlow();
+    const timer = window.setInterval(() => void refreshCashFlow(), 5 * 60_000);
     return () => {
       active = false;
       window.clearInterval(timer);
@@ -147,23 +233,52 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
       { id: 'GLOSSARY', label: 'Macro Cheat Sheet', icon: <BookOpen className="w-3.5 h-3.5" /> },
       { id: 'NEWS', label: 'Global Wire', icon: <Newspaper className="w-3.5 h-3.5" /> },
     ];
-    const unavailable: Record<Exclude<MacroTab, 'ALL' | 'DERIVATIVES' | 'MARKET_IMPACT' | 'GLOSSARY' | 'NEWS'>, string> = {
-      CASH_FLOWS: 'FII/DII cash-market participant flows are not returned by the connected Upstox endpoints.',
-      INFLATION: 'CPI and WPI releases are not returned by the connected Upstox endpoints.',
-      GDP: 'GDP and national account releases are not returned by the connected Upstox endpoints.',
-      RBI_POLICY: 'RBI policy rates and meeting outcomes are not returned by the connected Upstox endpoints.',
-      BOND_YIELDS: 'Government bond yields are not returned by the connected Upstox endpoints.',
-      COMMODITIES: 'Crude and other commodity prices are not returned by the connected Upstox endpoints.',
-      CURRENCY: 'USD/INR reference rates are not returned by the connected Upstox endpoints.',
-      PMI_IIP: 'PMI and IIP releases are not returned by the connected Upstox endpoints.',
-      FISCAL_LABOUR: 'Fiscal and employment releases are not returned by the connected Upstox endpoints.',
-      CALENDAR: 'An economic release calendar is not returned by the connected Upstox endpoints.',
+    const unavailable: Record<Exclude<MacroTab, 'ALL' | 'CASH_FLOWS' | 'DERIVATIVES' | 'MARKET_IMPACT' | 'GLOSSARY' | 'NEWS'>, string> = {
+      INFLATION: 'No verified release feed is connected yet. CPI is published by MoSPI/NSO and WPI by the Office of the Economic Adviser.',
+      GDP: 'No verified national-accounts series is connected yet. The official source is MoSPI/NSO.',
+      RBI_POLICY: 'No verified RBI policy-rate and decision feed is connected yet.',
+      BOND_YIELDS: 'No verified government-bond yield series is connected yet. RBI and FBIL publish relevant rates.',
+      COMMODITIES: 'No licensed live commodity-price provider is connected yet.',
+      CURRENCY: 'No verified USD/INR quote or FBIL reference-rate feed is connected yet.',
+      PMI_IIP: 'IIP needs the MoSPI/NSO release; PMI is separately published and licensed. Neither feed is connected yet.',
+      FISCAL_LABOUR: 'No verified CGA/Ministry of Finance or MoSPI/PLFS release feed is connected yet.',
+      CALENDAR: 'No verified official economic-release calendar is connected yet.',
     };
     const unavailableCard = (title: string, detail: string) => (
       <div key={title} className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-200"><ShieldAlert className="h-4 w-4 text-amber-400" />{title}</div>
         <p className="mt-2 text-xs leading-relaxed text-slate-400">{detail}</p>
-        <div className="mt-3 text-[10px] font-mono uppercase tracking-wide text-slate-500">No verified source data</div>
+        <div className="mt-3 text-[10px] font-mono uppercase tracking-wide text-slate-500">Source integration needed</div>
+      </div>
+    );
+    const cashLatest = cashReport?.latest;
+    const cashHistory: CashFlowHistoryPoint[] = Array.isArray(cashReport?.history) ? cashReport.history : [];
+    const graphHistory = cashHistory.length ? cashHistory : (cashReport?.data_date && cashLatest ? [{
+      date: cashReport.data_date,
+      fii_net: cashLatest.fii_fpi?.net,
+      dii_net: cashLatest.dii?.net,
+    }] : []);
+    const renderCashFlows = () => (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold text-white">Daily FII/FPI and DII cash-market activity</h3>
+            <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">These are verified daily cash-market totals, not an intraday live feed. Upstox is used when available; NSE is the labeled fallback and its report is provisional.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-[10px]">
+            <span className={`rounded-lg border px-2.5 py-1 font-bold ${cashReport?.status === 'CURRENT' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : cashReport?.status === 'STALE' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-slate-600 bg-slate-800/50 text-slate-300'}`}>{cashReport?.source_provider === 'UPSTOX_MARKET_INFO' ? 'UPSTOX DAILY' : cashReport?.source_provider === 'NSE_FII_DII_REPORT' ? 'NSE DAILY' : `${cashReport?.status || 'WAITING'}`}{cashReport?.status && cashReport.status !== 'CURRENT' ? ` · ${cashReport.status}` : ''}</span>
+            <span className="rounded-lg border border-[#232E47] px-2.5 py-1 text-slate-300">As of {cashReport?.data_date || '—'}</span>
+          </div>
+        </div>
+        {cashLatest ? <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <CashFlowHistoryGraph label="FII / FPI" net={cashLatest.fii_fpi?.net} buy={cashLatest.fii_fpi?.buy} sell={cashLatest.fii_fpi?.sell} color="#34d399" series={graphHistory} />
+          <CashFlowHistoryGraph label="DII" net={cashLatest.dii?.net} buy={cashLatest.dii?.buy} sell={cashLatest.dii?.sell} color="#38bdf8" series={graphHistory} />
+        </div> : <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">{cashReport?.detail || cashError || 'Waiting for a verified provider report.'}</div>}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#232E47] bg-[#0B0E14] p-3 text-[10px] text-slate-500">
+          <span>Source: <a className="text-sky-300 hover:underline" href={cashReport?.source_url || 'https://upstox.com/developer/api-documentation/get-fii-data/'} target="_blank" rel="noreferrer">{cashReport?.source || 'Upstox daily FII/DII; NSE fallback'}</a> · ₹ crore · Daily values{cashReport?.provisional ? ' · provisional NSE report' : ''}</span>
+          <span>{cashReport?.fetched_at ? `Retrieved ${new Date(cashReport.fetched_at).toLocaleString('en-IN')}` : 'No current provider refresh'}</span>
+        </div>
+        {cashReport?.history_sessions <= 1 && <p className="text-[10px] text-slate-500">Historical bars use actual daily provider observations archived by this service; no older flow values are estimated.</p>}
       </div>
     );
 
@@ -176,13 +291,13 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-bold text-white tracking-tight">{t('Indian Market Intelligence & Institutional Macro Surveillance Suite')}</h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-mono font-bold border border-sky-500/30">MODULES 32-39</span>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono font-bold ${statusStyle}`}>{verified ? `${status} FEED` : 'WAITING FOR VERIFIED DATA'}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono font-bold ${statusStyle}`}>OPTIONS: {status}</span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">FII/DII, derivatives, macro releases and market-impact modules. Verified Upstox option metrics are shown where available.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Upstox option data and daily FII/DII cash flows, each labeled with its source and update schedule.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden md:inline text-[10px] text-slate-500">{upstoxReport?.observed_at ? new Date(upstoxReport.observed_at).toLocaleTimeString() : 'Waiting for snapshot'}</span>
+            <span className="hidden md:inline text-[10px] text-slate-500">{upstoxReport?.observed_at ? new Date(upstoxReport.observed_at).toLocaleTimeString() : 'Option feed time unavailable'}</span>
             <button onClick={() => setCollapsed(!collapsed)} className="p-1.5 rounded-lg bg-[#0B0E14] text-slate-400 hover:text-white border border-[#232E47]" title="Toggle dashboard visibility">
               {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
             </button>
@@ -222,12 +337,14 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               {metric('Volume PCR', displayMarketValue(chain.totals?.vol_pcr, 3), 'Put volume divided by call volume')}
               {metric('OI change PCR', displayMarketValue(chain.totals?.oi_change_pcr, 3), 'Unavailable when call OI change is zero')}
             </div>}
+            {renderCashFlows()}
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-              {unavailableCard('FII/DII cash flows', 'The previous section is retained. Upstox market-data responses do not provide official participant net flows.')}
               {unavailableCard('Inflation, GDP & RBI policy', 'CPI/WPI, GDP, policy rates and releases need an official macroeconomic data source.')}
-              {unavailableCard('Rates, commodities & currency', 'Government yields, USD/INR and crude prices are not part of the configured Upstox market-data feed.')}
+              {unavailableCard('Rates, commodities & currency', 'RBI/FBIL rates and licensed cross-asset quotes are not connected yet.')}
             </div>
           </>}
+
+          {activeTab === 'CASH_FLOWS' && renderCashFlows()}
 
           {activeTab === 'DERIVATIVES' && <div className="space-y-4">
             <div><h3 className="text-sm font-bold text-white">Derivatives positioning</h3><p className="mt-1 text-xs text-slate-400">Live option-chain metrics from the selected Upstox expiry.</p></div>
@@ -270,7 +387,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
             {newsFeed.length ? newsFeed.slice(0, 12).map((item, index) => <div key={item.id || item.url || index} className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4"><div className="text-sm text-slate-200">{item.title || item.headline || 'News item'}</div><div className="mt-2 text-[10px] text-slate-500">{item.source || item.publisher || 'External news source'} {item.published_at ? `• ${item.published_at}` : ''}</div></div>) : <p className="rounded-xl border border-[#232E47] bg-[#0B0E14] p-4 text-sm text-slate-400">No global news items are available from the configured source right now.</p>}
           </div>}
 
-          {activeTab !== 'ALL' && activeTab !== 'DERIVATIVES' && activeTab !== 'MARKET_IMPACT' && activeTab !== 'GLOSSARY' && activeTab !== 'NEWS' && (
+          {activeTab !== 'ALL' && activeTab !== 'CASH_FLOWS' && activeTab !== 'DERIVATIVES' && activeTab !== 'MARKET_IMPACT' && activeTab !== 'GLOSSARY' && activeTab !== 'NEWS' && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-white">{restoredTabs.find(tab => tab.id === activeTab)?.icon}{restoredTabs.find(tab => tab.id === activeTab)?.label}</div>
               {unavailableCard(restoredTabs.find(tab => tab.id === activeTab)?.label || 'Market module', unavailable[activeTab])}
@@ -278,7 +395,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
           )}
 
           <p className="rounded-lg border border-[#232E47] bg-[#0B0E14] p-3 text-[11px] leading-relaxed text-slate-400">
-            Source: {upstoxReport?.source_endpoint || chain?.source || 'Upstox option-chain API'}. A REST snapshot can be available while the WebSocket feed is WAITING outside market hours. Unsupported macro figures remain unavailable instead of being filled with stale estimates.
+            Option source: {upstoxReport?.source_endpoint || chain?.source || 'Upstox option-chain API'} · Cash-flow source: {cashReport?.source || 'Upstox daily FII/DII with NSE fallback'}. The cash-flow report is daily, not intraday. A REST option snapshot can be available while the WebSocket feed is WAITING outside market hours. Macro figures without a verified provider remain unavailable.
           </p>
         </div>}
       </section>
