@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from typing import Dict, Any, List, Optional
 from app.services.market_intelligence_service import market_intelligence_service
 from app.services.institutional_data_service import institutional_data_service
 from app.services.macro_data_service import macro_data_service
 from app.services.global_news_service import global_news_service
+from app.services.macro_analytics_suite import macro_analytics_suite
 
 router = APIRouter(prefix="/market-intelligence", tags=["Institutional Market Intelligence"])
 
@@ -17,6 +18,7 @@ async def get_market_intelligence():
     - FII index futures derivative positioning & short covering metrics
     - India CPI Inflation breakdown across all 12 categories with RBI ceiling benchmarking
     - National Accounts & Macroeconomic glossary
+    - Full Modules 32-37 analytics suites
     """
     return market_intelligence_service.get_market_intelligence()
 
@@ -25,8 +27,8 @@ async def get_market_intelligence():
 async def get_fii_dii_cash_report():
     """
     Retrieve comprehensive FII and DII cash market activity:
-    - Latest session Gross Purchases, Gross Sales, Net Investment
-    - Previous session, 5-session, 20-session, MTD, and YTD aggregates
+    - Latest session Gross Purchases, Gross Sales, Net Investment (Equity & Debt)
+    - Previous session, 5-session, 10-session, 20-session, MTD, and YTD aggregates
     - 20-session historical daily series for dual-series graphical charting
     """
     return institutional_data_service.get_cash_market_report()
@@ -36,12 +38,82 @@ async def get_fii_dii_cash_report():
 async def get_fii_dii_derivatives_report():
     """
     Retrieve NSE participant-wise derivatives positioning:
-    - FII, DII, Pro, Client Index Futures Long & Short open interest
-    - Daily contract changes & percentage shifts
-    - Multi-session short-covering trajectory (225k peak shorts -> 70k current)
-    - Automated institutional interpretation synthesis
+    - FII, DII, Pro, Client Index Futures & Stock Futures Long, Short, Net open interest
+    - FII Index Options positioning (Calls, Puts, PCR)
+    - Long %, Short %, Long/Short ratio, and daily contract changes
+    - Multi-session short-covering trajectory (225k peak shorts -> 63.6k current)
     """
     return institutional_data_service.get_derivatives_positioning_report()
+
+
+@router.get("/inflation", response_model=Dict[str, Any])
+async def get_inflation_analytics():
+    """
+    Module 33: Complete India Inflation Analytics
+    - CPI Suite: Headline, Core, Food, Fuel, Housing
+    - WPI Suite: Headline, Core, Food, Fuel, Manufactured Products
+    - Inflation expectations & RBI 4% midpoint / 2-6% target comparison
+    """
+    return macro_analytics_suite.get_inflation_analytics()
+
+
+@router.get("/gdp", response_model=Dict[str, Any])
+async def get_gdp_analytics():
+    """
+    Module 34: GDP & National Accounts Analytics
+    - Real GDP vs Nominal GDP vs GVA vs GDP Deflator
+    - Expenditure components (PFCE, GFCE, GFCF, Net Exports)
+    - Sector-wise GVA contributions & 6-year historical series
+    """
+    return macro_analytics_suite.get_gdp_national_accounts_analytics()
+
+
+@router.get("/rbi-macro", response_model=Dict[str, Any])
+async def get_rbi_macro_dashboard():
+    """
+    Module 35: RBI Policy & Macroeconomic Dashboard
+    - Repo, SDF, MSF, Reverse Repo, CRR, SLR
+    - 10-year G-Sec yield, USD/INR, Commodities (Crude, Gold, Silver, Gas, Aluminium)
+    - PMI Manufacturing & Services, IIP, Fiscal Deficit, Capex, PLFS Unemployment, CAD
+    """
+    return macro_analytics_suite.get_rbi_macro_dashboard()
+
+
+@router.get("/calendar", response_model=Dict[str, Any])
+async def get_economic_calendar():
+    """
+    Module 36: Economic Calendar & Surprise Engine
+    - Scheduled releases for CPI, WPI, GDP, RBI MPC, US CPI, Fed FOMC
+    - Actual vs Forecast surprise calculations & revisions
+    """
+    return macro_analytics_suite.get_economic_calendar_and_surprises()
+
+
+@router.get("/market-impact", response_model=Dict[str, Any])
+async def get_market_impact_analysis():
+    """
+    Module 37: Macro-to-Market Impact Engine
+    - Quantitative impact on NIFTY 50, BANK NIFTY, 8 key sectors, heavyweights
+    - Option chain Max Pain, PCR, IV, Support/Resistance zones
+    - Potential Bullish, Bearish, Neutral, and Conflicting factors
+    """
+    return macro_analytics_suite.get_macro_market_impact_engine()
+
+
+@router.get("/export/csv/{section}")
+async def export_macro_csv(section: str):
+    """
+    Module 38: CSV Export for Macroeconomic Intelligence
+    - Downloads clean CSV representation for cash-flows, derivatives, inflation, gdp, or macro indicators
+    """
+    csv_content = macro_analytics_suite.export_section_csv(section)
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=macro_{section.replace('/', '_')}.csv"
+        }
+    )
 
 
 @router.get("/macro-topics", response_model=List[Dict[str, Any]])

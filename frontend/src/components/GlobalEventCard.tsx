@@ -91,6 +91,7 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
               {isUpcoming && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block mr-0.5" />}
               {isOngoing && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block mr-0.5" />}
               {isReleased && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-0.5" />}
+              {isUnverified && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-0.5" />}
               <span>
                 {languageMode === 'te' 
                   ? (event.countdown?.countdown_label_te || event.countdown?.countdown_label_en)

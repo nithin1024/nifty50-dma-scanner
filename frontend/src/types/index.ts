@@ -333,8 +333,17 @@ export interface MarketIntelligenceReport {
     dii_net_crores: number;
     dii_sentiment: string;
     net_institutional_crores: number;
+    fii_gross_buy?: number;
+    fii_gross_sell?: number;
+    dii_gross_buy?: number;
+    dii_gross_sell?: number;
     recent_fii_history: { date: string; fii_net_cr: number; status: string }[];
+    historical_daily_series?: any[];
+    aggregates?: any;
+    cumulative_flows?: any;
+    equity_debt_breakdown?: any;
     source: string;
+    [key: string]: any;
   };
   fii_derivatives_positioning: {
     session_date: string;
@@ -346,6 +355,13 @@ export interface MarketIntelligenceReport {
     historical_peak_shorts: number;
     trend_analysis: string;
     instrument_coverage: string;
+    long_contracts?: number;
+    short_contracts?: number;
+    long_short_ratio?: number;
+    participant_breakdown?: any;
+    stock_futures?: any;
+    index_options?: any;
+    [key: string]: any;
   };
   cpi_inflation_breakdown: {
     headline: string;
@@ -355,6 +371,11 @@ export interface MarketIntelligenceReport {
     categories: CpiInflationCategory[];
   };
   macro_glossary: MacroGlossaryTerm[];
+  inflation_analytics?: any;
+  gdp_national_accounts?: any;
+  rbi_macro_dashboard?: any;
+  economic_calendar?: any;
+  market_impact_engine?: any;
 }
 
 export interface EventCountdown {

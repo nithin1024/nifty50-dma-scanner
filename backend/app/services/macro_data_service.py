@@ -862,6 +862,282 @@ class MacroDataService:
             "market_impact_te": {
                 "summary": "PMI 57.5 వద్ద బలంగా ఉండటం భారత ఫ్యాక్టరీల ఉత్పత్తి సామర్థ్యాన్ని మరియు కంపెనీల ఆదాయ వృద్ధిని రుజువు చేస్తుంది."
             }
+        },
+
+        # 16. CORE CPI (Excluding Food & Fuel)
+        "core-cpi": {
+            "id": "core-cpi",
+            "name": "India Core CPI Inflation (Excluding Food & Fuel)",
+            "name_te": "కోర్ CPI ద్రవ్యోల్బణం (ఆహారం & ఇంధనం మినహాయించి)",
+            "group": "Price Indices & Deflators",
+            "category": "INFLATION",
+            "definition_en": "Core consumer inflation removing volatile perishable food and energy commodities, capturing underlying structural demand-pull pricing pressures.",
+            "definition_te": "అస్థిరమైన ఆహార మరియు ఇంధన ధరలను మినహాయించి ఆర్థిక వ్యవస్థలోని వాస్తవ ద్రవ్యోల్బణ ధోరణిని కొలిచే సూచిక.",
+            "formula": "Core CPI = All Commodities CPI - Food & Beverages (45.86% wt) - Fuel & Light (6.84% wt)",
+            "why_it_matters": "The primary operational gauge observed by the RBI MPC. Core CPI at 3.50% confirms that India faces no systemic demand-side overheating.",
+            "why_it_matters_te": "ఆర్బీఐ ద్రవ్య విధాన నిర్ణయాలకు ఇది అత్యంత ప్రాధాన్యం. కోర్ CPI 3.5% వద్ద ఉండటం వల్ల వడ్డీ రేట్ల తగ్గింపునకు మార్గం సుగమం అవుతుంది.",
+            "latest_value": "3.50%",
+            "previous_value": "3.56%",
+            "forecast_value": "3.60%",
+            "yoy_pct": 3.50,
+            "unit": "% YoY Growth",
+            "frequency": "Monthly",
+            "next_release": "12 December 2026, 05:30 PM IST",
+            "source_name": "MoSPI (National Statistical Office)",
+            "source_url": "https://www.mospi.gov.in/",
+            "five_year_history": [
+                {"period": "Oct 2026 (Latest)", "actual": "3.50%", "previous": "3.56%", "change_pct": -0.06},
+                {"period": "FY 2024-25", "actual": "4.30%", "previous": "4.40%", "change_pct": -0.10},
+                {"period": "FY 2023-24", "actual": "4.40%", "previous": "6.10%", "change_pct": -1.70},
+                {"period": "FY 2022-23", "actual": "6.10%", "previous": "5.90%", "change_pct": 0.20},
+                {"period": "FY 2021-22", "actual": "5.90%", "previous": "5.50%", "change_pct": 0.40}
+            ],
+            "chart_series": [
+                {"period": "FY22", "value": 5.9},
+                {"period": "FY23", "value": 6.1},
+                {"period": "FY24", "value": 4.4},
+                {"period": "FY25", "value": 4.3},
+                {"period": "FY26", "value": 3.5}
+            ],
+            "country_comparison": [
+                {"country": "India 🇮🇳", "value": "3.50%", "status": "BENIGN_STRUCTURAL_STABILITY"},
+                {"country": "United States 🇺🇸", "value": "3.30%", "status": "STICKY"},
+                {"country": "Eurozone 🇪🇺", "value": "2.70%", "status": "MODERATING"}
+            ],
+            "market_impact": {
+                "nifty_50": "Very bullish for equity multiples as low core inflation preserves corporate margin cushions.",
+                "bank_nifty": "Low core inflation anchors long-term sovereign bond yields, expanding banking treasury profitability.",
+                "it_sector": "Neutral.",
+                "banking_stocks": "Improves margin visibility.",
+                "auto_sector": "Stable input costs enhance auto OEM operating margins.",
+                "infra_capital_goods": "Supports capex planning.",
+                "usd_inr": "Preserves real interest rate differential in favour of the Rupee.",
+                "bond_yields": "Keeps 10Y G-Sec yields anchored near 6.75%.",
+                "fii_flows": "Supports long-duration sovereign and corporate bond inflows."
+            },
+            "market_impact_te": {
+                "summary": "కోర్ ద్రవ్యోల్బణం 3.5% వద్ద స్థిరంగా ఉండటం భారత కార్పొరేట్ కంపెనీల మార్జిన్లకు మరియు బ్యాంకింగ్ షేర్లకు ఎంతో సానుకూలం."
+            }
+        },
+
+        # 17. BRENT CRUDE OIL
+        "crude-oil": {
+            "id": "crude-oil",
+            "name": "Crude Oil (Brent Global Benchmark)",
+            "name_te": "బ్రెంట్ క్రూడ్ ఆయిల్ (ముడి చమురు ధర)",
+            "group": "Global Commodities & Raw Materials",
+            "category": "COMMODITY",
+            "definition_en": "Global crude oil trading benchmark sourced from the North Sea, serving as the definitive reference price for India's oil import basket.",
+            "definition_te": "ప్రపంచ ముడి చమురు ప్రామాణిక ధర. భారతదేశం తన చమురు అవసరాలలో 85% దిగుమతి చేసుకుంటుంది కాబట్టి ఇది ఆర్థిక వ్యవస్థకు అత్యంత కీలకం.",
+            "formula": "Brent Crude Price in USD per Barrel (1 barrel = ~159 liters)",
+            "why_it_matters": "Every $10/barrel drop in Brent crude reduces India's Current Account Deficit by ~0.3% of GDP and cools headline CPI by ~25-30 bps.",
+            "why_it_matters_te": "చమురు ధర $10 తగ్గితే భారతదేశ కరెంట్ ఖాతా లోటు (CAD) మరియు ద్రవ్యోల్బణం గణనీయంగా తగ్గుతాయి.",
+            "latest_value": "$72.80 / bbl",
+            "previous_value": "$74.20 / bbl",
+            "forecast_value": "$73.50 / bbl",
+            "yoy_pct": -12.4,
+            "unit": "USD / Barrel",
+            "frequency": "Continuous / Daily",
+            "next_release": "Real-time Intercontinental Exchange (ICE)",
+            "source_name": "ICE Futures Europe / Reuters",
+            "source_url": "https://www.theice.com/",
+            "five_year_history": [
+                {"period": "Nov 2026 (Latest)", "actual": "$72.80", "previous": "$74.20", "change_pct": -1.89},
+                {"period": "2025 Average", "actual": "$82.50", "previous": "$85.00", "change_pct": -2.94},
+                {"period": "2024 Average", "actual": "$85.00", "previous": "$83.20", "change_pct": 2.16},
+                {"period": "2023 Average", "actual": "$83.20", "previous": "$100.90", "change_pct": -17.54},
+                {"period": "2022 Average", "actual": "$100.90", "previous": "$70.80", "change_pct": 42.51}
+            ],
+            "chart_series": [
+                {"period": "2022", "value": 100.9},
+                {"period": "2023", "value": 83.2},
+                {"period": "2024", "value": 85.0},
+                {"period": "2025", "value": 82.5},
+                {"period": "2026", "value": 72.8}
+            ],
+            "country_comparison": [
+                {"country": "Brent Global", "value": "$72.80", "status": "BENIGN_FOR_INDIA"},
+                {"country": "WTI (US)", "value": "$68.50", "status": "DOMESTIC_US_DISCOUNT"},
+                {"country": "Urals (Russia)", "value": "$64.20", "status": "INDIA_DISCOUNTED_SUPPLY"}
+            ],
+            "market_impact": {
+                "nifty_50": "Sub-$75 Brent is a major structural positive for Indian macro, lowering imported inflation and strengthening sovereign twin deficits.",
+                "bank_nifty": "Highly positive via lower systemic inflation expectations.",
+                "it_sector": "Neutral.",
+                "banking_stocks": "Macroeconomic tailwind.",
+                "auto_sector": "Highly bullish; lower fuel costs spur commercial and passenger vehicle usage.",
+                "infra_capital_goods": "Bitumen and diesel running costs decrease for project developers.",
+                "usd_inr": "Significantly cushions the Indian Rupee against dollar outflows.",
+                "bond_yields": "Low oil eases bond yields by eliminating imported inflation spikes.",
+                "fii_flows": "Foreign institutional investors allocate more capital to India when crude remains benign."
+            },
+            "market_impact_te": {
+                "summary": "క్రూడ్ ఆయిల్ ధర $75 దిగువన ఉండటం భారతదేశానికి బంపర్ గిఫ్ట్. ఆయిల్ మార్కెటింగ్ కంపెనీలు (BPCL, IOC), పెయింట్స్ మరియు టైర్ కంపెనీల లాభాలు భారీగా పెరుగుతాయి."
+            }
+        },
+
+        # 18. SERVICES PMI
+        "services-pmi": {
+            "id": "services-pmi",
+            "name": "HSBC India Services Purchasing Managers' Index (PMI)",
+            "name_te": "భారత సర్వీసెస్ పర్చేజింగ్ మేనేజర్స్ ఇండెక్స్ (Services PMI)",
+            "group": "High-Frequency Activity",
+            "category": "BUSINESS_SURVEY",
+            "definition_en": "Monthly diffusion index surveying purchasing executives across IT, financial, transport, hospitality, and professional services sectors.",
+            "definition_te": "దేశంలో 54% పైగా GDP వాటా కలిగిన సర్వీసెస్ రంగం (IT, బ్యాంకింగ్, రవాణా, హోటల్స్) యొక్క వృద్ధిని కొలిచే నెలవారీ సూచిక.",
+            "formula": "PMI Services Diffusion Index (>50 = Expansion, <50 = Contraction)",
+            "why_it_matters": "Services comprise over 54% of India's GDP. A reading of 58.9 indicates world-leading expansion in white-collar employment, travel, and financial services.",
+            "why_it_matters_te": "భారతదేశ ఆర్థిక వ్యవస్థలో సేవా రంగం అతిపెద్దది. 58.9 పాయింట్ల వద్ద ఇది ప్రపంచంలోనే అత్యంత వేగంగా విస్తరిస్తున్న సేవా రంగంగా నిలిచింది.",
+            "latest_value": "58.90",
+            "previous_value": "57.70",
+            "forecast_value": "58.00",
+            "yoy_pct": 2.08,
+            "unit": "Diffusion Index (>50 = Expansion)",
+            "frequency": "Monthly",
+            "next_release": "03 December 2026, 10:30 AM IST",
+            "source_name": "S&P Global / HSBC",
+            "source_url": "https://www.spglobal.com/",
+            "five_year_history": [
+                {"period": "Oct 2026 (Latest)", "actual": "58.90", "previous": "57.70", "change_pct": 2.08},
+                {"period": "FY 2024-25 Average", "actual": "59.20", "previous": "57.50", "change_pct": 2.96},
+                {"period": "FY 2023-24 Average", "actual": "57.50", "previous": "55.20", "change_pct": 4.17},
+                {"period": "FY 2022-23 Average", "actual": "55.20", "previous": "52.30", "change_pct": 5.55}
+            ],
+            "chart_series": [
+                {"period": "FY23", "value": 55.2},
+                {"period": "FY24", "value": 57.5},
+                {"period": "FY25", "value": 59.2},
+                {"period": "FY26", "value": 58.9}
+            ],
+            "country_comparison": [
+                {"country": "India 🇮🇳", "value": "58.90", "status": "WORLD_LEADING_SERVICES_GROWTH"},
+                {"country": "United States 🇺🇸", "value": "55.30", "status": "EXPANSION"},
+                {"country": "Eurozone 🇪🇺", "value": "51.20", "status": "MODEST_EXPANSION"}
+            ],
+            "market_impact": {
+                "nifty_50": "Supports domestic consumption, travel, telecom, and financial corporate revenues.",
+                "bank_nifty": "Accelerates credit card, personal loan, and SME transactional velocity.",
+                "it_sector": "Reflects healthy domestic IT and digital platform adoption.",
+                "banking_stocks": "High fee-income generation.",
+                "auto_sector": "Supports commercial vehicle passenger fleet demand.",
+                "infra_capital_goods": "Commercial real estate and airport capacity expansion.",
+                "usd_inr": "Strong software services exports ($340B+ annual) cushion the current account.",
+                "bond_yields": "Neutral.",
+                "fii_flows": "Strong institutional interest in Indian financial technology and consumer internet."
+            },
+            "market_impact_te": {
+                "summary": "Services PMI 58.9 వద్ద ఉండటం బ్యాంకింగ్, టెలికాం, ట్రావెల్ మరియు హోటల్స్ షేర్లలో బలమైన వృద్ధిని కొనసాగిస్తుంది."
+            }
+        },
+
+        # 19. INDEX OF INDUSTRIAL PRODUCTION (IIP)
+        "iip": {
+            "id": "iip",
+            "name": "Index of Industrial Production (IIP)",
+            "name_te": "పారిశ్రామిక ఉత్పత్తి సూచిక (IIP)",
+            "group": "High-Frequency Activity",
+            "category": "INDUSTRIAL_OUTPUT",
+            "definition_en": "Official government index measuring physical production volumes across Mining (14.37% wt), Manufacturing (77.63% wt), and Electricity (7.99% wt).",
+            "definition_te": "గనుల తవ్వకం, ఫ్యాక్టరీల తయారీ మరియు విద్యుత్ ఉత్పత్తి రంగాల వాస్తవ వృద్ధిని కొలిచే భారత ప్రభుత్వ అధికారిక సూచిక.",
+            "formula": "IIP Laspeyres Index with 2011-12 Base Year weights",
+            "why_it_matters": "Unlike sentiment surveys, IIP reflects actual physical factory production data. Capital goods production within IIP (+10.2%) is the premier leading indicator of private investment.",
+            "why_it_matters_te": "దేశంలోని ఫ్యాక్టరీలలో వస్తువుల ఉత్పత్తి నిజంగా పెరిగిందో లేదో ఈ లెక్కల ద్వారా తెలుస్తుంది.",
+            "latest_value": "3.10%",
+            "previous_value": "-0.10%",
+            "forecast_value": "2.80%",
+            "yoy_pct": 3.10,
+            "unit": "% YoY Growth",
+            "frequency": "Monthly",
+            "next_release": "12 December 2026, 05:30 PM IST",
+            "source_name": "MoSPI (National Statistical Office)",
+            "source_url": "https://www.mospi.gov.in/",
+            "five_year_history": [
+                {"period": "Sep 2026 (Latest)", "actual": "3.10%", "previous": "-0.10%", "change_pct": 3.20},
+                {"period": "FY 2024-25", "actual": "5.80%", "previous": "5.20%", "change_pct": 0.60},
+                {"period": "FY 2023-24", "actual": "5.20%", "previous": "5.10%", "change_pct": 0.10},
+                {"period": "FY 2022-23", "actual": "5.10%", "previous": "11.40%", "change_pct": -6.30}
+            ],
+            "chart_series": [
+                {"period": "FY23", "value": 5.1},
+                {"period": "FY24", "value": 5.2},
+                {"period": "FY25", "value": 5.8},
+                {"period": "FY26", "value": 3.1}
+            ],
+            "country_comparison": [
+                {"country": "India 🇮🇳", "value": "3.10%", "status": "POSITIVE_REBOUND"},
+                {"country": "China 🇨🇳", "value": "5.40%", "status": "MODERATE_INDUSTRIAL"},
+                {"country": "Eurozone 🇪🇺", "value": "-1.20%", "status": "INDUSTRIAL_RECESSION"}
+            ],
+            "market_impact": {
+                "nifty_50": "Rebound to +3.1% relieves previous -0.1% contraction worries.",
+                "bank_nifty": "Industrial working capital borrowing expands.",
+                "it_sector": "Neutral.",
+                "banking_stocks": "Improves corporate debt servicing.",
+                "auto_sector": "Automotive factory sub-index shows steady 6.5% volume growth.",
+                "infra_capital_goods": "Capital goods sub-segment jumping +10.2% fuels Larsen & Toubro and Siemens order execution.",
+                "usd_inr": "Neutral.",
+                "bond_yields": "Neutral.",
+                "fii_flows": "Supports long-term capital allocation into Indian manufacturing leaders."
+            },
+            "market_impact_te": {
+                "summary": "IIP తిరిగి +3.1% కి చేరుకోవడం పారిశ్రామిక రంగానికి ఊరటనిచ్చింది. ముఖ్యంగా క్యాపిటల్ గూడ్స్ ఉత్పత్తి 10% పైగా పెరగడం L&T వంటి షేర్లకు అనుకూలం."
+            }
+        },
+
+        # 20. FISCAL DEFICIT
+        "fiscal-deficit": {
+            "id": "fiscal-deficit",
+            "name": "India Central Government Fiscal Deficit",
+            "name_te": "భారత కేంద్ర ప్రభుత్వ ద్రవ్య లోటు (Fiscal Deficit)",
+            "group": "Fiscal Accounts & Debt Sustainability",
+            "category": "FISCAL_POLICY",
+            "definition_en": "The shortfall in government total revenue compared with total expenditure, representing the total sovereign borrowing requirement for the fiscal year.",
+            "definition_te": "ప్రభుత్వ ఆదాయం కంటే ఖర్చులు ఎంత ఎక్కువగా ఉన్నాయో సూచించే ద్రవ్య లోటు (GDP శాతంగా లెక్కిస్తారు).",
+            "formula": "Fiscal Deficit = Total Expenditure - Total Non-Debt Receipts (Revenue Receipts + Non-debt Capital Receipts)",
+            "why_it_matters": "Fiscal consolidation toward 4.9% in FY25 and 4.5% in FY26 safeguards India's sovereign credit rating (S&P upgrade to Positive outlook) and controls market borrowing yields.",
+            "why_it_matters_te": "ద్రవ్య లోటు తగ్గుతుంటే ప్రభుత్వం తక్కువ అప్పులు చేస్తుందని అర్థం. ఇది అంతర్జాతీయ రేటింగ్ ఏజెన్సీలను మరియు FII ఇన్వెస్టర్లను ఆకట్టుకుంటుంది.",
+            "latest_value": "4.90% of GDP",
+            "previous_value": "5.60% of GDP",
+            "forecast_value": "4.90%",
+            "yoy_pct": -12.5,
+            "unit": "% of GDP",
+            "frequency": "Monthly / Annual Budget",
+            "next_release": "30 November 2026, 04:30 PM IST",
+            "source_name": "Controller General of Accounts (CGA) / Ministry of Finance",
+            "source_url": "https://cga.nic.in/",
+            "five_year_history": [
+                {"period": "FY 2025-26 Target", "actual": "4.90%", "previous": "5.60%", "change_pct": -0.70},
+                {"period": "FY 2024-25 Actual", "actual": "5.60%", "previous": "6.40%", "change_pct": -0.80},
+                {"period": "FY 2023-24", "actual": "6.40%", "previous": "6.70%", "change_pct": -0.30},
+                {"period": "FY 2022-23", "actual": "6.70%", "previous": "9.20%", "change_pct": -2.50},
+                {"period": "FY 2021-22", "actual": "9.20%", "previous": "9.30%", "change_pct": -0.10}
+            ],
+            "chart_series": [
+                {"period": "FY22", "value": 9.2},
+                {"period": "FY23", "value": 6.7},
+                {"period": "FY24", "value": 6.4},
+                {"period": "FY25", "value": 5.6},
+                {"period": "FY26", "value": 4.9}
+            ],
+            "country_comparison": [
+                {"country": "India 🇮🇳", "value": "4.90%", "status": "AGGRESSIVE_CONSOLIDATION"},
+                {"country": "United States 🇺🇸", "value": "6.40%", "status": "ELEVATED_DEFICIT"},
+                {"country": "United Kingdom 🇬🇧", "value": "4.40%", "status": "CONSOLIDATING"}
+            ],
+            "market_impact": {
+                "nifty_50": "Paves the path for sovereign credit rating upgrade to BBB/BBB+, lowering borrowing costs for all Indian corporates.",
+                "bank_nifty": "Cuts gross market borrowing supply, keeping bond yields suppressed.",
+                "it_sector": "Neutral.",
+                "banking_stocks": "Lower government borrowing crowd-out leaves abundant liquidity for private loan growth.",
+                "auto_sector": "Neutral.",
+                "infra_capital_goods": "Government preserves high capital expenditure (₹11.11 Lakh Cr) while pruning revenue waste.",
+                "usd_inr": "Significantly strengthens the Indian Rupee's macro balance of payments credibility.",
+                "bond_yields": "Key anchor pushing 10Y G-Sec yields below 6.80%.",
+                "fii_flows": "Inclusion of Indian government bonds in JP Morgan & Bloomberg EM Indices attracts $30B+ in debt inflows."
+            },
+            "market_impact_te": {
+                "summary": "కేంద్ర ప్రభుత్వం ద్రవ్య లోటును 4.9% కి తగ్గించడం దేశీయ అప్పుల భారాన్ని తగ్గిస్తుంది. దీనివల్ల భారత కంపెనీలకు విదేశాల్లో తక్కువ వడ్డీకే రుణాలు లభిస్తాయి."
+            }
         }
     }
 
@@ -897,19 +1173,40 @@ class MacroDataService:
         alias_map = {
             "cpi": "cpi-inflation",
             "cpi-headline": "cpi-inflation",
+            "core-cpi": "core-cpi",
+            "core-inflation": "core-cpi",
+            "food-cpi": "cpi-inflation",
+            "food-inflation": "cpi-inflation",
             "wpi": "wpi-inflation",
             "wpi-headline": "wpi-inflation",
+            "core-wpi": "wpi-inflation",
+            "food-wpi": "wpi-inflation",
             "repo-rate": "rbi-repo-rate",
-            "gsec": "10y-gsec-yield",
-            "10y-gsec": "10y-gsec-yield",
+            "repo": "rbi-repo-rate",
+            "gsec": "india-10y-bond-yield",
+            "10y-gsec": "india-10y-bond-yield",
+            "10y-gsec-yield": "india-10y-bond-yield",
+            "bond-yield": "india-10y-bond-yield",
+            "bonds": "india-10y-bond-yield",
             "gdp": "real-gdp",
-            "gni": "gnp",
-            "nni": "national-income",
+            "gni": "real-gdp",
+            "nni": "real-gdp",
+            "ndp": "real-gdp",
             "gdp-per-capita": "real-gdp",
             "forex": "forex-reserves",
             "fx-reserves": "forex-reserves",
             "pmi": "manufacturing-pmi",
-            "manufacturing": "manufacturing-pmi"
+            "manufacturing": "manufacturing-pmi",
+            "services": "services-pmi",
+            "services-pmi": "services-pmi",
+            "crude": "crude-oil",
+            "brent": "crude-oil",
+            "brent-crude": "crude-oil",
+            "oil": "crude-oil",
+            "iip": "iip",
+            "industrial-production": "iip",
+            "fiscal": "fiscal-deficit",
+            "fiscal-deficit": "fiscal-deficit"
         }
         target_id = alias_map.get(cleaned_id, cleaned_id)
 

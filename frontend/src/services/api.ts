@@ -230,3 +230,47 @@ export async function fetchEmaScanner(rsiMin = 40.0, rsiMax = 60.0): Promise<any
   return response.json();
 }
 
+export async function fetchInflationAnalytics(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/inflation`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchGdpAnalytics(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/gdp`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchRbiMacro(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/rbi-macro`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchEconomicCalendar(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/calendar`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchMarketImpact(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/market-impact`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export function getMacroCsvDownloadUrl(section: string): string {
+  return `${API_BASE}/market-intelligence/export/csv/${section}`;
+}
+

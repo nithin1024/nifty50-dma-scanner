@@ -114,23 +114,31 @@ def compute_live_countdown(utc_dt: datetime, actual_val: Optional[str] = None) -
         hours = (passed_seconds % 86400) // 3600
         minutes = (passed_seconds % 3600) // 60
 
-        if days > 1:
-            label = f"Released {days} days ago"
-            label_te = f"{days} రోజుల క్రితం విడుదలైంది"
-        elif days == 1:
-            label = f"Released 1 day ago"
-            label_te = "నిన్న విడుదలైంది"
-        elif hours > 0:
-            label = f"Released {hours}h {minutes}m ago"
-            label_te = f"{hours} గంటల క్రితం విడుదలైంది"
-        else:
-            label = f"Released {minutes}m ago"
-            label_te = f"{minutes} నిమిషాల క్రితం విడుదలైంది"
-
-        if has_actual:
-            lifecycle = "RELEASED_ACTUAL_AVAILABLE"
-        else:
+        if actual_val is not None and not has_actual:
             lifecycle = "RELEASED_ACTUAL_UNVERIFIED"
+            if days > 0:
+                label = f"Awaiting Data ({days}d overdue)"
+                label_te = f"డేటా కోసం వేచి ఉంది ({days} రోజులు ఆలస్యం)"
+            elif hours > 0:
+                label = f"Awaiting Data ({hours}h {minutes}m overdue)"
+                label_te = f"డేటా కోసం వేచి ఉంది ({hours}గం {minutes}ని ఆలస్యం)"
+            else:
+                label = f"Awaiting Data ({minutes}m overdue)"
+                label_te = f"డేటా కోసం వేచి ఉంది ({minutes}ని ఆలస్యం)"
+        else:
+            if days > 1:
+                label = f"Released {days} days ago"
+                label_te = f"{days} రోజుల క్రితం విడుదలైంది"
+            elif days == 1:
+                label = f"Released 1 day ago"
+                label_te = "నిన్న విడుదలైంది"
+            elif hours > 0:
+                label = f"Released {hours}h {minutes}m ago"
+                label_te = f"{hours} గంటల క్రితం విడుదలైంది"
+            else:
+                label = f"Released {minutes}m ago"
+                label_te = f"{minutes} నిమిషాల క్రితం విడుదలైంది"
+            lifecycle = "RELEASED_ACTUAL_AVAILABLE" if has_actual else "RELEASED"
 
         return {
             "status": "RELEASED",
