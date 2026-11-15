@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 
 from app.config import get_settings
-from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner, options, chart
 from app.services.db_service import db_service
 from app.services.global_events_service import global_events_service
 from app import __version__
@@ -72,6 +72,38 @@ app.include_router(export.router, prefix="/api/v1")
 app.include_router(market_intelligence.router, prefix="/api/v1")
 app.include_router(global_events.router, prefix="/api/v1")
 app.include_router(ema_scanner.router, prefix="/api/v1")
+app.include_router(options.router, prefix="/api/v1")
+app.include_router(chart.router, prefix="/api/v1")
+
+
+@app.websocket("/ws/options-feed")
+async def options_feed_websocket(websocket: WebSocket):
+    """WebSocket endpoint for live NIFTY & Stock option chain ticks with Protobuf/JSON schema."""
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+
+
+@app.websocket("/ws/chart-feed")
+async def chart_feed_websocket(websocket: WebSocket):
+    """WebSocket endpoint for real-time live-moving chart candles."""
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
 
 
 @app.websocket("/ws/live-scanner")

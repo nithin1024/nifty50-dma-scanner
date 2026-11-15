@@ -274,3 +274,108 @@ export function getMacroCsvDownloadUrl(section: string): string {
   return `${API_BASE}/market-intelligence/export/csv/${section}`;
 }
 
+// =========================================================================
+// Institutional Live Options & Chart Engine API Clients
+// =========================================================================
+
+export async function fetchFoUniverse(): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/universe`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchOptionChain(
+  symbol: string = 'NIFTY',
+  strikeRange: number = 10,
+  expiry?: string
+): Promise<any> {
+  const params = new URLSearchParams({
+    symbol,
+    strike_range: strikeRange.toString(),
+  });
+  if (expiry) params.append('expiry', expiry);
+
+  const response = await fetch(`${API_BASE}/options/chain?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchExpiries(symbol: string = 'NIFTY'): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/expiries?symbol=${encodeURIComponent(symbol)}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchStrategyPayoff(
+  strategy: string = 'BULL_CALL_SPREAD',
+  spot: number = 23532.70,
+  lotSize: number = 25
+): Promise<any> {
+  const params = new URLSearchParams({
+    strategy,
+    spot: spot.toString(),
+    lot_size: lotSize.toString()
+  });
+  const response = await fetch(`${API_BASE}/options/strategy-payoff?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchMarketRegime(spot: number = 23532.70): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/market-regime?spot=${spot.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchOptionsAlerts(): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/alerts`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchDataQualityReport(): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/data-quality`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchChartCandles(
+  symbol: string = 'NIFTY',
+  timeframe: string = '15m',
+  chartType: string = 'CANDLESTICK'
+): Promise<any> {
+  const params = new URLSearchParams({
+    symbol,
+    timeframe,
+    chart_type: chartType
+  });
+  const response = await fetch(`${API_BASE}/chart/candles?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export function getChartCsvDownloadUrl(
+  symbol: string = 'NIFTY',
+  timeframe: string = '15m',
+  chartType: string = 'CANDLESTICK'
+): string {
+  const params = new URLSearchParams({ symbol, timeframe, chart_type: chartType });
+  return `${API_BASE}/chart/export/csv?${params.toString()}`;
+}
+

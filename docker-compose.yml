@@ -19,6 +19,13 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: nifty50_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
   web:
     build:
       context: .
@@ -28,15 +35,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "8000:8000"
     environment:
-      - APP_NAME=NIFTY 50 DMA Scanner
+      - APP_NAME=NIFTY 50 Institutional Live Option Chain & Charting Platform
       - APP_ENV=production
+      - APP_MODE=${APP_MODE:-DEMO}
       - DEBUG=False
       - PORT=8000
       - HOST=0.0.0.0
       - DATABASE_URL=postgresql://nifty_user:nifty_secure_password@db:5432/nifty50_dma
+      - REDIS_URL=redis://redis:6379/0
       - CORS_ORIGINS=*
       - UPSTOX_API_KEY=${UPSTOX_API_KEY:-}
       - UPSTOX_API_SECRET=${UPSTOX_API_SECRET:-}

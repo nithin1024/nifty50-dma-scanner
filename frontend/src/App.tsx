@@ -11,6 +11,8 @@ import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
+import { NiftyLiveOptionChainDashboard } from './components/NiftyLiveOptionChainDashboard';
+import { ProfessionalTradingChart } from './components/ProfessionalTradingChart';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -152,6 +154,14 @@ export const App: React.FC = () => {
             onNavigate={setActiveTab}
             onSelectStock={handleSelectStock}
           />
+        )}
+
+        {activeTab === 'option-chain' && (
+          <NiftyLiveOptionChainDashboard />
+        )}
+
+        {activeTab === 'trading-chart' && (
+          <ProfessionalTradingChart symbol={selectedStock || 'NIFTY'} height={560} />
         )}
 
         {activeTab === 'dma-scanner' && (

@@ -1,5 +1,7 @@
 export type NavTab = 
   | 'overview' 
+  | 'option-chain'
+  | 'trading-chart'
   | 'dma-scanner' 
   | 'ema-scanner'
   | 'all-volume' 

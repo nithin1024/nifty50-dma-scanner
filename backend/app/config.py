@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     UPSTOX_API_KEY: str = ""
     UPSTOX_API_SECRET: str = ""
     UPSTOX_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/upstox/callback"
+    APP_MODE: str = "DEMO"
+    REDIS_URL: str = "redis://localhost:6379/0"
+    NSE_FO_SOURCE_URL: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
