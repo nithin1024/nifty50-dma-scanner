@@ -51,7 +51,7 @@ class VolumeAnalyticsEngine:
     def classify_volume_trend(volumes: List[int]) -> str:
         """Evaluate 3-session volume trajectory."""
         if len(volumes) < 3:
-            return "STEADY"
+            return "UNAVAILABLE"
         v3, v2, v1 = volumes[-1], volumes[-2], volumes[-3]
         if v3 > v2 > v1:
             return "INCREASING"
@@ -71,7 +71,7 @@ class VolumeAnalyticsEngine:
         - Declining Volume (RVOL < 0.50 or Change <= -50%)
         """
         if rvol is None:
-            return "NORMAL_VOLUME"
+            return "UNAVAILABLE"
 
         if rvol >= 2.0 or (volume_change_pct is not None and volume_change_pct >= 50.0):
             return "VERY_HIGH_VOLUME"
@@ -149,6 +149,7 @@ class VolumeAnalyticsEngine:
         constituent = constituents_service.get_by_symbol(symbol) or {}
         comp_name = constituent.get("company_name", symbol)
         weightage = constituent.get("weightage", 0.0)
+        candles = [c for c in candles if c.get("volume") is not None]
 
         if not candles or len(candles) < 6:
             return {
@@ -156,12 +157,12 @@ class VolumeAnalyticsEngine:
                 "company_name": comp_name,
                 "weightage": weightage,
                 "status": "INSUFFICIENT_VOLUME_DATA",
-                "latest_volume": 0,
+                "latest_volume": None,
                 "six_session_avg_volume": None,
                 "rvol": None,
                 "volume_change_pct": None,
-                "volume_trend": "STEADY",
-                "volume_classification": "NORMAL_VOLUME",
+                "volume_trend": "UNAVAILABLE",
+                "volume_classification": "UNAVAILABLE",
                 "price_volume_confirmation": {"signal": "NEUTRAL", "label": "No Data", "detail": "Insufficient history"},
                 "six_session_history": []
             }

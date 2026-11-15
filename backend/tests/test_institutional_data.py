@@ -56,19 +56,11 @@ def test_participant_derivatives_positioning():
 
 @pytest.mark.asyncio
 async def test_fii_dii_api_routes():
-    """Verify FastAPI routes for institutional cash and derivatives."""
+    """Upstox does not expose participant-wise FII/DII datasets."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Cash route
         cash_resp = await client.get("/api/v1/market-intelligence/fii-dii/cash")
-        assert cash_resp.status_code == 200
-        cash_json = cash_resp.json()
-        assert "latest" in cash_json
-        assert len(cash_json["historical_daily_series"]) >= 20
-
-        # Derivatives route
         deriv_resp = await client.get("/api/v1/market-intelligence/fii-dii/derivatives")
-        assert deriv_resp.status_code == 200
-        deriv_json = deriv_resp.json()
-        assert "fii_derivatives" in deriv_json
-        assert deriv_json["fii_derivatives"]["net_contracts"] == -63650
+        assert cash_resp.status_code == deriv_resp.status_code == 503
+        assert cash_resp.json()["detail"]["status"] == "UNAVAILABLE"
+        assert deriv_resp.json()["detail"]["status"] == "UNAVAILABLE"

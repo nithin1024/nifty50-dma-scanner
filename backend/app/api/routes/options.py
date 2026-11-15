@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, Dict, Any
 import asyncio
+from datetime import datetime, timezone
 
 from app.services.options_universe_service import options_universe_service
 from app.services.options_analytics_engine import options_analytics_engine
@@ -93,6 +94,10 @@ async def get_option_chain(
         raise HTTPException(status_code=404, detail="No Upstox underlying instrument key for symbol")
     try:
         contracts = await upstox.get_option_contracts(key)
+        # A successful authenticated contracts response is enough to start the
+        # shared feed manager when the overview or chain page is opened directly.
+        subscription_manager.authentication_status = "AUTHENTICATED"
+        subscription_manager.start()
         expiries = upstox.unique_expiries(contracts)
         selected = expiry or (expiries[0] if expiries else None)
         if not selected or selected not in expiries:
@@ -194,13 +199,78 @@ async def get_option_chain(
 @router.get("/strategy-payoff")
 async def get_strategy_payoff(
     strategy: str = Query("BULL_CALL_SPREAD", description="Strategy name e.g. BULL_CALL_SPREAD, IRON_CONDOR, STRADDLE"),
-    spot: float = Query(23532.70, description="Underlying reference spot price"),
-    lot_size: int = Query(25, description="Contract lot size")
+    symbol: str = Query("NIFTY"),
+    expiry: Optional[str] = Query(None)
 ) -> Dict[str, Any]:
-    """Evaluate options strategy payoff, breakevens, max profit, and max loss."""
-    result = options_analytics_engine.calculate_strategy_payoff(strategy_name=strategy, spot=spot, lot_size=lot_size)
-    result["premium_source"] = "ILLUSTRATIVE_MODEL_INPUTS"
-    result["is_market_quote"] = False
+    """Calculate hypothetical expiry payoff from actual Upstox option-chain premiums."""
+    key = upstox.instrument_key_for_symbol(symbol.upper())
+    if not key:
+        raise HTTPException(status_code=404, detail="No Upstox underlying instrument key for symbol")
+    try:
+        contracts = await upstox.get_option_contracts(key)
+        expiries = upstox.unique_expiries(contracts)
+        selected = expiry or (expiries[0] if expiries else None)
+        if not selected or selected not in expiries:
+            raise HTTPException(status_code=400, detail="Expiry is not present in Upstox option contracts")
+        raw = await upstox.get_option_chain(key, selected)
+    except UpstoxApiError as exc:
+        raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
+    if not raw:
+        raise HTTPException(status_code=404, detail="Upstox returned no option-chain rows")
+
+    spot = float(raw[0]["underlying_spot_price"])
+    strikes = sorted({float(row["strike_price"]) for row in raw})
+    atm_idx = min(range(len(strikes)), key=lambda index: abs(strikes[index] - spot))
+    step = min((b - a for a, b in zip(strikes, strikes[1:])), default=50.0)
+    strategy_key = strategy.upper().replace(" ", "_")
+    structures = {
+        "LONG_CALL": [("CE", 0, "BUY", 1)], "SHORT_CALL": [("CE", 1, "SELL", 1)],
+        "LONG_PUT": [("PE", 0, "BUY", 1)], "SHORT_PUT": [("PE", -1, "SELL", 1)],
+        "BULL_CALL_SPREAD": [("CE", 0, "BUY", 1), ("CE", 4, "SELL", 1)],
+        "BEAR_PUT_SPREAD": [("PE", 0, "BUY", 1), ("PE", -4, "SELL", 1)],
+        "BULL_PUT_SPREAD": [("PE", 0, "SELL", 1), ("PE", -4, "BUY", 1)],
+        "BEAR_CALL_SPREAD": [("CE", 0, "SELL", 1), ("CE", 4, "BUY", 1)],
+        "LONG_STRADDLE": [("CE", 0, "BUY", 1), ("PE", 0, "BUY", 1)],
+        "SHORT_STRADDLE": [("CE", 0, "SELL", 1), ("PE", 0, "SELL", 1)],
+        "LONG_STRANGLE": [("CE", 3, "BUY", 1), ("PE", -3, "BUY", 1)],
+        "SHORT_STRANGLE": [("CE", 3, "SELL", 1), ("PE", -3, "SELL", 1)],
+        "IRON_CONDOR": [("PE", -6, "BUY", 1), ("PE", -3, "SELL", 1),
+                        ("CE", 3, "SELL", 1), ("CE", 6, "BUY", 1)],
+        "BUTTERFLY": [("CE", -3, "BUY", 1), ("CE", 0, "SELL", 2), ("CE", 3, "BUY", 1)],
+    }
+    structure = structures.get(strategy_key)
+    if not structure:
+        raise HTTPException(status_code=400, detail="Unsupported strategy")
+
+    lot_size = next((int(item["lot_size"]) for item in contracts if item.get("expiry") == selected and item.get("lot_size")), None)
+    if not lot_size:
+        raise HTTPException(status_code=503, detail="Upstox did not return a lot size for the selected expiry")
+    market_legs = []
+    for option_type, offset, action, quantity_multiplier in structure:
+        strike_idx = atm_idx + offset
+        if strike_idx < 0 or strike_idx >= len(strikes):
+            raise HTTPException(status_code=422, detail="Selected expiry does not provide enough strikes for this strategy")
+        strike = strikes[strike_idx]
+        row = next((item for item in raw if float(item["strike_price"]) == strike), None)
+        side = "call_options" if option_type == "CE" else "put_options"
+        option = (row or {}).get(side) or {}
+        market = option.get("market_data") or {}
+        premium = market.get("ltp")
+        if premium is None or float(premium) <= 0:
+            raise HTTPException(status_code=503, detail=f"No current Upstox premium is available for {option_type} {strike:g}")
+        market_legs.append({"type": option_type, "action": action, "strike": strike,
+                            "premium": float(premium), "qty": lot_size * quantity_multiplier,
+                            "instrument_key": option.get("instrument_key")})
+    try:
+        result = options_analytics_engine.calculate_strategy_payoff(
+            strategy_name=strategy_key, spot=spot, lot_size=lot_size,
+            params={"center": strikes[atm_idx], "price_step": step, "range_steps": max(25, int(1500 / step))},
+            market_legs=market_legs)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    result.update({"symbol": symbol.upper(), "expiry": selected, "instrument_key": key,
+                   "premium_source": "/v2/option/chain", "is_market_quote": True,
+                   "observed_at": datetime.now(timezone.utc).isoformat()})
     return result
 
 

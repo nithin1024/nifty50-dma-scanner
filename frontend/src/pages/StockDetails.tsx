@@ -3,8 +3,7 @@ import { Search, Sparkles, Check, X } from 'lucide-react';
 import { fetchStockDetails } from '../services/api';
 import type { StockDetailsResponse } from '../types';
 import { VolumeTrendChart } from '../components/VolumeTrendChart';
-import { InstitutionalStockChart } from '../components/InstitutionalStockChart';
-import type { ChartDataPoint } from '../components/InstitutionalStockChart';
+import { ProfessionalTradingChart } from '../components/ProfessionalTradingChart';
 import { useLanguage } from '../context/LanguageContext';
 
 interface StockDetailsProps {
@@ -107,23 +106,7 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
                 {t('Latest Close')}: <span className="font-bold text-emerald-400">₹{data.latest_close.toFixed(2)}</span> ({data.latest_trading_date})
               </span>
             </div>
-            <InstitutionalStockChart
-              symbol={selectedSymbol}
-              data={(data.chart_data || []).map((c): ChartDataPoint => ({
-                date: c.time,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume,
-                dma20: c.dma20 ?? null,
-                dma50: c.dma50 ?? null,
-                dma100: c.dma100 ?? null,
-                dma200: c.dma200 ?? null,
-                vwap: null
-              }))}
-              height={420}
-            />
+            <ProfessionalTradingChart symbol={selectedSymbol} height={420} initialTimeframe="5Y" />
           </div>
 
           {/* Volume Trend Bar Chart (Matching Screenshot) */}

@@ -1,10 +1,11 @@
 import httpx
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from app.services.constituents_service import constituents_service
+from app.services import upstox_market_client as upstox
 
 logger = logging.getLogger("historical_data_service")
 
@@ -68,6 +69,45 @@ class HistoricalDataService:
 
         return True, None
 
+    async def _fetch_upstox_daily(self, symbol: str, range_period: str) -> Optional[Dict[str, Any]]:
+        """Fetch and validate real daily bars from Upstox Historical Candle V3."""
+        key = upstox.instrument_key_for_symbol(symbol)
+        if not key:
+            return None
+        lookbacks = {"1mo": 45, "3mo": 120, "6mo": 240, "1y": 370,
+                     "2y": 730, "3y": 1095, "5y": 1825, "max": 3650}
+        end = datetime.now().date()
+        start = end - timedelta(days=lookbacks.get(range_period.lower(), 370))
+        rows = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
+        from zoneinfo import ZoneInfo
+        candles: List[Dict[str, Any]] = []
+        seen_dates = set()
+        for row in rows:
+            parsed = upstox.parse_candle_row(row)
+            if not parsed:
+                continue
+            trading_date = datetime.fromtimestamp(parsed["time"], timezone.utc).astimezone(
+                ZoneInfo("Asia/Kolkata")).date().isoformat()
+            if trading_date in seen_dates:
+                continue
+            candle = {"trading_date": trading_date, "open": round(parsed["open"], 2),
+                      "high": round(parsed["high"], 2), "low": round(parsed["low"], 2),
+                      "close": round(parsed["close"], 2), "volume": parsed.get("volume"),
+                      "oi": parsed.get("oi")}
+            valid, _ = self.validate_candle(candle)
+            if valid:
+                seen_dates.add(trading_date)
+                candles.append(candle)
+        candles.sort(key=lambda item: item["trading_date"])
+        if not candles:
+            return None
+        return {"symbol": symbol, "instrument_key": key, "provider": "UPSTOX_HISTORICAL_CANDLE_V3",
+                "price_adjustment": "UPSTOX_EXCHANGE_CANDLES", "retrieval_timestamp": datetime.now(timezone.utc).isoformat(),
+                "total_sessions": len(candles), "min_required_sessions": MIN_REQUIRED_SESSIONS,
+                "quality_status": "VERIFIED" if len(candles) >= MIN_REQUIRED_SESSIONS else "INSUFFICIENT_HISTORY",
+                "first_trading_date": candles[0]["trading_date"], "latest_trading_date": candles[-1]["trading_date"],
+                "candles": candles}
+
     async def fetch_symbol_history(self, symbol: str, range_period: str = "1y", force_refresh: bool = False) -> Dict[str, Any]:
         """
         Fetch historical daily candles for an NSE constituent.
@@ -77,11 +117,43 @@ class HistoricalDataService:
         3. Fallback to local verified cache if network error.
         """
         clean_symbol = symbol.strip().upper()
+        lookbacks = {"1mo": 45, "3mo": 120, "6mo": 240, "1y": 370,
+                     "2y": 730, "3y": 1095, "5y": 1825, "max": 3650}
+        requested_days = lookbacks.get(range_period.lower(), 370)
+        minimum_cached_sessions = max(180, int(requested_days * 0.58))
 
         if not force_refresh:
             cached = self.get_cached_history(clean_symbol)
-            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
-                return cached
+            if cached and cached.get("provider") == "UPSTOX_HISTORICAL_CANDLE_V3":
+                try:
+                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(
+                        cached["retrieval_timestamp"].replace("Z", "+00:00"))).total_seconds()
+                    if age < 900 and len(cached.get("candles", [])) >= minimum_cached_sessions:
+                        return cached
+                except (KeyError, TypeError, ValueError):
+                    pass
+
+        try:
+            upstox_history = await self._fetch_upstox_daily(clean_symbol, range_period)
+            if upstox_history:
+                for cache_path in self._get_cache_paths(clean_symbol):
+                    try:
+                        with open(cache_path, "w", encoding="utf-8") as cache_file:
+                            json.dump(upstox_history, cache_file, indent=2)
+                    except OSError as exc:
+                        logger.warning("Could not cache Upstox history for %s (%s)", clean_symbol, type(exc).__name__)
+                return upstox_history
+        except upstox.UpstoxApiError as exc:
+            if exc.status_code in (401, 403):
+                cached = self.get_cached_history(clean_symbol)
+                if cached and cached.get("provider") == "UPSTOX_HISTORICAL_CANDLE_V3":
+                    cached["quality_status"] = "STALE"
+                    return cached
+                logger.warning("Upstox authentication rejected historical data for %s", clean_symbol)
+                return {"symbol": clean_symbol, "provider": "UPSTOX_HISTORICAL_CANDLE_V3",
+                        "quality_status": "UNAVAILABLE", "total_sessions": 0, "candles": [], "error": exc.message}
+        except Exception as exc:
+            logger.warning("Upstox historical data unavailable for %s (%s)", clean_symbol, type(exc).__name__)
 
         tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
 
@@ -304,58 +376,13 @@ class HistoricalDataService:
         return None
 
     def get_multi_year_candles(self, symbol: str, years: int = 5) -> List[Dict[str, Any]]:
-        """
-        Provides authentic multi-year daily candles (up to 5 years, ~1,250 trading sessions).
-        Guarantees 100% availability for all 50 constituents so inspecting 5-year history never fails.
-        """
+        """Return only retrieved history; never invent bars to pad a requested period."""
         cached = self.get_cached_history(symbol)
         candles = cached.get("candles", []) if cached else []
-        if not candles:
-            return []
-
-        if years <= 1 or len(candles) >= years * 240:
+        if years <= 1:
             return candles
-
-        from datetime import datetime, timedelta
-        import math
-
-        earliest = candles[0]
-        base_date = datetime.strptime(earliest["trading_date"], "%Y-%m-%d").date()
-        base_close = earliest["close"]
-        base_vol = earliest["volume"]
-
-        synthetic_candles = []
-        needed_sessions = (years * 245) - len(candles)
-        
-        # Historical compound annual growth rate ~12-14% backwards
-        daily_decay = 0.12 / 245.0
-        current_date = base_date
-        current_close = base_close
-
-        for i in range(needed_sessions):
-            current_date -= timedelta(days=1)
-            while current_date.weekday() >= 5:  # Skip Saturday & Sunday
-                current_date -= timedelta(days=1)
-
-            cycle = math.sin(i / 15.0) * 0.015 + math.cos(i / 45.0) * 0.01
-            current_close = current_close * (1.0 - daily_decay + cycle)
-            close_p = round(max(10.0, current_close), 2)
-            open_p = round(close_p * (1.0 + (math.sin(i * 3) * 0.005)), 2)
-            high_p = round(max(open_p, close_p) * 1.012, 2)
-            low_p = round(min(open_p, close_p) * 0.988, 2)
-            vol = int(max(100000, base_vol * (0.8 + (math.cos(i) * 0.3))))
-
-            synthetic_candles.append({
-                "trading_date": current_date.isoformat(),
-                "open": open_p,
-                "high": high_p,
-                "low": low_p,
-                "close": close_p,
-                "volume": vol
-            })
-
-        synthetic_candles.reverse()  # Chronological ascending
-        return synthetic_candles + candles
+        max_sessions = years * 240
+        return candles[-max_sessions:] if len(candles) > max_sessions else candles
 
 
 historical_data_service = HistoricalDataService()

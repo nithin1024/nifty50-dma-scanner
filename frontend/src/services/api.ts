@@ -93,7 +93,9 @@ export async function fetchAllVolumeAnalytics(): Promise<any> {
 export async function fetchMarketIntelligence(): Promise<any> {
   const response = await fetch(`${API_BASE}/market-intelligence`);
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    const body = await response.json().catch(() => ({}));
+    const detail = typeof body.detail === 'string' ? body.detail : body.detail?.message;
+    return { detail: detail || `Upstox market data is unavailable (HTTP ${response.status}).` };
   }
   return response.json();
 }
@@ -314,14 +316,11 @@ export async function fetchExpiries(symbol: string = 'NIFTY'): Promise<any> {
 
 export async function fetchStrategyPayoff(
   strategy: string = 'BULL_CALL_SPREAD',
-  spot: number = 23532.70,
-  lotSize: number = 25
+  symbol: string = 'NIFTY',
+  expiry?: string
 ): Promise<any> {
-  const params = new URLSearchParams({
-    strategy,
-    spot: spot.toString(),
-    lot_size: lotSize.toString()
-  });
+  const params = new URLSearchParams({ strategy, symbol });
+  if (expiry) params.set('expiry', expiry);
   const response = await fetch(`${API_BASE}/options/strategy-payoff?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
@@ -357,7 +356,8 @@ export async function fetchChartCandles(
   symbol: string = 'NIFTY',
   timeframe: string = '15m',
   chartType: string = 'CANDLESTICK',
-  before?: string
+  before?: string,
+  instrumentKey?: string
 ): Promise<any> {
   const params = new URLSearchParams({
     symbol,
@@ -365,6 +365,7 @@ export async function fetchChartCandles(
     chart_type: chartType
   });
   if (before) params.set('before', before);
+  if (instrumentKey) params.set('instrument_key', instrumentKey);
   const response = await fetch(`${API_BASE}/chart/candles?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
@@ -375,9 +376,11 @@ export async function fetchChartCandles(
 export function getChartCsvDownloadUrl(
   symbol: string = 'NIFTY',
   timeframe: string = '15m',
-  chartType: string = 'CANDLESTICK'
+  chartType: string = 'CANDLESTICK',
+  instrumentKey?: string
 ): string {
   const params = new URLSearchParams({ symbol, timeframe, chart_type: chartType });
+  if (instrumentKey) params.set('instrument_key', instrumentKey);
   return `${API_BASE}/chart/export/csv?${params.toString()}`;
 }
 

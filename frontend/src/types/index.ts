@@ -320,6 +320,12 @@ export interface MacroGlossaryTerm {
 
 export interface MarketIntelligenceReport {
   timestamp: string;
+  data_source?: 'UPSTOX' | string;
+  source_endpoint?: string;
+  feed_status?: 'LIVE' | 'STALE' | 'WAITING' | 'DISCONNECTED' | string;
+  option_chain?: any;
+  unavailable_sections?: string[];
+  detail?: string;
   report_date: string;
   market_closing_levels: {
     nifty_50: { level: number; change_pct: number; date: string };

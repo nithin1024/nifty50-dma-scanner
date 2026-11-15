@@ -26,12 +26,18 @@ interface ProfessionalTradingChartProps {
   symbol?: string;
   className?: string;
   height?: number;
+  initialTimeframe?: string;
+  instrumentKey?: string;
+  displayName?: string;
 }
 
 export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> = ({
   symbol = 'NIFTY',
   className = '',
-  height = 500
+  height = 500,
+  initialTimeframe = '15m',
+  instrumentKey,
+  displayName
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
@@ -43,7 +49,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   const sma200SeriesRef = useRef<ISeriesApi<any> | null>(null);
   const emaSeriesRef = useRef<ISeriesApi<any> | null>(null);
 
-  const [timeframe, setTimeframe] = useState<string>('15m');
+  const [timeframe, setTimeframe] = useState<string>(initialTimeframe);
   const [chartType, setChartType] = useState<'CANDLESTICK' | 'LINE' | 'AREA' | 'HEIKIN_ASHI'>('CANDLESTICK');
   const [loading, setLoading] = useState<boolean>(true);
   const [candlesData, setCandlesData] = useState<any[]>([]);
@@ -59,6 +65,12 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     close?: number;
     volume?: number;
     vwap?: number;
+    oi?: number;
+    iv?: number;
+    delta?: number;
+    gamma?: number;
+    theta?: number;
+    vega?: number;
     change?: number;
     changePct?: number;
     sma20?: number;
@@ -80,7 +92,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   const selectedPriceRef = useRef<number | null>(null);
 
   // Timeframes supported
-  const timeframes = ['1m', '5m', '15m', '1h', 'Daily', '5Y'];
+  const timeframes = ['1m', '5m', '15m', '1h', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   // Load candle data
   useEffect(() => {
@@ -91,7 +103,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     setHasOlder(true);
     preservedRangeRef.current = null;
     hasInitialRangeRef.current = false;
-    fetchChartCandles(symbol, timeframe, chartType)
+    fetchChartCandles(symbol, timeframe, chartType, undefined, instrumentKey)
       .then(res => {
         if (!isMounted) return;
         setCandlesData(res.candles || []);
@@ -113,7 +125,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     return () => {
       isMounted = false;
     };
-  }, [symbol, timeframe, chartType]);
+  }, [symbol, timeframe, chartType, instrumentKey]);
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -133,6 +145,10 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         last.close = tick.ltp;
         last.high = Math.max(Number(last.high), Number(tick.ltp));
         last.low = Math.min(Number(last.low), Number(tick.ltp));
+        last.volume = tick.volume ?? last.volume;
+        last.oi = tick.oi ?? last.oi;
+        last.iv = tick.iv ?? last.iv;
+        if (tick.greeks) Object.assign(last, tick.greeks);
         next[next.length - 1] = last;
         return next;
       });
@@ -149,7 +165,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     const oldest = candlesData[0];
     const before = new Date(Number(oldest.time) * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     try {
-      const page = await fetchChartCandles(symbol, timeframe, chartType, before);
+      const page = await fetchChartCandles(symbol, timeframe, chartType, before, instrumentKey);
       const older = page.candles || [];
       if (!older.length) setHasOlder(false);
       else {
@@ -391,6 +407,12 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         close: selected.close,
         volume: selected.volume,
         vwap: selected.vwap,
+        oi: selected.oi,
+        iv: selected.iv,
+        delta: selected.delta,
+        gamma: selected.gamma,
+        theta: selected.theta,
+        vega: selected.vega,
         change: chg,
         changePct: prevClose ? (chg / prevClose) * 100 : 0,
         sma20: indicatorsData.sma_20?.[selectedIndex],
@@ -433,6 +455,12 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           close: closeVal,
           volume: match?.volume,
           vwap: match?.vwap,
+          oi: match?.oi,
+          iv: match?.iv,
+          delta: match?.delta,
+          gamma: match?.gamma,
+          theta: match?.theta,
+          vega: match?.vega,
           change: chg,
           changePct: prevClose > 0 ? (chg / prevClose) * 100 : 0,
           sma20: matchedIndex >= 0 ? indicatorsData.sma_20?.[matchedIndex] : undefined,
@@ -513,7 +541,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           <div className="flex items-center space-x-2">
             <span className={`w-2.5 h-2.5 rounded-full ${feedStatus === 'LIVE' ? 'bg-emerald-400 animate-pulse' : feedStatus === 'STALE' ? 'bg-amber-400' : 'bg-slate-500'}`} />
             <h3 className="text-sm sm:text-base font-black text-white tracking-wide font-mono">
-              {symbol} &bull; {timeframe.toUpperCase()}
+              {displayName || symbol} &bull; {timeframe.toUpperCase()}
             </h3>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
               {feedStatus}
@@ -589,7 +617,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
 
           {/* CSV Export */}
           <a
-            href={getChartCsvDownloadUrl(symbol, timeframe, chartType)}
+            href={getChartCsvDownloadUrl(symbol, timeframe, chartType, instrumentKey)}
             download={`${symbol}_${timeframe}_candles.csv`}
             className="p-1.5 rounded-lg bg-[#121824] hover:bg-[#1a2334] text-slate-300 border border-[#232E47]"
             title="Download OHLCV CSV"
@@ -640,6 +668,12 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           {activeLegend.vwap !== undefined && activeLegend.vwap !== null && (
             <span className="text-slate-400">VWAP: <strong className="text-purple-300">₹{activeLegend.vwap.toLocaleString()}</strong></span>
           )}
+          {activeLegend.oi !== undefined && activeLegend.oi !== null && <span className="text-slate-400">OI: <strong className="text-sky-300">{activeLegend.oi.toLocaleString()}</strong></span>}
+          {activeLegend.iv !== undefined && activeLegend.iv !== null && <span className="text-slate-400">IV: <strong className="text-purple-300">{activeLegend.iv.toFixed(2)}%</strong></span>}
+          {activeLegend.delta !== undefined && <span className="text-slate-400">Δ: <strong className="text-white">{activeLegend.delta.toFixed(3)}</strong></span>}
+          {activeLegend.gamma !== undefined && <span className="text-slate-400">Γ: <strong className="text-white">{activeLegend.gamma.toFixed(5)}</strong></span>}
+          {activeLegend.theta !== undefined && <span className="text-slate-400">Θ: <strong className="text-white">{activeLegend.theta.toFixed(3)}</strong></span>}
+          {activeLegend.vega !== undefined && <span className="text-slate-400">Vega: <strong className="text-white">{activeLegend.vega.toFixed(3)}</strong></span>}
           {showSeries.sma20 && activeLegend.sma20 !== undefined && activeLegend.sma20 !== null && <span className="text-amber-300">SMA20: ₹{activeLegend.sma20.toLocaleString()}</span>}
           {showSeries.sma50 && activeLegend.sma50 !== undefined && activeLegend.sma50 !== null && <span className="text-purple-300">SMA50: ₹{activeLegend.sma50.toLocaleString()}</span>}
           {showSeries.sma100 && activeLegend.sma100 !== undefined && activeLegend.sma100 !== null && <span className="text-rose-300">SMA100: ₹{activeLegend.sma100.toLocaleString()}</span>}

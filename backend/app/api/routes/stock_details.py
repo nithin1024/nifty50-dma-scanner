@@ -18,14 +18,10 @@ async def get_stock_details(
     if not constituent:
         raise HTTPException(status_code=404, detail=f"Stock symbol '{symbol}' not found in NIFTY 50.")
 
-    hist = await historical_data_service.fetch_symbol_history(symbol)
-    candles = hist.get("candles", [])
-
     clean_tf = timeframe.lower().strip()
-    if clean_tf in ("5y", "5-year", "5years"):
-        multi_candles = historical_data_service.get_multi_year_candles(symbol, years=5)
-        if multi_candles:
-            candles = multi_candles
+    history_range = "5y" if clean_tf in ("5y", "5-year", "5years") else clean_tf
+    hist = await historical_data_service.fetch_symbol_history(symbol, range_period=history_range)
+    candles = hist.get("candles", [])
 
     if not candles:
         return {

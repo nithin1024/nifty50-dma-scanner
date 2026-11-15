@@ -119,16 +119,27 @@ def test_market_regime_classification():
     assert "cpr_pivot" in regime["pivots"]
 
 
-def test_chart_candles_and_heikin_ashi():
-    """Verify candlestick and Heikin-Ashi transformation."""
-    chart_data = chart_engine_service.get_instrument_chart_data(symbol="NIFTY", timeframe="15m", chart_type="CANDLESTICK")
+@pytest.mark.asyncio
+async def test_chart_candles_and_heikin_ashi(monkeypatch):
+    """Verify shared chart adapter and Heikin-Ashi transform using a candle fixture."""
+    async def candle_fixture(symbol, timeframe, chart_type, before, instrument_key):
+        return {
+            "symbol": symbol,
+            "candles": [
+                {"time": 1, "open": 100.0, "high": 112.0, "low": 98.0, "close": 108.0, "volume": 1000, "oi": 10},
+                {"time": 2, "open": 108.0, "high": 114.0, "low": 104.0, "close": 110.0, "volume": 1200, "oi": 12},
+            ],
+        }
+
+    monkeypatch.setattr("app.api.routes.chart.get_chart_candles", candle_fixture)
+    chart_data = await chart_engine_service.get_instrument_chart_data(symbol="NIFTY", timeframe="15m", chart_type="CANDLESTICK")
     assert chart_data["symbol"] == "NIFTY"
     assert len(chart_data["candles"]) > 0
     c0 = chart_data["candles"][0]
     assert "open" in c0 and "high" in c0 and "low" in c0 and "close" in c0 and "volume" in c0
 
     # Heikin-Ashi
-    ha_data = chart_engine_service.get_instrument_chart_data(symbol="NIFTY", timeframe="15m", chart_type="HEIKIN_ASHI")
+    ha_data = await chart_engine_service.get_instrument_chart_data(symbol="NIFTY", timeframe="15m", chart_type="HEIKIN_ASHI")
     assert ha_data["candles"][0]["is_transformed"] is True
     assert ha_data["candles"][0]["transformation_type"] == "HEIKIN_ASHI"
 

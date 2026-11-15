@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -28,6 +29,15 @@ class DailyScannerService:
         """
         stocks = constituents_service.get_constituents()
         scan_time = datetime.now(timezone.utc).isoformat()
+
+        semaphore = asyncio.Semaphore(5)
+
+        async def fetch_history(stock):
+            async with semaphore:
+                return await historical_data_service.fetch_symbol_history(stock["symbol"])
+
+        histories = await asyncio.gather(*(fetch_history(stock) for stock in stocks))
+        history_providers = {hist.get("provider", "UNAVAILABLE") for hist in histories}
         
         all_results = []
         stocks_6_6 = []
@@ -35,13 +45,12 @@ class DailyScannerService:
         all_fresh_crossovers = []
         latest_session_dates = set()
 
-        for stock in stocks:
+        for stock, hist in zip(stocks, histories):
             symbol = stock["symbol"]
             company_name = stock["company_name"]
             industry = stock["industry"]
 
             # Retrieve genuine historical daily session candles
-            hist = await historical_data_service.fetch_symbol_history(symbol)
             candles = hist.get("candles", [])
 
             if not candles or len(candles) < 200:
@@ -52,6 +61,7 @@ class DailyScannerService:
                     "company_name": company_name,
                     "industry": industry,
                     "status": status,
+                    "data_provider": hist.get("provider", "UNAVAILABLE"),
                     "latest_close": candles[-1]["close"] if candles else None,
                     "latest_trading_date": candles[-1]["trading_date"] if candles else None,
                     "score": 0,
@@ -94,7 +104,9 @@ class DailyScannerService:
 
             # 6. Volume Analytics
             vol_metrics = volume_engine.analyze_stock_volume(symbol, candles)
-            price_change_pct = vol_metrics.get("price_change_pct", 0.0)
+            price_change_pct = vol_metrics.get("price_change_pct")
+            if price_change_pct is None and len(closes) > 1 and closes[-2] != 0:
+                price_change_pct = (closes[-1] - closes[-2]) / closes[-2] * 100.0
             rvol = vol_metrics.get("rvol")
 
             # 7. Combined Technical + Volume Signal Engine (Phase 7)
@@ -102,7 +114,7 @@ class DailyScannerService:
                 score=classification["score"],
                 is_6_6=classification["is_6_6"],
                 is_5_6=classification["is_5_6"],
-                price_change_pct=price_change_pct,
+                price_change_pct=price_change_pct or 0.0,
                 rvol=rvol,
                 fresh_crossovers=fresh_crossovers,
                 transition_type=transition["transition_type"],
@@ -117,6 +129,7 @@ class DailyScannerService:
                 "industry": industry,
                 "weightage": stock.get("weightage", 0.0),
                 "status": "VERIFIED",
+                "data_provider": hist.get("provider", "UNAVAILABLE"),
                 "latest_close": round(latest_close, 2),
                 "price_change_pct": price_change_pct,
                 "latest_trading_date": latest_date,
@@ -136,12 +149,12 @@ class DailyScannerService:
                 "closest_resistance_dma": classification.get("closest_resistance_dma"),
                 "closest_resistance_value": classification.get("closest_resistance_value"),
                 # Volume Analytics fields
-                "volume": vol_metrics.get("latest_volume", 0),
+                "volume": vol_metrics.get("latest_volume"),
                 "six_session_avg_volume": vol_metrics.get("six_session_avg_volume"),
                 "rvol": rvol,
                 "volume_change_pct": vol_metrics.get("volume_change_pct"),
-                "volume_trend": vol_metrics.get("volume_trend", "STEADY"),
-                "volume_classification": vol_metrics.get("volume_classification", "NORMAL_VOLUME"),
+                "volume_trend": vol_metrics.get("volume_trend", "UNAVAILABLE"),
+                "volume_classification": vol_metrics.get("volume_classification", "UNAVAILABLE"),
                 "price_volume_confirmation": vol_metrics.get("price_volume_confirmation"),
                 "six_session_history": vol_metrics.get("six_session_history", []),
                 # Combined Signal
@@ -187,6 +200,9 @@ class DailyScannerService:
 
         scan_payload = {
             "scan_timestamp": scan_time,
+            "historical_data_provider": (next(iter(history_providers)) if len(history_providers) == 1
+                                          else "MIXED_ACTUAL_SOURCES"),
+            "historical_data_sources": sorted(history_providers),
             "completed_session_date": completed_session_date,
             "total_constituents": len(stocks),
             "verified_constituents": len([r for r in all_results if r["status"] == "VERIFIED"]),

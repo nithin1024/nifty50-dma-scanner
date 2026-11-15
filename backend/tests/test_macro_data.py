@@ -36,24 +36,11 @@ def test_macro_topic_detail_depth():
 
 @pytest.mark.asyncio
 async def test_macro_api_routes():
-    """Verify FastAPI routes for macro topic list and detail drawer."""
+    """Macro observations are not returned as if they came from Upstox."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # List route
         list_resp = await client.get("/api/v1/market-intelligence/macro-topics")
-        assert list_resp.status_code == 200
-        topics = list_resp.json()
-        assert len(topics) >= 10
-
-        # Real GDP Detail route
         gdp_resp = await client.get("/api/v1/market-intelligence/macro-topics/real-gdp")
-        assert gdp_resp.status_code == 200
-        gdp_json = gdp_resp.json()
-        assert gdp_json["id"] == "real-gdp"
-        assert "five_year_history" in gdp_json
-
-        # CPI Detail route
-        cpi_resp = await client.get("/api/v1/market-intelligence/macro-topics/cpi-headline")
-        assert cpi_resp.status_code == 200
-        cpi_json = cpi_resp.json()
-        assert cpi_json["id"] == "cpi-inflation"
+        assert list_resp.status_code == gdp_resp.status_code == 503
+        assert list_resp.json()["detail"]["status"] == "UNAVAILABLE"
+        assert gdp_resp.json()["detail"]["status"] == "UNAVAILABLE"

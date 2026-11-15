@@ -396,14 +396,15 @@ class OptionsAnalyticsEngine:
         strategy_name: str,
         spot: float = 23532.70,
         lot_size: int = 25,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
+        market_legs: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Evaluate 14 institutional options strategies with payoff curves, max profit,
         max loss, breakevens, and risk-reward ratios.
         """
         p = params or {}
-        atm = round(spot / 50.0) * 50.0
+        atm = float((params or {}).get("center", round(spot / 50.0) * 50.0))
 
         legs = []
         name = strategy_name.upper().replace(" ", "_")
@@ -462,6 +463,11 @@ class OptionsAnalyticsEngine:
             legs.append({"type": "CE", "action": "BUY", "strike": atm, "premium": 185.0, "qty": lot_size})
             legs.append({"type": "CE", "action": "SELL", "strike": atm + 200, "premium": 85.0, "qty": lot_size})
 
+        if market_legs is not None:
+            legs = market_legs
+            if not legs or any(leg.get("premium") is None for leg in legs):
+                raise ValueError("Actual market premiums are required for every strategy leg")
+
         # Net entry premium
         net_entry = sum(
             (-leg["premium"] if leg["action"] == "BUY" else leg["premium"]) * leg["qty"]
@@ -469,7 +475,9 @@ class OptionsAnalyticsEngine:
         )
 
         # Range for simulation
-        sim_range = [atm + i * 25 for i in range(-25, 26)]
+        price_step = float(p.get("price_step", 25))
+        range_steps = int(p.get("range_steps", 25))
+        sim_range = [atm + i * price_step for i in range(-range_steps, range_steps + 1)]
         payoff_curve = []
         profits = []
 

@@ -49,6 +49,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [universe, setUniverse] = useState<any[]>([]);
   const [expiries, setExpiries] = useState<string[]>([]);
   const [chainData, setChainData] = useState<any>(null);
+  const [chartInstrumentKey, setChartInstrumentKey] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [feedStatus, setFeedStatus] = useState<string>('WAITING');
@@ -58,6 +59,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   // Strategy payoff state
   const [selectedStrategy, setSelectedStrategy] = useState<string>('BULL_CALL_SPREAD');
   const [strategyResult, setStrategyResult] = useState<any>(null);
+  const [strategyError, setStrategyError] = useState<string | null>(null);
 
   // Market regime state
   const [marketRegime, setMarketRegime] = useState<any>(null);
@@ -177,11 +179,12 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   // Strategy payoff calculation
   useEffect(() => {
     if (activeTab === 'STRATEGY_SIMULATOR' && chainData) {
-      fetchStrategyPayoff(selectedStrategy, chainData.spot_price, chainData.lot_size)
-        .then(res => setStrategyResult(res))
-        .catch(err => console.error('Error calculating strategy payoff:', err));
+      setStrategyError(null);
+      fetchStrategyPayoff(selectedStrategy, symbol, selectedExpiry || chainData.expiry)
+        .then(res => { setStrategyResult(res); setStrategyError(null); })
+        .catch(err => { setStrategyResult(null); setStrategyError(err instanceof Error ? err.message : 'Current premiums are unavailable.'); });
     }
-  }, [selectedStrategy, activeTab, chainData]);
+  }, [selectedStrategy, activeTab, chainData, symbol, selectedExpiry]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -199,6 +202,14 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
     { id: 'CHART', label: '8. Professional Chart', icon: <Zap className="w-4 h-4" /> },
     { id: 'ALERTS_MONITOR', label: '9. Monitor & Alerts', icon: <AlertCircle className="w-4 h-4" /> }
   ];
+
+  const optionChartChoices = (chainData?.rows || []).flatMap((row: any) =>
+    ([['ce', 'CE'], ['pe', 'PE']] as const).map(([side, label]) => ({
+      key: row[side]?.instrument_key,
+      label: `${symbol} ${row.strike_price} ${label} ${chainData.expiry || ''}`
+    })).filter((choice: any) => Boolean(choice.key))
+  );
+  const chartDisplayName = optionChartChoices.find((choice: any) => choice.key === chartInstrumentKey)?.label || symbol;
 
   const foSymbols = universe.filter(u => u.is_fo_eligible || u.is_index).map(u => u.symbol);
 
@@ -772,9 +783,10 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             </select>
           </div>
 
+          {strategyError && <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">Live strategy premiums are unavailable: {strategyError}</div>}
           {strategyResult && (
             <div className="space-y-3">
-              {strategyResult.is_market_quote === false && <p className="text-xs text-amber-300">Illustrative payoff only. Premium inputs are model assumptions, not current Upstox market quotes.</p>}
+              {strategyResult.is_market_quote === true && <p className="text-xs text-slate-400">Uses the selected expiry’s observed Upstox option-chain premiums ({strategyResult.observed_at}). Expiry payoff is hypothetical; it does not model time decay or volatility changes.</p>}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
                   <span className="text-slate-400 text-[10px]">Net Debit / Credit</span>
@@ -890,7 +902,20 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
       {/* TAB 8: PROFESSIONAL INTERACTIVE TRADINGVIEW CHART */}
       {/* ========================================================================= */}
       {activeTab === 'CHART' && (
-        <ProfessionalTradingChart symbol={symbol} height={520} />
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#232E47] bg-[#0B0E14] p-3">
+            <label htmlFor="option-chart-instrument" className="text-xs font-mono text-slate-400">Chart instrument</label>
+            <select id="option-chart-instrument" value={chartInstrumentKey}
+              onChange={event => setChartInstrumentKey(event.target.value)}
+              className="max-w-full rounded-lg border border-[#232E47] bg-[#121824] px-3 py-2 text-xs text-white">
+              <option value="">{symbol} underlying index</option>
+              {optionChartChoices.map((choice: any) => <option key={choice.key} value={choice.key}>{choice.label}</option>)}
+            </select>
+            <span className="text-[11px] text-slate-500">Historical candles and any live ticks use the selected Upstox instrument key.</span>
+          </div>
+          <ProfessionalTradingChart symbol={symbol} height={520}
+            instrumentKey={chartInstrumentKey || undefined} displayName={chartDisplayName} />
+        </div>
       )}
 
       {/* ========================================================================= */}

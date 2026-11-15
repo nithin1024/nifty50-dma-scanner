@@ -185,22 +185,31 @@ def test_csv_export_generation():
 # INTEGRATION API ROUTES TESTING
 # -----------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_macro_api_endpoints():
-    """Test all new macro endpoints return HTTP 200 with verified schemas."""
+async def test_market_intelligence_api_only_returns_upstox_data(monkeypatch):
+    """Supported market fields use the chain; unavailable macro routes do not return samples."""
+    async def chain_fixture():
+        return {"symbol": "NIFTY", "source": "/v2/option/chain", "data_status": "WAITING", "spot_price": 25000.0}
+
+    monkeypatch.setattr("app.api.routes.market_intelligence._nifty_option_chain", chain_fixture)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        endpoints = [
-            "/api/v1/market-intelligence",
+        for endpoint in ("/api/v1/market-intelligence", "/api/v1/market-intelligence/market-impact"):
+            response = await client.get(endpoint)
+            assert response.status_code == 200
+            assert response.json()["data_source"] == "UPSTOX"
+            assert response.json()["option_chain"]["spot_price"] == 25000.0
+
+        unavailable_endpoints = [
             "/api/v1/market-intelligence/fii-dii/cash",
             "/api/v1/market-intelligence/fii-dii/derivatives",
             "/api/v1/market-intelligence/inflation",
             "/api/v1/market-intelligence/gdp",
             "/api/v1/market-intelligence/rbi-macro",
             "/api/v1/market-intelligence/calendar",
-            "/api/v1/market-intelligence/market-impact",
             "/api/v1/market-intelligence/export/csv/fii-dii",
             "/api/v1/market-intelligence/export/csv/inflation"
         ]
-        for ep in endpoints:
-            res = await client.get(ep)
-            assert res.status_code == 200, f"Endpoint {ep} failed with {res.status_code}"
+        for endpoint in unavailable_endpoints:
+            response = await client.get(endpoint)
+            assert response.status_code == 503, f"Endpoint {endpoint} should report unsupported source data"
+            assert response.json()["detail"]["status"] == "UNAVAILABLE"

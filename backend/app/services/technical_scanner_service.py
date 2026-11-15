@@ -124,7 +124,7 @@ class TechnicalScannerService:
                 continue
 
             closes = [c["close"] for c in candles]
-            volumes = [c["volume"] for c in candles]
+            volumes = [int(c["volume"]) for c in candles if c.get("volume") is not None]
             dates = [c["trading_date"] for c in candles]
 
             ema9_series = self.calculate_ema_series(closes, 9)
@@ -182,7 +182,7 @@ class TechnicalScannerService:
             is_in_corridor = (rsi_min <= latest_rsi <= rsi_max)
 
             # Volume Confirmation
-            rvol = volume_engine.calculate_completed_session_rvol(volumes) or 1.0
+            rvol = volume_engine.calculate_completed_session_rvol(volumes)
             six_avg = volume_engine.calculate_six_session_average(volumes)
             vol_chg = volume_engine.calculate_volume_change_percentage(volumes[-1], six_avg)
             vol_status = volume_engine.get_volume_classification(rvol, vol_chg)

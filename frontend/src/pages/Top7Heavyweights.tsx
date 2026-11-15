@@ -38,20 +38,21 @@ export const Top7Heavyweights: React.FC<Top7HeavyweightsProps> = ({
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Dedicated institutional tracking for HDFCBANK, ICICIBANK, RELIANCE, BHARTIARTL, LT, SBIN, and INFY (~46% combined weight).
+            Historical-price tracking for selected NIFTY 50 constituents. Upstox does not supply official index weights.
           </p>
         </div>
 
         <div className="flex items-center space-x-4 bg-[#1A2234] px-4 py-2 rounded-lg border border-[#232E47] text-xs">
           <div>
             <span className="text-slate-400 block text-[10px]">{t('COMBINED WEIGHT')}</span>
-            <strong className="text-white text-base">{heavyweights?.combined_weightage_pct || 45.5}%</strong>
+            <strong className="text-white text-base">{heavyweights?.heavyweight_count ? `${heavyweights.combined_weightage_pct}%` : 'N/A'}</strong>
           </div>
           <div className="border-l border-[#232E47] pl-4">
             <span className="text-slate-400 block text-[10px]">{t('EST. INDEX CONTRIBUTION')}</span>
-            <strong className={`text-base ${((heavyweights?.combined_estimated_contribution_pts || 0) >= 0) ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {(heavyweights?.combined_estimated_contribution_pts || 0) >= 0 ? '+' : ''}
-              {(heavyweights?.combined_estimated_contribution_pts || 0).toFixed(4)} pts
+            <strong className={`text-base ${heavyweights?.heavyweight_count && heavyweights.combined_estimated_contribution_pts >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {heavyweights?.heavyweight_count
+                ? `${heavyweights.combined_estimated_contribution_pts >= 0 ? '+' : ''}${heavyweights.combined_estimated_contribution_pts.toFixed(4)} pts`
+                : 'N/A'}
             </strong>
           </div>
         </div>

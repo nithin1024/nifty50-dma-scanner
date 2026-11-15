@@ -9,8 +9,9 @@ router = APIRouter(prefix="/scanner/daily", tags=["Daily Scanner"])
 async def get_daily_scan():
     """Retrieve the latest completed daily session DMA scan."""
     latest = scanner_service.get_latest_scan()
-    if not latest:
-        # Run scan if not yet executed
+    # Refresh legacy/Yahoo scans after the Upstox migration so stale generated
+    # files are not presented as if they came from the current data source.
+    if not latest or latest.get("historical_data_provider") != "UPSTOX_HISTORICAL_CANDLE_V3":
         latest = await scanner_service.run_daily_scan()
     return latest
 
@@ -25,7 +26,7 @@ async def trigger_daily_scan():
 async def get_fresh_crossovers():
     """Retrieve all fresh bullish crossovers detected in the latest session."""
     latest = scanner_service.get_latest_scan()
-    if not latest:
+    if not latest or latest.get("historical_data_provider") != "UPSTOX_HISTORICAL_CANDLE_V3":
         latest = await scanner_service.run_daily_scan()
     return {
         "completed_session_date": latest.get("completed_session_date"),

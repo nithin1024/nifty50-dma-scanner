@@ -53,8 +53,8 @@ class HeavyweightAnalyticsEngine:
         prev_close = prev_candle["close"]
         price_change = round(ltp - prev_close, 2)
         price_change_pct = round(((ltp - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
-        cumulative_volume = int(recent_candle.get("volume", 0))
-        traded_value = round(cumulative_volume * ltp, 2)
+        cumulative_volume = int(recent_candle["volume"]) if recent_candle.get("volume") is not None else None
+        traded_value = round(cumulative_volume * ltp, 2) if cumulative_volume is not None else None
 
         # B & C. Volume Analytics & 6-Session History
         vol_data = volume_engine.analyze_stock_volume(clean_sym, candles)

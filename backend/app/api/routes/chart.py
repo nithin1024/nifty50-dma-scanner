@@ -25,8 +25,10 @@ async def get_chart_candles(
     if not key:
         raise HTTPException(status_code=404, detail="No Upstox instrument key for symbol")
     units = {"1m": ("minutes", "1"), "5m": ("minutes", "5"), "15m": ("minutes", "15"),
-             "1h": ("hours", "1"), "Daily": ("days", "1"), "1d": ("days", "1"),
-             "1D": ("days", "1"), "5Y": ("weeks", "1")}
+             "1h": ("hours", "1"), "1d": ("days", "1"), "1D": ("days", "1"),
+             "Daily": ("days", "1"), "daily": ("days", "1"), "1M": ("days", "1"), "3M": ("days", "1"),
+             "6M": ("days", "1"), "1Y": ("days", "1"), "3Y": ("days", "1"),
+             "5Y": ("days", "1")}
     unit, interval = units.get(timeframe, ("minutes", "15"))
     today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     end = date.fromisoformat(before) - timedelta(days=1) if before else today
@@ -35,9 +37,8 @@ async def get_chart_candles(
     elif unit == "hours":
         lookback = 90
     elif unit == "days":
-        lookback = 365
-    else:
-        lookback = 365 * 5
+        lookback = {"1M": 31, "3M": 93, "6M": 186, "1Y": 370,
+                    "3Y": 365 * 3 + 5, "5Y": 365 * 5 + 10}.get(timeframe, 370)
     start = end - timedelta(days=lookback)
     try:
         if unit in ("minutes", "hours") and not before and end == today:

@@ -26,7 +26,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { 
   fetchMacroTopicDetail, 
   fetchGlobalNews, 
-  getMacroCsvDownloadUrl 
+  getMacroCsvDownloadUrl,
+  fetchMarketIntelligence
 } from '../services/api';
 import { MacroIndicatorModal } from './MacroIndicatorModal';
 
@@ -52,6 +53,11 @@ type MacroTab =
   | 'GLOSSARY'
   | 'NEWS';
 
+const displayMarketValue = (value: unknown, digits = 2): string => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'N/A';
+  return value.toLocaleString('en-IN', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+};
+
 export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardProps> = ({
   intelligence,
   className = ''
@@ -68,6 +74,23 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
 
   // Global News State
   const [newsFeed, setNewsFeed] = useState<any[]>([]);
+  const [upstoxReport, setUpstoxReport] = useState<any>(intelligence);
+
+  useEffect(() => setUpstoxReport(intelligence), [intelligence]);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      const next = await fetchMarketIntelligence();
+      if (active) setUpstoxReport(next);
+    };
+    void refresh().catch(() => {});
+    const timer = window.setInterval(() => void refresh().catch(() => {}), 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     fetchGlobalNews().then(data => setNewsFeed(data || [])).catch(() => {});
@@ -83,7 +106,74 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
     }
   };
 
-  if (!intelligence) return null;
+  if (upstoxReport?.data_source === 'UPSTOX') {
+    const chain = upstoxReport.option_chain;
+    const status = String(chain?.data_status || upstoxReport.feed_status || 'WAITING').toUpperCase();
+    const statusStyle = status === 'LIVE'
+      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+      : status === 'STALE'
+        ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+        : status === 'DISCONNECTED'
+          ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+          : 'border-sky-500/40 bg-sky-500/10 text-sky-300';
+    const metric = (label: string, value: string, note?: string) => (
+      <div key={label} className="rounded-xl border border-[#232E47] bg-[#121824] p-4">
+        <div className="text-[11px] uppercase tracking-wide text-slate-400">{label}</div>
+        <div className="mt-1 text-xl font-bold text-white">{value}</div>
+        {note && <div className="mt-1 text-[10px] text-slate-500">{note}</div>}
+      </div>
+    );
+    const spot = typeof chain?.spot_price === 'number' ? chain.spot_price : null;
+    const levelNote = (strike: number | undefined) => spot != null && typeof strike === 'number'
+      ? `${strike > spot ? '+' : ''}${displayMarketValue(strike - spot)} pts from spot`
+      : undefined;
+    const support = chain?.support_resistance?.strong_support?.strike;
+    const resistance = chain?.support_resistance?.strong_resistance?.strike;
+
+    return (
+      <section className={`rounded-2xl border border-[#232E47] bg-[#0B0E14] p-5 shadow-xl ${className}`}>
+        <div className="flex flex-col gap-3 border-b border-[#232E47] pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-white">
+              <ShieldCheck className="h-5 w-5 text-sky-400" />
+              <h2 className="text-lg font-bold">Verified Upstox Market Data</h2>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">NIFTY option-chain metrics from Upstox. Refreshes every 30 seconds.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>
+              {status === 'LIVE' ? 'LIVE FEED' : `${status} FEED`}
+            </span>
+            <span className="rounded-lg border border-[#232E47] px-2.5 py-1 text-[10px] text-slate-300">REST snapshot • {chain?.expiry || 'N/A'}</span>
+            <span className="text-[10px] text-slate-500">{upstoxReport.observed_at ? new Date(upstoxReport.observed_at).toLocaleTimeString() : 'time unavailable'}</span>
+          </div>
+        </div>
+        {!chain && <p className="mt-4 text-sm text-amber-300">Waiting for a verified Upstox option-chain response.</p>}
+        {chain && <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {metric('NIFTY spot', displayMarketValue(chain.spot_price), `ATM ${displayMarketValue(chain.atm_strike, 0)}`)}
+          {metric('Put / call OI ratio', displayMarketValue(chain.totals?.oi_pcr, 3), 'From returned chain open interest')}
+          {metric('Max pain', displayMarketValue(chain.max_pain?.max_pain_strike, 0), 'Calculated from observed chain OI')}
+          {metric('ATM option IV', chain.exposures?.atm_iv_pct == null ? 'N/A' : `${displayMarketValue(chain.exposures.atm_iv_pct)}%`, 'CE/PE average; not India VIX')}
+          {metric('Put OI support', displayMarketValue(support, 0), levelNote(support))}
+          {metric('Call OI resistance', displayMarketValue(resistance, 0), levelNote(resistance))}
+          {metric('Call OI change', displayMarketValue(chain.totals?.total_call_oi_change, 0), 'Current OI minus previous OI')}
+          {metric('Put OI change', displayMarketValue(chain.totals?.total_put_oi_change, 0), 'Current OI minus previous OI')}
+        </div>}
+        <p className="mt-4 rounded-lg border border-[#232E47] bg-[#121824] p-3 text-[11px] leading-relaxed text-slate-400">
+          Source: {upstoxReport.source_endpoint || chain?.source || 'Upstox option-chain API'}. A REST snapshot can be available while the WebSocket feed is WAITING outside market hours. Upstox does not provide FII/DII participant flows, CPI, GDP, RBI releases, or India VIX through this option-chain endpoint; those figures are not presented here as Upstox data.
+        </p>
+      </section>
+    );
+  }
+
+  if (intelligence?.data_source !== 'UPSTOX') {
+    return (
+      <section className={`rounded-2xl border border-[#232E47] bg-[#121824] p-5 ${className}`}>
+        <div className="flex items-center gap-2 text-white"><Activity className="h-5 w-5 text-sky-400" /><h2 className="font-bold">Upstox Market Data</h2></div>
+        <p className="mt-3 text-sm text-amber-300">{upstoxReport?.detail || 'Waiting for verified Upstox data. Unsupported or unverified figures are hidden.'}</p>
+      </section>
+    );
+  }
 
   const { 
     market_closing_levels, 
