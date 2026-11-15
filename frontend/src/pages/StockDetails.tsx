@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Search, Sparkles, Check, X } from 'lucide-react';
+import { Search, Sparkles, Check, X } from 'lucide-react';
 import { fetchStockDetails } from '../services/api';
 import type { StockDetailsResponse } from '../types';
 import { VolumeTrendChart } from '../components/VolumeTrendChart';
+import { InstitutionalStockChart } from '../components/InstitutionalStockChart';
+import type { ChartDataPoint } from '../components/InstitutionalStockChart';
 import { useLanguage } from '../context/LanguageContext';
 
 interface StockDetailsProps {
@@ -20,12 +22,11 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
   const [data, setData] = useState<StockDetailsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
-  const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y' | '5Y'>('1Y');
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    fetchStockDetails(selectedSymbol, timeframe.toLowerCase())
+    fetchStockDetails(selectedSymbol, '5y')
       .then(res => {
         if (isMounted) setData(res);
       })
@@ -34,165 +35,13 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
         if (isMounted) setLoading(false);
       });
     return () => { isMounted = false; };
-  }, [selectedSymbol, timeframe]);
+  }, [selectedSymbol]);
 
   const filteredSymbols = availableSymbols.filter(s => 
     s.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Clean SVG technical analysis chart: Daily Closes, 20 DMA & Synchronized Volume Bar Graph
-  const renderChart = () => {
-    if (!data || !data.chart_data || data.chart_data.length === 0) return null;
-    let candles = data.chart_data;
-    if (timeframe === '1M') candles = candles.slice(-22);
-    else if (timeframe === '3M') candles = candles.slice(-66);
-    else if (timeframe === '6M') candles = candles.slice(-132);
-    else if (timeframe === '1Y') candles = candles.slice(-250);
-    // 5Y uses all candles available
-    const closes = candles.map(c => c.close);
-    const dma20s = candles.map(c => c.dma20).filter((v): v is number => v !== null);
-    const volumes = candles.map(c => c.volume);
 
-    const minVal = Math.min(...closes, ...(dma20s.length ? dma20s : [closes[0]])) * 0.98;
-    const maxVal = Math.max(...closes, ...(dma20s.length ? dma20s : [closes[0]])) * 1.02;
-    const range = maxVal - minVal || 1;
-
-    const maxVol = Math.max(...volumes, 1) * 1.1;
-
-    // Calculate 20-session volume average for overlay line
-    const volSma20: (number | null)[] = candles.map((_, i) => {
-      if (i < 19) return null;
-      const slice = volumes.slice(i - 19, i + 1);
-      return slice.reduce((a, b) => a + b, 0) / 20;
-    });
-
-    const width = 800;
-    const priceHeight = 180;
-    const volHeight = 70;
-    const totalHeight = priceHeight + volHeight + 20;
-
-    const getX = (i: number) => (i / (candles.length - 1)) * width;
-    const getPriceY = (val: number) => priceHeight - ((val - minVal) / range) * priceHeight;
-    const getVolY = (vol: number) => totalHeight - ((vol / maxVol) * volHeight);
-
-    const closePoints = candles.map((c, i) => `${getX(i)},${getPriceY(c.close)}`).join(' ');
-    const dma20Points = candles
-      .map((c, i) => (c.dma20 !== null ? `${getX(i)},${getPriceY(c.dma20)}` : null))
-      .filter(Boolean)
-      .join(' ');
-
-    const volMaPoints = volSma20
-      .map((v, i) => (v !== null ? `${getX(i)},${getVolY(v)}` : null))
-      .filter(Boolean)
-      .join(' ');
-
-    const barWidth = Math.max(2, (width / candles.length) * 0.7);
-
-    return (
-      <div className="relative w-full bg-[#0B0E14] rounded-lg p-2 border border-[#232E47]/60 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between text-xs font-mono px-2 pt-1 pb-2 border-b border-[#232E47]/40 gap-2">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-0.5 bg-sky-400" />
-              <span className="text-slate-300">{t('Daily Close')}</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-0.5 bg-amber-400" />
-              <span className="text-slate-300">{t('20 DMA')}</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/80" />
-              <span className="text-slate-300">{t('Vol (Up)')}</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/80" />
-              <span className="text-slate-300">{t('Vol (Down)')}</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-0.5 bg-purple-400" />
-              <span className="text-slate-300">{t('20 Vol SMA')}</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-1 bg-[#121824] p-0.5 rounded-lg border border-[#232E47]">
-            {(['1M', '3M', '6M', '1Y', '5Y'] as const).map(tf => (
-              <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all ${
-                  timeframe === tf ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <svg viewBox={`0 0 ${width} ${totalHeight}`} className="w-full h-[320px] pt-2" preserveAspectRatio="none">
-          {/* Price Grid lines */}
-          <line x1="0" y1={priceHeight * 0.25} x2={width} y2={priceHeight * 0.25} stroke="#232E47" strokeDasharray="3 3" />
-          <line x1="0" y1={priceHeight * 0.5} x2={width} y2={priceHeight * 0.5} stroke="#232E47" strokeDasharray="3 3" />
-          <line x1="0" y1={priceHeight * 0.75} x2={width} y2={priceHeight * 0.75} stroke="#232E47" strokeDasharray="3 3" />
-
-          {/* Separator line between price and volume */}
-          <line x1="0" y1={priceHeight + 10} x2={width} y2={priceHeight + 10} stroke="#232E47" strokeWidth="1" />
-
-          {/* Price Close line */}
-          <polyline
-            fill="none"
-            stroke="#38BDF8"
-            strokeWidth="2"
-            points={closePoints}
-          />
-          {/* 20 DMA line */}
-          {dma20Points && (
-            <polyline
-              fill="none"
-              stroke="#F59E0B"
-              strokeWidth="1.5"
-              strokeDasharray="4 2"
-              points={dma20Points}
-            />
-          )}
-
-          {/* Volume Bars */}
-          {candles.map((c, i) => {
-            const isUp = c.close >= c.open;
-            const x = getX(i) - (barWidth / 2);
-            const barH = Math.max(1, (c.volume / maxVol) * volHeight);
-            const y = totalHeight - barH;
-            return (
-              <rect
-                key={c.time}
-                x={x}
-                y={y}
-                width={barWidth}
-                height={barH}
-                fill={isUp ? '#10B981' : '#F43F5E'}
-                opacity="0.8"
-              />
-            );
-          })}
-
-          {/* 20 Volume SMA line */}
-          {volMaPoints && (
-            <polyline
-              fill="none"
-              stroke="#C084FC"
-              strokeWidth="1.5"
-              strokeDasharray="3 2"
-              points={volMaPoints}
-            />
-          )}
-        </svg>
-
-        <div className="flex justify-between text-[10px] font-mono text-slate-500 px-2 pt-1">
-          <span>Range: ₹{minVal.toFixed(1)} - ₹{maxVal.toFixed(1)}</span>
-          <span>Max Volume: {(maxVol / 1000000).toFixed(2)}M</span>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -248,20 +97,33 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
         </div>
       ) : data ? (
         <>
-          {/* Historical Candlestick & DMA Curve Chart */}
+          {/* Historical Price & DMA Trajectory — Professional Interactive Chart */}
           <div className="bg-[#121824] border border-[#232E47] rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <LineChart className="w-4 h-4 text-sky-400" />
-                <h2 className="font-bold text-white text-sm">
-                  {t('Historical Price & 20 DMA Trajectory')}
-                </h2>
-              </div>
+              <h2 className="font-bold text-white text-sm">
+                {t('Historical Price & DMA Trajectory')}
+              </h2>
               <span className="text-xs font-mono text-white">
                 {t('Latest Close')}: <span className="font-bold text-emerald-400">₹{data.latest_close.toFixed(2)}</span> ({data.latest_trading_date})
               </span>
             </div>
-            {renderChart()}
+            <InstitutionalStockChart
+              symbol={selectedSymbol}
+              data={(data.chart_data || []).map((c): ChartDataPoint => ({
+                date: c.time,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close,
+                volume: c.volume,
+                dma20: c.dma20 ?? null,
+                dma50: c.dma50 ?? null,
+                dma100: c.dma100 ?? null,
+                dma200: c.dma200 ?? null,
+                vwap: null
+              }))}
+              height={420}
+            />
           </div>
 
           {/* Volume Trend Bar Chart (Matching Screenshot) */}

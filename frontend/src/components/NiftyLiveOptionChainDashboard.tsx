@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Activity, 
   TrendingUp, 
@@ -18,7 +18,6 @@ import {
   fetchOptionChain, 
   fetchExpiries, 
   fetchStrategyPayoff, 
-  fetchMarketRegime, 
   fetchOptionsAlerts, 
   fetchDataQualityReport 
 } from '../services/api';
@@ -35,6 +34,11 @@ type OptionsTab =
   | 'ALERTS_MONITOR'
   | 'CHART';
 
+const displayMetric = (value: unknown, suffix = ''): string => {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  return `${typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : String(value)}${suffix}`;
+};
+
 export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<OptionsTab>('CHAIN');
   const [symbol, setSymbol] = useState<string>('NIFTY');
@@ -47,6 +51,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [chainData, setChainData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [feedStatus, setFeedStatus] = useState<string>('WAITING');
+  const [chainError, setChainError] = useState<string | null>(null);
+  const feedSocketRef = useRef<WebSocket | null>(null);
   
   // Strategy payoff state
   const [selectedStrategy, setSelectedStrategy] = useState<string>('BULL_CALL_SPREAD');
@@ -60,6 +67,64 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [dataQuality, setDataQuality] = useState<any>(null);
 
   // Initial load: F&O Universe
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${protocol}//${window.location.host}/ws/options-feed`);
+    feedSocketRef.current = socket;
+    socket.onmessage = event => {
+      let message: any;
+      try { message = JSON.parse(event.data); } catch { return; }
+      if (message.type === 'status') setFeedStatus(message.status || 'WAITING');
+      if (message.type !== 'market_data') return;
+      if (message.is_live_update) setFeedStatus('LIVE');
+      setChainData((previous: any) => {
+        if (!previous?.rows) return previous;
+        let callOiDelta = 0, putOiDelta = 0, callVolumeDelta = 0, putVolumeDelta = 0;
+        const rows = previous.rows.map((row: any) => {
+          const next = { ...row };
+          for (const side of ['ce', 'pe']) {
+            const tick = message.ticks?.[row[side]?.instrument_key];
+            if (!tick) continue;
+            const oldOi = Number(next[side].oi || 0);
+            const oldVolume = Number(next[side].volume || 0);
+            if (tick.oi != null) {
+              const delta = Number(tick.oi) - oldOi;
+              if (side === 'ce') callOiDelta += delta; else putOiDelta += delta;
+            }
+            if (tick.volume != null) {
+              const delta = Number(tick.volume) - oldVolume;
+              if (side === 'ce') callVolumeDelta += delta; else putVolumeDelta += delta;
+            }
+            next[side] = { ...next[side], ltp: tick.ltp ?? next[side].ltp,
+              change: tick.close_price != null && tick.ltp != null ? tick.ltp - tick.close_price : next[side].change,
+              change_pct: tick.close_price ? ((tick.ltp - tick.close_price) / tick.close_price) * 100 : next[side].change_pct,
+              volume: tick.volume ?? next[side].volume, oi: tick.oi ?? next[side].oi,
+              oi_change: tick.oi != null ? Number(next[side].oi_change || 0) + (Number(tick.oi) - oldOi) : next[side].oi_change,
+              iv: tick.iv ?? next[side].iv, ...tick.greeks };
+          }
+          return next;
+        });
+        const calls = Number(previous.totals?.total_call_oi || 0) + callOiDelta;
+        const puts = Number(previous.totals?.total_put_oi || 0) + putOiDelta;
+        const callVol = Number(previous.totals?.total_call_volume || 0) + callVolumeDelta;
+        const putVol = Number(previous.totals?.total_put_volume || 0) + putVolumeDelta;
+        const callOiChange = Number(previous.totals?.total_call_oi_change || 0) + callOiDelta;
+        const putOiChange = Number(previous.totals?.total_put_oi_change || 0) + putOiDelta;
+        return { ...previous, rows, totals: { ...previous.totals, total_call_oi: calls, total_put_oi: puts,
+          total_call_volume: callVol, total_put_volume: putVol,
+          total_call_oi_change: callOiChange, total_put_oi_change: putOiChange,
+          oi_pcr: calls ? puts / calls : null,
+          vol_pcr: callVol ? putVol / callVol : null,
+          oi_change_pcr: callOiChange ? putOiChange / callOiChange : null } };
+      });
+    };
+    const refreshStatus = () => fetch('/api/v1/options/feed-status').then(r => r.json())
+      .then(status => setFeedStatus(status.status || 'WAITING')).catch(() => setFeedStatus('DISCONNECTED'));
+    refreshStatus();
+    const interval = window.setInterval(refreshStatus, 5000);
+    return () => { window.clearInterval(interval); socket.close(); feedSocketRef.current = null; };
+  }, []);
+
   useEffect(() => {
     fetchFoUniverse().then(res => {
       setUniverse(res.universe || []);
@@ -88,16 +153,17 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   // Load option chain when symbol, strike range, or expiry changes
   const loadOptionChain = async () => {
     setLoading(true);
+    setChainError(null);
     try {
       const data = await fetchOptionChain(symbol, strikeRange, selectedExpiry || undefined);
       setChainData(data);
+      const instrumentKeys = (data.rows || []).flatMap((row: any) => [row.ce?.instrument_key, row.pe?.instrument_key]).filter(Boolean);
+      feedSocketRef.current?.send(JSON.stringify({ mode: 'full', instrumentKeys }));
       
-      // Also update market regime
-      if (data && data.spot_price) {
-        fetchMarketRegime(data.spot_price).then(regime => setMarketRegime(regime)).catch(() => {});
-      }
+      setMarketRegime(null);
     } catch (err) {
       console.error('Error fetching option chain:', err);
+      setChainError(err instanceof Error ? err.message : 'Unable to retrieve verified Upstox option-chain data.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -192,9 +258,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
         {/* Live Feed Status & Quick Stats */}
         <div className="flex items-center space-x-2 font-mono text-xs">
           <div className="px-3 py-1 rounded-lg bg-[#121824] border border-[#232E47] flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className={`w-2 h-2 rounded-full ${feedStatus === 'LIVE' ? 'bg-emerald-400 animate-pulse' : feedStatus === 'STALE' ? 'bg-amber-400' : 'bg-slate-500'}`} />
             <span className="text-slate-300">
-              {dataQuality?.feed_status === 'LIVE' ? 'UPSTOX V3 LIVE' : 'DEMO/SESSION VERIFIED'}
+              {feedStatus}
             </span>
             <span className="text-slate-500">|</span>
             <span className="text-sky-400 font-bold">Protobuf</span>
@@ -218,9 +284,10 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
           <span>Ingesting Live Option Chain &amp; Greeks for {symbol}...</span>
         </div>
       )}
+      {chainError && !chainData && <div role="status" className="p-4 rounded-xl bg-amber-950/30 border border-amber-700/40 text-amber-200 text-sm">{chainError}. Live quotes are not available until Upstox authentication succeeds.</div>}
 
       {/* ========================================================================= */}
-      {/* KEY OPTION CHAIN METRICS BAR (Spot, ATM, PCR, Max Pain, GEX) */}
+      {/* KEY OPTION CHAIN METRICS BAR (verified spot, ATM, PCR and Max Pain) */}
       {/* ========================================================================= */}
       {chainData && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -270,10 +337,10 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             <div className={`text-lg sm:text-xl font-black font-mono mt-0.5 ${
               chainData.exposures?.net_gex_crores >= 0 ? 'text-sky-400' : 'text-rose-400'
             }`}>
-              {chainData.exposures?.net_gex_crores >= 0 ? '+' : ''}{chainData.exposures?.net_gex_crores} Cr
+              N/A
             </div>
             <span className="text-[10px] text-slate-400 font-mono truncate block" title={chainData.exposures?.gex_regime}>
-              {chainData.exposures?.net_gex_crores >= 0 ? 'Positive Gamma' : 'Negative Gamma'}
+              Not supplied by verified chain fields
             </span>
           </div>
 
@@ -390,24 +457,24 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className={`py-1.5 px-1.5 text-right font-medium text-slate-300 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.oi.toLocaleString()}
+                        {displayMetric(row.ce.oi)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right font-medium ${
                         row.ce.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
                       } ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.oi_change >= 0 ? '+' : ''}{row.ce.oi_change.toLocaleString()}
+                        {row.ce.oi_change == null ? 'N/A' : `${row.ce.oi_change >= 0 ? '+' : ''}${displayMetric(row.ce.oi_change)}`}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.volume.toLocaleString()}
+                        {displayMetric(row.ce.volume)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.iv}%
+                        {displayMetric(row.ce.iv, row.ce.iv == null ? '' : '%')}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right text-sky-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.delta}
+                        {displayMetric(row.ce.delta)}
                       </td>
                       <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
-                        ₹{row.ce.ltp}
+                        {row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
                       </td>
 
                       {/* STRIKE PRICE */}
@@ -419,24 +486,24 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
 
                       {/* PE Cells */}
                       <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
-                        ₹{row.pe.ltp}
+                        {row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left text-sky-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.delta}
+                        {displayMetric(row.pe.delta)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.iv}%
+                        {displayMetric(row.pe.iv, row.pe.iv == null ? '' : '%')}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.volume.toLocaleString()}
+                        {displayMetric(row.pe.volume)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left font-medium ${
                         row.pe.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
                       } ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.oi_change >= 0 ? '+' : ''}{row.pe.oi_change.toLocaleString()}
+                        {row.pe.oi_change == null ? 'N/A' : `${row.pe.oi_change >= 0 ? '+' : ''}${displayMetric(row.pe.oi_change)}`}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left font-medium text-slate-300 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.oi.toLocaleString()}
+                        {displayMetric(row.pe.oi)}
                       </td>
                       <td className={`py-1.5 px-1.5 text-right text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
                         <span className={`px-1 py-0.5 rounded ${
@@ -600,7 +667,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                 {chainData.support_resistance?.strong_support?.reason}
               </p>
               <div className="text-[10px] text-slate-400 pt-1 border-t border-[#232E47]">
-                Invalidation Level: <strong className="text-rose-400">{chainData.support_resistance?.strong_support?.invalidation_level}</strong>
+                Invalidation Level: <strong className="text-rose-400">{displayMetric(chainData.support_resistance?.strong_support?.invalidation_level)}</strong>
               </div>
             </div>
           </div>
@@ -623,7 +690,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                 {chainData.support_resistance?.strong_resistance?.reason}
               </p>
               <div className="text-[10px] text-slate-400 pt-1 border-t border-[#232E47]">
-                Invalidation Level: <strong className="text-emerald-400">{chainData.support_resistance?.strong_resistance?.invalidation_level}</strong>
+                Invalidation Level: <strong className="text-emerald-400">{displayMetric(chainData.support_resistance?.strong_resistance?.invalidation_level)}</strong>
               </div>
             </div>
           </div>
@@ -650,15 +717,15 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             </div>
             <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
               <span className="text-slate-400 block text-[10px]">52-Week IV Rank</span>
-              <strong className="text-emerald-400 text-base">{chainData.exposures?.iv_rank_52w}</strong>
+              <strong className="text-emerald-400 text-base">{displayMetric(chainData.exposures?.iv_rank_52w)}</strong>
             </div>
             <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
               <span className="text-slate-400 block text-[10px]">52-Week IV Percentile</span>
-              <strong className="text-sky-400 text-base">{chainData.exposures?.iv_percentile_52w}</strong>
+              <strong className="text-sky-400 text-base">{displayMetric(chainData.exposures?.iv_percentile_52w)}</strong>
             </div>
             <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
               <span className="text-slate-400 block text-[10px]">Gamma Flip Level</span>
-              <strong className="text-amber-300 text-base">{chainData.exposures?.gamma_flip_strike?.toLocaleString()}</strong>
+              <strong className="text-amber-300 text-base">{displayMetric(chainData.exposures?.gamma_flip_strike)}</strong>
             </div>
           </div>
 
@@ -707,6 +774,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
 
           {strategyResult && (
             <div className="space-y-3">
+              {strategyResult.is_market_quote === false && <p className="text-xs text-amber-300">Illustrative payoff only. Premium inputs are model assumptions, not current Upstox market quotes.</p>}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
                   <span className="text-slate-400 text-[10px]">Net Debit / Credit</span>
@@ -772,6 +840,11 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 7: REGIME & PRICE ACTION */}
       {/* ========================================================================= */}
+      {activeTab === 'REGIME_PRICE_ACTION' && !marketRegime && (
+        <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] text-sm text-slate-300">
+          Regime and CPR readings need verified intraday VWAP and session OHLC data. Those inputs are not present in the current option-chain snapshot, so no regime value is shown.
+        </div>
+      )}
       {activeTab === 'REGIME_PRICE_ACTION' && marketRegime && (
         <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] space-y-3 font-mono">
           <div className="flex items-center justify-between pb-2 border-b border-[#232E47]">

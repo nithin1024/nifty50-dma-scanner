@@ -8,6 +8,7 @@ from app.services.options_analytics_engine import (
 )
 from app.services.chart_engine_service import chart_engine_service
 from app.services.alerts_and_monitoring_service import alerts_and_monitoring_service
+from app.config import get_settings
 
 client = TestClient(app)
 
@@ -135,7 +136,7 @@ def test_chart_candles_and_heikin_ashi():
 def test_alerts_and_data_quality_report():
     """Verify alert history and honest DEMO vs LIVE status report."""
     alerts = alerts_and_monitoring_service.get_active_alerts()
-    assert len(alerts) >= 1
+    assert isinstance(alerts, list)
 
     dq = alerts_and_monitoring_service.get_data_quality_report()
     assert dq["app_mode"] in ("DEMO", "LIVE")
@@ -151,8 +152,15 @@ def test_options_api_endpoints():
     assert r_uni.status_code == 200
     assert len(r_uni.json()["universe"]) >= 50
 
-    # Option chain
+    # Authenticated Upstox routes must fail closed when a local token is absent.
+    has_token = bool(get_settings().UPSTOX_ACCESS_TOKEN.strip())
     r_chain = client.get("/api/v1/options/chain?symbol=NIFTY&strike_range=10")
+    if not has_token:
+        assert r_chain.status_code == 401
+        assert "token" in r_chain.json()["detail"].lower()
+        assert client.get("/api/v1/chart/candles?symbol=NIFTY&timeframe=15m").status_code == 401
+        assert client.get("/api/v1/chart/export/csv?symbol=NIFTY&timeframe=15m").status_code == 401
+        return
     assert r_chain.status_code == 200
     assert r_chain.json()["symbol"] == "NIFTY"
 

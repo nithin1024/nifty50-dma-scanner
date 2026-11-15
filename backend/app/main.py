@@ -4,12 +4,16 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from pathlib import Path
 import logging
+import json
 
 from app.config import get_settings
 from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner, options, chart
 from app.services.db_service import db_service
 from app.services.global_events_service import global_events_service
 from app import __version__
+from app.services.upstox_feed_service import subscription_manager
+from app.services.upstox_market_client import get_user_profile, UpstoxApiError
+import asyncio
 
 # Set up logging
 logging.basicConfig(
@@ -30,8 +34,38 @@ async def lifespan(app: FastAPI):
         global_events_service.init_database_events()
     except Exception as e:
         logger.warning(f"Database startup sync warning: {e}")
+    settings = get_settings()
+    snapshot_task = asyncio.create_task(_oi_snapshot_scheduler(), name="oi-snapshot-scheduler")
+    if settings.UPSTOX_ACCESS_TOKEN.strip():
+        try:
+            profile = await get_user_profile()
+            if profile.get("authenticated"):
+                subscription_manager.authentication_status = "AUTHENTICATED"
+                subscription_manager.start()
+            else:
+                subscription_manager.authentication_status = "DISCONNECTED"
+        except UpstoxApiError as exc:
+            subscription_manager.authentication_status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
+            logger.warning("Upstox profile validation failed with HTTP %s", exc.status_code)
+    else:
+        subscription_manager.status = "WAITING"
+        subscription_manager.authentication_status = "WAITING"
     yield
+    snapshot_task.cancel()
+    await asyncio.gather(snapshot_task, return_exceptions=True)
+    await subscription_manager.stop()
     logger.info("Shutting down %s", settings.APP_NAME)
+
+
+async def _oi_snapshot_scheduler():
+    """Take exchange OI snapshots on 15-minute boundaries after actual feed data arrives."""
+    from datetime import datetime, timezone
+    while True:
+        now = datetime.now(timezone.utc).timestamp()
+        wait = 900 - (now % 900)
+        await asyncio.sleep(wait)
+        if subscription_manager.get_status().get("status") == "LIVE":
+            subscription_manager.capture_oi_snapshot()
 
 
 settings = get_settings()
@@ -78,32 +112,41 @@ app.include_router(chart.router, prefix="/api/v1")
 
 @app.websocket("/ws/options-feed")
 async def options_feed_websocket(websocket: WebSocket):
-    """WebSocket endpoint for live NIFTY & Stock option chain ticks with Protobuf/JSON schema."""
+    """Relay normalized exchange ticks from the authenticated Upstox V3 connection."""
     await websocket.accept()
+    subscription_manager.clients.add(websocket)
+    await websocket.send_json({"type": "status", **subscription_manager.get_status()})
     try:
         while True:
             data = await websocket.receive_text()
-            if data == "ping":
-                await websocket.send_text("pong")
+            if data == "ping": await websocket.send_text("pong")
+            elif data:
+                try: await subscription_manager.subscribe_client_request(json.loads(data))
+                except (ValueError, TypeError): pass
     except WebSocketDisconnect:
-        pass
+        subscription_manager.clients.discard(websocket)
     except Exception:
-        pass
+        subscription_manager.clients.discard(websocket)
 
 
 @app.websocket("/ws/chart-feed")
 async def chart_feed_websocket(websocket: WebSocket):
-    """WebSocket endpoint for real-time live-moving chart candles."""
+    """Relay actual normalized Upstox feed ticks for chart instruments."""
     await websocket.accept()
+    subscription_manager.clients.add(websocket)
+    await websocket.send_json({"type": "status", **subscription_manager.get_status()})
     try:
         while True:
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
+            elif data:
+                try: await subscription_manager.subscribe_client_request(json.loads(data))
+                except (ValueError, TypeError): pass
     except WebSocketDisconnect:
-        pass
+        subscription_manager.clients.discard(websocket)
     except Exception:
-        pass
+        subscription_manager.clients.discard(websocket)
 
 
 @app.websocket("/ws/live-scanner")

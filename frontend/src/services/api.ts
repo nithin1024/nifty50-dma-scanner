@@ -356,13 +356,15 @@ export async function fetchDataQualityReport(): Promise<any> {
 export async function fetchChartCandles(
   symbol: string = 'NIFTY',
   timeframe: string = '15m',
-  chartType: string = 'CANDLESTICK'
+  chartType: string = 'CANDLESTICK',
+  before?: string
 ): Promise<any> {
   const params = new URLSearchParams({
     symbol,
     timeframe,
     chart_type: chartType
   });
+  if (before) params.set('before', before);
   const response = await fetch(`${API_BASE}/chart/candles?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);

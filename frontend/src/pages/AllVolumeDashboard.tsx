@@ -28,7 +28,7 @@ interface UnifiedStockVolume {
   weightage: number;
   price: number;
   price_change_pct: number;
-  volume: number;
+  volume: number | null;
   six_session_avg_volume: number | null;
   rvol: number | null;
   volume_trend: string;
@@ -68,14 +68,14 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
         weightage: s.weightage,
         price: s.live_price,
         price_change_pct: s.price_change_pct || 0,
-        volume: s.cumulative_volume || 0,
+        volume: s.cumulative_volume ?? null,
         six_session_avg_volume: s.six_session_avg_volume || null,
         rvol: s.rvol || null,
         volume_trend: s.volume_trend || 'STEADY',
         volume_classification: s.volume_classification || 'NORMAL_VOLUME',
         score: s.live_score,
         price_volume_confirmation: s.price_volume_confirmation,
-        isLive: true,
+        isLive: s.is_provisional === true && s.feed_status === 'LIVE',
         update_timestamp: s.update_timestamp
       }));
     }
@@ -110,7 +110,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
   }, [unifiedStocks]);
 
   const maxVolume = useMemo(() => {
-    return Math.max(...unifiedStocks.map(s => s.volume), 1);
+    return Math.max(...unifiedStocks.map(s => s.volume ?? 0), 1);
   }, [unifiedStocks]);
 
   const handleSort = (field: SortField) => {
@@ -170,7 +170,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
   const topStocksForChart = useMemo(() => {
     const copy = [...unifiedStocks];
     if (chartMetric === 'VOLUME') {
-      return copy.sort((a, b) => b.volume - a.volume).slice(0, 10);
+      return copy.sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0)).slice(0, 10);
     } else {
       return copy.sort((a, b) => (b.rvol || 0) - (a.rvol || 0)).slice(0, 10);
     }
@@ -178,7 +178,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
 
   const chartMaxVal = useMemo(() => {
     if (chartMetric === 'VOLUME') {
-      return Math.max(...topStocksForChart.map(s => s.volume), 1);
+      return Math.max(...topStocksForChart.map(s => s.volume ?? 0), 1);
     }
     return Math.max(...topStocksForChart.map(s => s.rvol || 0), 1);
   }, [topStocksForChart, chartMetric]);
@@ -314,7 +314,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
           <div className="space-y-3">
             {topStocksForChart.map((s, idx) => {
               const isPos = s.price_change_pct >= 0;
-              const barVal = chartMetric === 'VOLUME' ? s.volume : (s.rvol || 0);
+              const barVal = chartMetric === 'VOLUME' ? (s.volume ?? 0) : (s.rvol || 0);
               const barWidthPct = Math.min(100, Math.max(5, (barVal / chartMaxVal) * 100));
 
               // Benchmark marker calculation for volume mode
@@ -346,7 +346,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                         {isPos ? '+' : ''}{s.price_change_pct.toFixed(2)}%
                       </span>
                       <span className="text-slate-200 font-bold">
-                        {chartMetric === 'VOLUME' ? `${(s.volume / 1000000).toFixed(2)}M` : `${s.rvol?.toFixed(2)}x RVOL`}
+                        {chartMetric === 'VOLUME' ? (s.volume == null ? 'N/A' : `${(s.volume / 1000000).toFixed(2)}M`) : `${s.rvol?.toFixed(2) ?? 'N/A'}x RVOL`}
                       </span>
                       {chartMetric === 'VOLUME' && s.six_session_avg_volume && (
                         <span className="text-slate-500 text-[10px]">
@@ -530,7 +530,7 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                 const isPositive = stock.price_change_pct >= 0;
                 const rvol = stock.rvol;
                 const pv = stock.price_volume_confirmation;
-                const volPct = Math.min(100, Math.max(3, (stock.volume / maxVolume) * 100));
+                const volPct = Math.min(100, Math.max(3, ((stock.volume ?? 0) / maxVolume) * 100));
 
                 return (
                   <tr 
@@ -564,10 +564,10 @@ export const AllVolumeDashboard: React.FC<AllVolumeDashboardProps> = ({
                     <td className="py-3 px-3">
                       <div className="flex items-center justify-between text-xs font-mono mb-1">
                         <span className="font-semibold text-slate-100">
-                          {stock.volume.toLocaleString()}
+                          {stock.volume == null ? 'N/A' : stock.volume.toLocaleString()}
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono">
-                          {(stock.volume / 1000000).toFixed(2)}M
+                          {stock.volume == null ? 'N/A' : `${(stock.volume / 1000000).toFixed(2)}M`}
                         </span>
                       </div>
                       {/* Mini Bar Meter */}

@@ -11,6 +11,7 @@ from app.models.global_event import (
     EventUpdateHistoryModel,
     UserEventPreferenceModel
 )
+from app.models.option_snapshot import OptionOISnapshotModel
 
 __all__ = [
     "Base",
@@ -21,5 +22,6 @@ __all__ = [
     "CrossoverEventModel",
     "GlobalEventModel",
     "EventUpdateHistoryModel",
-    "UserEventPreferenceModel"
+    "UserEventPreferenceModel",
+    "OptionOISnapshotModel",
 ]

@@ -86,6 +86,7 @@ TOP_7_HEAVYWEIGHT_SYMBOLS = [
 
 class ConstituentsService:
     def __init__(self):
+        self.last_fetch_source = "LOCAL_OFFICIAL_REGISTRY"
         BACKEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
         ROOT_DATA_DIR.mkdir(parents=True, exist_ok=True)
         # Ensure initial CSVs and JSON cache exist on instantiation
@@ -193,6 +194,7 @@ class ConstituentsService:
                                 items.append(self._format_constituent(sym, comp, sector, ind, isin, weight))
 
                         if len(items) == 50:
+                            self.last_fetch_source = url
                             logger.info(f"Successfully fetched 50 constituents from {url}")
                             # Normalize weights to exactly 100.0%
                             tot = sum(x["weightage"] for x in items)
@@ -206,6 +208,7 @@ class ConstituentsService:
                 logger.warning(f"Failed to fetch constituents from {url}: {e}")
 
         logger.info("Using built-in verified official NIFTY 50 constituent registry.")
+        self.last_fetch_source = "OFFICIAL_REGISTRY_FALLBACK"
         return self._build_default_list()
 
     async def sync_constituents(self) -> Dict[str, Any]:

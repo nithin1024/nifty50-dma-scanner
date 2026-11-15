@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Response, HTTPException
 from typing import Optional, Dict, Any
 import io
 import csv
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from app.services.chart_engine_service import chart_engine_service
+from app.services import upstox_market_client as upstox
+from app.services.upstox_market_client import UpstoxApiError
+from app.services.upstox_feed_service import subscription_manager
 
 router = APIRouter(prefix="/chart", tags=["Professional Charting Engine"])
 
@@ -12,14 +16,58 @@ router = APIRouter(prefix="/chart", tags=["Professional Charting Engine"])
 async def get_chart_candles(
     symbol: str = Query("NIFTY", description="Instrument symbol (e.g. NIFTY, RELIANCE, HDFCBANK)"),
     timeframe: str = Query("15m", description="Timeframe e.g. 1m, 5m, 15m, 1h, Daily"),
-    chart_type: str = Query("CANDLESTICK", description="CANDLESTICK, LINE, AREA, HEIKIN_ASHI")
+    chart_type: str = Query("CANDLESTICK", description="CANDLESTICK, LINE, AREA, HEIKIN_ASHI"),
+    before: Optional[str] = Query(None, description="Load candles strictly earlier than this YYYY-MM-DD"),
+    instrument_key: Optional[str] = Query(None, description="Optional verified Upstox instrument key"),
 ) -> Dict[str, Any]:
-    """Retrieve normalized OHLCV candles, indicators, and live tick for TradingView Lightweight Charts."""
-    return chart_engine_service.get_instrument_chart_data(
-        symbol=symbol,
-        timeframe=timeframe,
-        chart_type=chart_type
-    )
+    """Retrieve actual Historical Candle V3 data; no generated bars or synthetic live tick."""
+    key = instrument_key or upstox.instrument_key_for_symbol(symbol.upper())
+    if not key:
+        raise HTTPException(status_code=404, detail="No Upstox instrument key for symbol")
+    units = {"1m": ("minutes", "1"), "5m": ("minutes", "5"), "15m": ("minutes", "15"),
+             "1h": ("hours", "1"), "Daily": ("days", "1"), "1d": ("days", "1"),
+             "1D": ("days", "1"), "5Y": ("weeks", "1")}
+    unit, interval = units.get(timeframe, ("minutes", "15"))
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    end = date.fromisoformat(before) - timedelta(days=1) if before else today
+    if unit == "minutes":
+        lookback = 30 if int(interval) <= 15 else 90
+    elif unit == "hours":
+        lookback = 90
+    elif unit == "days":
+        lookback = 365
+    else:
+        lookback = 365 * 5
+    start = end - timedelta(days=lookback)
+    try:
+        if unit in ("minutes", "hours") and not before and end == today:
+            historical_end = today - timedelta(days=1)
+            previous = await upstox.get_historical_candles_v3(
+                key, unit, interval, historical_end.isoformat(), start.isoformat())
+            intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
+            raw = [*previous, *intraday]
+        else:
+            raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())
+    except UpstoxApiError as exc:
+        raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
+    await subscription_manager.set_subscriptions([key], mode="full")
+    candles = [parsed for row in raw if (parsed := upstox.parse_candle_row(row))]
+    candles.sort(key=lambda candle: candle["time"])
+    closes = [candle["close"] for candle in candles]
+    indicators = {"sma_20": [], "sma_50": [], "sma_100": [], "sma_200": [], "ema_9": []}
+    ema = closes[0] if closes else 0.0
+    alpha = 2 / 10
+    for index, close in enumerate(closes):
+        for period in (20, 50, 100, 200):
+            indicators[f"sma_{period}"].append(
+                round(sum(closes[index - period + 1:index + 1]) / period, 2) if index >= period - 1 else None)
+        ema = close * alpha + ema * (1 - alpha)
+        indicators["ema_9"].append(round(ema, 2))
+    return {"symbol": symbol.upper(), "instrument_key": key, "timeframe": timeframe,
+            "chart_type": chart_type, "timezone": "Asia/Kolkata", "source": "Upstox Historical Candle V3",
+            "candles": candles, "indicators": indicators,
+            "has_older_data": len(candles) > 0, "live_tick": None,
+            "feed_status": subscription_manager.get_status()["status"], "total_records": len(candles)}
 
 
 @router.get("/export/csv")
@@ -29,7 +77,8 @@ async def export_chart_csv(
     chart_type: str = Query("CANDLESTICK")
 ):
     """Download synchronized historical numerical candle data as CSV."""
-    data = chart_engine_service.get_instrument_chart_data(symbol=symbol, timeframe=timeframe, chart_type=chart_type)
+    data = await get_chart_candles(symbol=symbol, timeframe=timeframe, chart_type=chart_type,
+                                   before=None, instrument_key=None)
     candles = data.get("candles", [])
 
     output = io.StringIO()

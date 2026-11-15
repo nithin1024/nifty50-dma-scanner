@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from app.config import get_settings
 from app.services.options_universe_service import options_universe_service
+from app.services.upstox_feed_service import subscription_manager
 
 logger = logging.getLogger("alerts_monitoring")
 
@@ -21,53 +22,8 @@ class AlertsAndMonitoringService:
         self._init_default_alerts()
 
     def _init_default_alerts(self):
-        now = datetime.now(timezone.utc).isoformat()
-        self.alerts_history = [
-            {
-                "id": "alt_001",
-                "type": "PCR_EXTREME",
-                "instrument": "NIFTY",
-                "severity": "WARNING",
-                "message": "NIFTY Total OI PCR reached 0.88 — hovering near institutional put support zone.",
-                "value": 0.88,
-                "threshold": 0.85,
-                "timestamp": now,
-                "source": "Options Analytics Engine"
-            },
-            {
-                "id": "alt_002",
-                "type": "UNUSUAL_VOLUME",
-                "instrument": "NIFTY20NOV26CE23600",
-                "severity": "INFO",
-                "message": "Unusual Call volume surge detected: Volume/OI ratio reached 2.45x at 23,600 strike.",
-                "value": 2.45,
-                "threshold": 2.00,
-                "timestamp": now,
-                "source": "Flow & Unusual Volume Engine"
-            },
-            {
-                "id": "alt_003",
-                "type": "FII_DERIVATIVES",
-                "instrument": "NIFTY FUTURES",
-                "severity": "BULLISH",
-                "message": "FII net short index-futures position unwound 20,328 contracts to -70,413 (68.7% deleveraged from 225k peak).",
-                "value": -70413,
-                "threshold": -100000,
-                "timestamp": now,
-                "source": "Institutional Data Service"
-            },
-            {
-                "id": "alt_004",
-                "type": "DATA_QUALITY",
-                "instrument": "FEED_MONITOR",
-                "severity": "INFO",
-                "message": "Market feed operating in authorized DEMO/COMPLETED_SESSION mode. All data labeled with verified exchange timestamps.",
-                "value": "ACTIVE",
-                "threshold": None,
-                "timestamp": now,
-                "source": "Data Quality Engine"
-            }
-        ]
+        # Alerts are populated only from actual evaluated market observations.
+        self.alerts_history = []
 
     def get_active_alerts(self) -> List[Dict[str, Any]]:
         return self.alerts_history
@@ -79,19 +35,13 @@ class AlertsAndMonitoringService:
         and honest DEMO vs LIVE labeling.
         """
         app_mode = self.settings.APP_MODE.upper()
-        has_creds = bool(self.settings.UPSTOX_API_KEY and self.settings.UPSTOX_API_SECRET)
-        sub_stats = options_universe_service.get_subscription_stats()
-
-        if app_mode == "LIVE" and has_creds:
-            feed_status = "LIVE"
-            ws_status = "CONNECTED_V3_PROTOBUF"
-            msg = "Streaming live real-time ticks from Upstox Market Data Feed V3."
-            synthetic_label = False
-        else:
-            feed_status = "DEMO"
-            ws_status = "STANDBY_DEMO_STREAM"
-            msg = "Operating in verified DEMO/COMPLETED_SESSION mode. Quotes reflect latest completed exchange sessions."
-            synthetic_label = True
+        feed = subscription_manager.get_status()
+        sub_stats = feed
+        feed_status = feed["status"]
+        ws_status = {"LIVE": "CONNECTED_V3_PROTOBUF", "STALE": "STALE_V3_PROTOBUF",
+                     "WAITING": "WAITING_FOR_REAL_FEED", "DISCONNECTED": "DISCONNECTED"}.get(feed_status, feed_status)
+        msg = "Live exchange ticks received from Upstox V3." if feed_status == "LIVE" else "No current live exchange ticks have been received."
+        synthetic_label = False
 
         return {
             "app_mode": app_mode,
@@ -100,14 +50,10 @@ class AlertsAndMonitoringService:
             "websocket_status": ws_status,
             "api_endpoint": "https://api.upstox.com/v2",
             "protobuf_version": "Upstox V3 MarketDataFeed.proto",
-            "last_exchange_timestamp": datetime.now(timezone.utc).isoformat(),
-            "data_freshness_seconds": 1.2,
-            "latency_ms": 42.0,
-            "rate_limit_quota": {
-                "limit_per_minute": 500,
-                "remaining": 482,
-                "reset_seconds": 38
-            },
+            "last_exchange_timestamp": datetime.fromtimestamp(subscription_manager.last_exchange_ts / 1000, timezone.utc).isoformat() if subscription_manager.last_exchange_ts else None,
+            "data_freshness_seconds": feed["last_message_age_seconds"],
+            "latency_ms": None,
+            "rate_limit_quota": None,
             "subscriptions": sub_stats,
             "honest_data_policy": (
                 "Market data is streamed strictly for personal educational and analytical use. "

@@ -26,8 +26,12 @@ async def test_live_scanner_endpoint():
         assert "live_count_5_6" in data
         assert "all_results" in data
         assert data["total_constituents"] == 50
+        assert data["feed_status"] in ("LIVE", "STALE", "WAITING", "DISCONNECTED")
+        if data["feed_status"] != "LIVE":
+            assert data["all_results"] == []
+            assert data["received_instruments"] == 0
         for stock in data["all_results"]:
-            assert stock["is_provisional"] is True
+            assert "is_provisional" in stock
             assert "live_score" in stock
             assert "completed_smas" in stock
 

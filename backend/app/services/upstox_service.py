@@ -14,6 +14,7 @@ from app.services.dma_service import dma_engine, DMA_PERIODS
 from app.services.crossover_service import crossover_engine
 from app.services.volume_service import volume_engine
 from app.services.historical_data_service import historical_data_service
+from app.services.upstox_feed_service import subscription_manager
 
 logger = logging.getLogger("upstox_service")
 
@@ -87,17 +88,23 @@ class UpstoxAuthService:
 
     def get_connection_status(self) -> Dict[str, Any]:
         has_credentials = bool(self.settings.UPSTOX_API_KEY and self.settings.UPSTOX_API_SECRET)
-        is_authenticated = bool(self.access_token)
+        is_authenticated = False
+        try:
+            from app.services.upstox_feed_service import subscription_manager
+            is_authenticated = subscription_manager.authentication_status == "AUTHENTICATED"
+            feed_status = subscription_manager.get_status()
+        except Exception:
+            feed_status = {"status": "DISCONNECTED"}
 
-        if not has_credentials:
+        if is_authenticated:
+            status = "AUTHENTICATED"
+            message = "Upstox User Profile validated; feed state is reported separately."
+        elif not has_credentials:
             status = "CREDENTIALS_REQUIRED"
             message = "Upstox API Key/Secret not configured in server .env."
-        elif not is_authenticated:
-            status = "AUTH_PENDING"
-            message = "API credentials present. Awaiting OAuth login flow."
         else:
-            status = "AUTHENTICATED"
-            message = "Upstox V3 authenticated and authorized."
+            status = "AUTH_PENDING"
+            message = "API credentials present. Awaiting successful User Profile validation."
 
         return {
             "provider": "Upstox Market Data Feed V3",
@@ -106,6 +113,9 @@ class UpstoxAuthService:
             "has_credentials": has_credentials,
             "login_url": self.get_login_url(),
             "message": message,
+            "feed_status": feed_status["status"],
+            "active_subscriptions": feed_status.get("active_subscriptions", 0),
+            "waiting_subscriptions": feed_status.get("waiting_subscriptions", 0),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "permissions_notice": (
                 "Market data feeds are subject to exchange and broker redistribution policies. "
@@ -159,7 +169,7 @@ class LiveMarketFeedManager:
         stocks_5_6 = []
         live_results = []
         provisional_crossings = []
-
+        feed_status = subscription_manager.get_status()
         now_utc = datetime.now(timezone.utc).isoformat()
 
         for stock in completed_results:
@@ -172,19 +182,24 @@ class LiveMarketFeedManager:
             if not completed_close or status != "VERIFIED":
                 continue
 
+            instrument_key = stock.get("upstox_instrument_key")
+            tick = subscription_manager.latest_ticks.get(instrument_key or "")
+            if not tick or tick.get("ltp") is None:
+                continue
+
             # Fetch historical candles for 6-session volume analytics
             hist = historical_data_service.get_cached_history(symbol)
             candles = hist.get("candles", []) if hist else []
             vol_metrics = volume_engine.analyze_stock_volume(symbol, candles)
 
             # In intraday mode, live price is compared against completed daily SMAs
-            live_price = completed_close  # Default to latest session close when market closed
+            live_price = float(tick["ltp"])
 
             # Classify live price strictly against completed daily SMAs
             classification = dma_engine.classify_stock(live_price, completed_smas)
 
             # Check provisional crossings
-            if candles and len(candles) >= 2:
+            if tick.get("feed_type") == "live_feed" and candles and len(candles) >= 2:
                 completed_closes = [c["close"] for c in candles]
                 crossings = crossover_engine.detect_intraday_provisional_crossing(live_price, completed_closes)
                 for cx in crossings:
@@ -200,15 +215,16 @@ class LiveMarketFeedManager:
                 "weightage": weightage,
                 "live_price": round(live_price, 2),
                 "completed_close": round(completed_close, 2),
-                "price_change_pct": vol_metrics.get("price_change_pct", 0.0),
+                "price_change_pct": ((live_price - float(tick["close_price"])) / float(tick["close_price"]) * 100)
+                    if tick.get("close_price") else None,
                 "live_score": classification["score"],
                 "live_classification": classification["classification"],
                 "is_6_6": classification["is_6_6"],
                 "is_5_6": classification["is_5_6"],
-                "is_provisional": True,
+                "is_provisional": tick.get("feed_type") == "live_feed",
                 "status": status,
-                "feed_status": "UPSTOX_V3_ACTIVE" if upstox_auth_service.access_token else "COMPLETED_SESSION_SNAPSHOT",
-                "update_timestamp": now_utc,
+                "feed_status": feed_status["status"],
+                "update_timestamp": tick.get("received_at") or now_utc,
                 "completed_smas": completed_smas,
                 "live_distances": {
                     k: round(v, 2) if v is not None else None 
@@ -217,17 +233,18 @@ class LiveMarketFeedManager:
                 "failed_dma": classification.get("failed_dma"),
                 "failed_dma_label": classification.get("failed_dma_label"),
                 # Volume Analytics fields (Phase 5)
-                "cumulative_volume": vol_metrics.get("latest_volume", 0),
+                "cumulative_volume": tick.get("volume"),
                 "previous_session_volume": vol_metrics.get("previous_session_volume", 0),
                 "previous_five_volumes": vol_metrics.get("previous_five_volumes", []),
                 "six_session_avg_volume": vol_metrics.get("six_session_avg_volume"),
                 "volume_change_pct": vol_metrics.get("volume_change_pct"),
-                "rvol": vol_metrics.get("rvol"),
+                "rvol": None,
                 "intraday_rvol": None,
                 "intraday_rvol_notice": "Intraday RVOL requires same-time-of-day cumulative benchmark. Direct comparison of partial session to full day is mathematically prohibited.",
-                "volume_trend": vol_metrics.get("volume_trend", "STEADY"),
-                "volume_classification": vol_metrics.get("volume_classification", "NORMAL_VOLUME"),
-                "price_volume_confirmation": vol_metrics.get("price_volume_confirmation", {"signal": "NEUTRAL", "label": "Neutral"}),
+                "volume_trend": None,
+                "volume_classification": "UNAVAILABLE" if tick.get("volume") is None else vol_metrics.get("volume_classification"),
+                "price_volume_confirmation": {"signal": "UNAVAILABLE", "label": "Live volume unavailable for this subscription mode"}
+                    if tick.get("volume") is None else vol_metrics.get("price_volume_confirmation"),
                 "six_session_history": vol_metrics.get("six_session_history", [])
             }
 
@@ -245,10 +262,13 @@ class LiveMarketFeedManager:
 
         payload = {
             "type": "LIVE_SCAN_SNAPSHOT",
-            "feed_timestamp": now_utc,
-            "feed_status": "FEED_ACTIVE_PROVISIONAL",
+            "feed_timestamp": datetime.fromtimestamp(subscription_manager.last_exchange_ts / 1000, timezone.utc).isoformat()
+                if subscription_manager.last_exchange_ts else None,
+            "feed_status": feed_status["status"],
+            "is_live": feed_status["status"] == "LIVE",
             "completed_daily_session_date": latest_daily_scan.get("completed_session_date"),
-            "total_constituents": len(live_results),
+            "total_constituents": len(completed_results),
+            "received_instruments": len(live_results),
             "live_count_6_6": len(stocks_6_6),
             "live_count_5_6": len(stocks_5_6),
             "stocks_6_6": stocks_6_6,

@@ -1,29 +1,84 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, Dict, Any
+import asyncio
 
 from app.services.options_universe_service import options_universe_service
 from app.services.options_analytics_engine import options_analytics_engine
 from app.services.alerts_and_monitoring_service import alerts_and_monitoring_service
+from app.services import upstox_market_client as upstox
+from app.services.upstox_feed_service import subscription_manager
+from app.services.constituents_service import constituents_service
+from app.services.upstox_market_client import UpstoxApiError
 
 router = APIRouter(prefix="/options", tags=["Options Analytics & Universe"])
 
 
+@router.get("/auth-status")
+async def upstox_auth_status() -> Dict[str, Any]:
+    """Verify credentials against Upstox User Profile without returning account identifiers."""
+    try:
+        profile = await upstox.get_user_profile()
+        subscription_manager.authentication_status = "AUTHENTICATED" if profile.get("authenticated") else "DISCONNECTED"
+        if profile.get("authenticated"):
+            subscription_manager.start()
+        return {"authenticated": profile.get("authenticated", False), "is_active": profile.get("is_active"),
+                "broker": profile.get("broker"), "status": "CONNECTED" if profile.get("authenticated") else "DISCONNECTED",
+                "profile_endpoint": "/v2/user/profile", "feed_status": subscription_manager.get_status()}
+    except UpstoxApiError as exc:
+        subscription_manager.authentication_status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
+        raise HTTPException(status_code=exc.status_code or 503,
+                            detail={"message": exc.message, "endpoint": exc.endpoint,
+                                    "authentication": "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"})
+
+
+@router.get("/feed-status")
+async def upstox_feed_status() -> Dict[str, Any]:
+    return subscription_manager.get_status()
+
+
 @router.get("/universe")
 async def get_fo_universe() -> Dict[str, Any]:
-    """Retrieve NIFTY 50 F&O eligible universe and subscription stats."""
+    """Discover F&O eligibility from actual Upstox option contract responses."""
+    semaphore = asyncio.Semaphore(5)
+
+    async def discover(stock: Dict[str, Any]) -> Dict[str, Any]:
+        key = stock["upstox_instrument_key"]
+        async with semaphore:
+            try:
+                contracts = await upstox.get_option_contracts(key)
+                return {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
+                        "instrument_key": key, "is_fo_eligible": bool(contracts),
+                        "verified_contract_count": len(contracts), "expiries": upstox.unique_expiries(contracts),
+                        "verification_source": "/v2/option/contract"}
+            except UpstoxApiError as exc:
+                return {"symbol": stock["symbol"], "instrument_key": key, "is_fo_eligible": None,
+                        "verification_error": f"Upstox HTTP {exc.status_code}"}
+
+    current_constituents = await constituents_service.fetch_from_nse()
+    results = await asyncio.gather(*(discover(stock) for stock in current_constituents))
     return {
-        "universe": options_universe_service.get_fo_eligible_universe(),
-        "subscription_monitor": options_universe_service.get_subscription_stats()
+        "universe": [{"symbol": "NIFTY", "instrument_key": upstox.NIFTY_INSTRUMENT_KEY,
+                      "is_index": True, "is_fo_eligible": True,
+                      "verified_contract_count": subscription_manager.contract_count,
+                      "verification_source": "/v2/option/contract"}, *results],
+        "subscription_monitor": subscription_manager.get_status(),
+        "constituents_source": constituents_service.last_fetch_source,
     }
 
 
 @router.get("/expiries")
 async def get_expiries(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
-    """Retrieve valid upcoming weekly and monthly expiries for symbol."""
-    return {
-        "symbol": symbol.upper(),
-        "expiries": options_universe_service.get_upcoming_expiries(symbol)
-    }
+    """Return expiries observed in actual Upstox option contracts."""
+    key = upstox.instrument_key_for_symbol(symbol.upper())
+    if not key:
+        raise HTTPException(status_code=404, detail="No Upstox underlying instrument key for symbol")
+    try:
+        contracts = await upstox.get_option_contracts(key)
+        return {"symbol": symbol.upper(), "instrument_key": key,
+                "expiries": upstox.unique_expiries(contracts),
+                "verified_contract_count": len(contracts), "source": "/v2/option/contract"}
+    except UpstoxApiError as exc:
+        raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
 
 
 @router.get("/chain")
@@ -32,8 +87,108 @@ async def get_option_chain(
     strike_range: int = Query(10, ge=5, le=25, description="Number of strikes above and below ATM"),
     expiry: Optional[str] = Query(None, description="Target expiry date (e.g. 20-NOV-2026)")
 ) -> Dict[str, Any]:
-    """Retrieve complete live/session Option Chain with Greeks, PCR, Max Pain and GEX."""
-    return options_analytics_engine.get_option_chain(symbol=symbol.upper(), strike_range=strike_range, expiry=expiry)
+    """Return a chain built from Upstox's official option-chain response."""
+    key = upstox.instrument_key_for_symbol(symbol.upper())
+    if not key:
+        raise HTTPException(status_code=404, detail="No Upstox underlying instrument key for symbol")
+    try:
+        contracts = await upstox.get_option_contracts(key)
+        expiries = upstox.unique_expiries(contracts)
+        selected = expiry or (expiries[0] if expiries else None)
+        if not selected or selected not in expiries:
+            raise HTTPException(status_code=400, detail="Expiry is not present in Upstox option contracts")
+        raw = await upstox.get_option_chain(key, selected)
+        if not raw:
+            raise HTTPException(status_code=404, detail="Upstox returned no option-chain rows")
+        subscription_manager.register_option_chain(symbol.upper(), raw)
+        spot = float(raw[0]["underlying_spot_price"])
+        total_call_oi = total_put_oi = total_call_vol = total_put_vol = 0
+        total_call_change = total_put_change = 0
+        for item in raw:
+            for side, is_call in (("call_options", True), ("put_options", False)):
+                market = (item.get(side) or {}).get("market_data") or {}
+                oi, previous_oi, volume = market.get("oi"), market.get("prev_oi"), market.get("volume")
+                if oi is not None:
+                    if is_call: total_call_oi += float(oi)
+                    else: total_put_oi += float(oi)
+                if volume is not None:
+                    if is_call: total_call_vol += int(volume)
+                    else: total_put_vol += int(volume)
+                if oi is not None and previous_oi is not None:
+                    change = float(oi) - float(previous_oi)
+                    if is_call: total_call_change += change
+                    else: total_put_change += change
+        strikes = sorted({float(row["strike_price"]) for row in raw})
+        contract = next((item for item in contracts if item.get("expiry") == selected), {})
+        atm_index = min(range(len(strikes)), key=lambda i: abs(strikes[i] - spot))
+        lower, upper = max(0, atm_index - strike_range), min(len(strikes), atm_index + strike_range + 1)
+        kept_strikes = set(strikes[lower:upper])
+        rows = []
+        for item in raw:
+            strike = float(item["strike_price"])
+            if strike not in kept_strikes:
+                continue
+            row = {"strike_price": strike, "is_atm": strike == strikes[atm_index]}
+            for name, side, is_call in (("ce", "call_options", True), ("pe", "put_options", False)):
+                option = item.get(side) or {}
+                market = option.get("market_data") or {}
+                greeks = option.get("option_greeks") or {}
+                oi, prev_oi = market.get("oi"), market.get("prev_oi")
+                oi_change = (float(oi) - float(prev_oi)) if oi is not None and prev_oi is not None else None
+                ltp, close = market.get("ltp"), market.get("close_price")
+                price_change = float(ltp) - float(close) if ltp is not None and close is not None else None
+                volume = market.get("volume")
+                if price_change is None or oi_change is None:
+                    buildup = "N/A"
+                elif price_change >= 0 and oi_change >= 0: buildup = "Long Buildup"
+                elif price_change < 0 and oi_change >= 0: buildup = "Short Buildup"
+                elif price_change >= 0: buildup = "Short Covering"
+                else: buildup = "Long Unwinding"
+                row[name] = {"instrument_key": option.get("instrument_key"), "ltp": ltp,
+                    "change": price_change,
+                    "change_pct": (price_change / float(close) * 100) if close not in (None, 0) and price_change is not None else None,
+                    "oi": oi, "oi_change": oi_change, "volume": volume,
+                    "iv": greeks.get("iv"), "delta": greeks.get("delta"), "gamma": greeks.get("gamma"),
+                    "theta": greeks.get("theta"), "vega": greeks.get("vega"),
+                    "bid_price": market.get("bid_price"), "ask_price": market.get("ask_price"),
+                    "bid_qty": market.get("bid_qty"), "ask_qty": market.get("ask_qty"),
+                    "classification": ("ITM" if (strike < spot if is_call else strike > spot) else "OTM" if (strike > spot if is_call else strike < spot) else "ATM"),
+                    "buildup": buildup}
+            rows.append(row)
+        requested_keys = [leg.get("instrument_key") for row in rows for leg in (row.get("ce"), row.get("pe")) if leg and leg.get("instrument_key")]
+        await subscription_manager.set_subscriptions([key, *requested_keys], mode="full")
+        max_pain_rows = []
+        for settle in strikes:
+            payout = sum(float((r.get("call_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, settle - float(r["strike_price"])) +
+                         float((r.get("put_options") or {}).get("market_data", {}).get("oi") or 0) * max(0, float(r["strike_price"]) - settle) for r in raw)
+            max_pain_rows.append({"hypothetical_expiry_price": settle, "total_payout": payout})
+        max_pain = min(max_pain_rows, key=lambda x: x["total_payout"])["hypothetical_expiry_price"] if max_pain_rows else None
+        put_candidates = [r for r in rows if r["strike_price"] <= spot and r["pe"].get("oi") is not None]
+        call_candidates = [r for r in rows if r["strike_price"] >= spot and r["ce"].get("oi") is not None]
+        support = max(put_candidates, key=lambda r: r["pe"]["oi"]) if put_candidates else None
+        resistance = max(call_candidates, key=lambda r: r["ce"]["oi"]) if call_candidates else None
+        atm_row = next((item for item in raw if float(item["strike_price"]) == strikes[atm_index]), {})
+        atm_ivs = [float((atm_row.get(side) or {}).get("option_greeks", {}).get("iv"))
+                   for side in ("call_options", "put_options")
+                   if (atm_row.get(side) or {}).get("option_greeks", {}).get("iv") is not None]
+        return {"symbol": symbol.upper(), "instrument_key": key, "expiry": selected,
+            "source": "/v2/option/chain", "spot_price": spot, "atm_strike": strikes[atm_index],
+            "lot_size": contract.get("lot_size"),
+            "strike_step": min((b - a for a, b in zip(strikes, strikes[1:])), default=None), "rows": rows,
+            "totals": {"total_call_oi": total_call_oi, "total_put_oi": total_put_oi,
+                "total_call_volume": total_call_vol, "total_put_volume": total_put_vol,
+                "oi_pcr": total_put_oi / total_call_oi if total_call_oi else None,
+                "vol_pcr": total_put_vol / total_call_vol if total_call_vol else None,
+                "oi_change_pcr": total_put_change / total_call_change if total_call_change else None,
+                "total_call_oi_change": total_call_change, "total_put_oi_change": total_put_change},
+            "exposures": {"atm_iv_pct": round(sum(atm_ivs) / len(atm_ivs), 2) if atm_ivs else None},
+            "max_pain": {"max_pain_strike": max_pain, "payout_table": max_pain_rows},
+            "support_resistance": {
+                "strong_support": {"strike": support["strike_price"], "reason": "Highest observed put OI at or below spot"} if support else None,
+                "strong_resistance": {"strike": resistance["strike_price"], "reason": "Highest observed call OI at or above spot"} if resistance else None},
+            "data_status": subscription_manager.get_status()["status"]}
+    except UpstoxApiError as exc:
+        raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
 
 
 @router.get("/strategy-payoff")
@@ -43,15 +198,18 @@ async def get_strategy_payoff(
     lot_size: int = Query(25, description="Contract lot size")
 ) -> Dict[str, Any]:
     """Evaluate options strategy payoff, breakevens, max profit, and max loss."""
-    return options_analytics_engine.calculate_strategy_payoff(strategy_name=strategy, spot=spot, lot_size=lot_size)
+    result = options_analytics_engine.calculate_strategy_payoff(strategy_name=strategy, spot=spot, lot_size=lot_size)
+    result["premium_source"] = "ILLUSTRATIVE_MODEL_INPUTS"
+    result["is_market_quote"] = False
+    return result
 
 
 @router.get("/market-regime")
 async def get_market_regime(
     spot: float = Query(23532.70, description="Underlying spot price")
 ) -> Dict[str, Any]:
-    """Classifies current market regime using VWAP and option flow."""
-    return options_analytics_engine.detect_market_regime(spot=spot)
+    """Regime analysis needs verified intraday anchors not supplied by option-chain snapshots."""
+    raise HTTPException(status_code=503, detail="Market regime is unavailable until verified intraday VWAP data is available")
 
 
 @router.get("/alerts")

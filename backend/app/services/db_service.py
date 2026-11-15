@@ -12,6 +12,7 @@ from app.models.stock import (
     DailyScanRecordModel,
     CrossoverEventModel
 )
+from app.models.option_snapshot import OptionOISnapshotModel
 from app.services.constituents_service import constituents_service
 
 logger = logging.getLogger("db_service")
