@@ -162,6 +162,9 @@ async def test_stock_option_universe_uses_contracts_and_live_spot_without_chain_
     async def profile():
         return {"authenticated": True}
 
+    async def eligible_fo_symbols():
+        return {"ABC"}, "https://nse.example/fo_mktlots.csv"
+
     async def configure_nifty():
         return None
 
@@ -179,21 +182,61 @@ async def test_stock_option_universe_uses_contracts_and_live_spot_without_chain_
     monkeypatch.setattr(options_route.upstox, "get_option_contracts", get_contracts)
     monkeypatch.setattr(options_route.upstox, "get_option_chain", fail_if_chain_requested)
     monkeypatch.setattr(options_route.constituents_service, "fetch_from_nse", lambda: _async_value(constituents))
+    monkeypatch.setattr(options_route.constituents_service, "fetch_official_fo_eligible_symbols", eligible_fo_symbols)
     monkeypatch.setattr(manager, "configure_nifty", configure_nifty)
     monkeypatch.setattr(manager, "start", lambda: None)
     monkeypatch.setattr(manager, "set_subscriptions", set_subscriptions)
 
     result = await options_route.get_fo_universe()
     stock_rows = [row for row in result["universe"] if row["symbol"] != "NIFTY"]
-    assert calls == ["NSE_EQ|ABC", "NSE_EQ|XYZ"]
-    assert all(row["selection_status"] == "SELECTED" for row in stock_rows)
-    assert all(row["selected_strike_count"] == 5 for row in stock_rows)
-    assert len(subscriptions) == 20
-    assert result["subscription_monitor"]["tracked_stock_option_contracts"] == 20
+    assert calls == ["NSE_EQ|ABC"]
+    assert stock_rows[0]["is_fo_eligible"] is True
+    assert stock_rows[0]["selection_status"] == "SELECTED"
+    assert stock_rows[0]["selected_strike_count"] == 5
+    assert stock_rows[1]["nse_fo_eligible"] is False
+    assert stock_rows[1]["selection_status"] == "NOT_NSE_FO_ELIGIBLE"
+    assert len(subscriptions) == 10
+    assert result["subscription_monitor"]["tracked_stock_option_contracts"] == 10
 
 
 async def _async_value(value):
     return value
+
+
+@pytest.mark.asyncio
+async def test_nse_fo_eligibility_reads_official_permitted_lot_csv_symbols(monkeypatch):
+    import app.services.constituents_service as service_module
+    from app.services.constituents_service import constituents_service
+
+    csv_content = "UNDERLYING                          ,SYMBOL    ,NOV-26\n"
+    csv_content += "NIFTY 50                            ,NIFTY     ,65\n"
+    csv_content += "Reliance Industries                 ,RELIANCE  ,250\n"
+    csv_content += "".join(f"Sample company {index:<20},SAMPLE{index:<4},1\n" for index in range(10))
+
+    class FakeResponse:
+        status_code = 200
+        content = csv_content.encode()
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, _url):
+            return FakeResponse()
+
+    monkeypatch.setattr(constituents_service, "_fo_symbols_cache", None)
+    monkeypatch.setattr(constituents_service, "_fo_symbols_cache_until", 0.0)
+    monkeypatch.setattr(service_module.httpx, "AsyncClient", FakeClient)
+    symbols, source = await constituents_service.fetch_official_fo_eligible_symbols()
+
+    assert {"NIFTY", "RELIANCE", "SAMPLE0", "SAMPLE9"} <= symbols
+    assert source.endswith("/content/fo/fo_mktlots.csv")
 
 
 @pytest.mark.asyncio

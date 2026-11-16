@@ -3,6 +3,7 @@ import csv
 import io
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Optional, Any
@@ -19,6 +20,7 @@ ROOT_CSV_FILE = ROOT_DATA_DIR / "nifty50_constituents.csv"
 
 NSE_NIFTY50_CSV_URL = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
 NSE_NIFTY50_ALT_URL = "https://nsearchives.nseindia.com/content/indices/ind_nifty50list.csv"
+NSE_FO_PERMITTED_LOTS_URL = "https://nsearchives.nseindia.com/content/fo/fo_mktlots.csv"
 
 # Official NIFTY 50 Constituents with calibrated weights (NSE Indices Factsheet)
 # Effective Date of Current Rebalance: 2024-09-27 (Semi-annual review)
@@ -87,6 +89,8 @@ TOP_7_HEAVYWEIGHT_SYMBOLS = [
 class ConstituentsService:
     def __init__(self):
         self.last_fetch_source = "LOCAL_OFFICIAL_REGISTRY"
+        self._fo_symbols_cache: Optional[set[str]] = None
+        self._fo_symbols_cache_until = 0.0
         BACKEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
         ROOT_DATA_DIR.mkdir(parents=True, exist_ok=True)
         # Ensure initial CSVs and JSON cache exist on instantiation
@@ -210,6 +214,44 @@ class ConstituentsService:
         logger.info("Using built-in verified official NIFTY 50 constituent registry.")
         self.last_fetch_source = "OFFICIAL_REGISTRY_FALLBACK"
         return self._build_default_list()
+
+    async def fetch_official_fo_eligible_symbols(self, force_refresh: bool = False) -> tuple[set[str], str]:
+        """Read current eligible symbols from NSE's published Permitted Lot Sizes CSV."""
+        now = time.monotonic()
+        if not force_refresh and self._fo_symbols_cache and now < self._fo_symbols_cache_until:
+            return set(self._fo_symbols_cache), NSE_FO_PERMITTED_LOTS_URL
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "text/csv,*/*",
+            "Referer": "https://www.nseindia.com/products-services/equity-derivatives-contract-information",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=20.0, headers=headers) as client:
+                response = await client.get(NSE_FO_PERMITTED_LOTS_URL)
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Unable to retrieve NSE F&O permitted-lot list ({exc.__class__.__name__})") from exc
+        if response.status_code != 200:
+            raise RuntimeError(f"NSE F&O permitted-lot list returned HTTP {response.status_code}")
+
+        rows = csv.reader(io.StringIO(response.content.decode("utf-8-sig")))
+        header = next(rows, None)
+        if not header:
+            raise RuntimeError("NSE F&O permitted-lot CSV has no header")
+        header_indexes = {name.strip().upper(): index for index, name in enumerate(header)}
+        symbol_index = header_indexes.get("SYMBOL")
+        if symbol_index is None:
+            raise RuntimeError("NSE F&O permitted-lot CSV is missing its documented SYMBOL column")
+
+        symbols = {
+            row[symbol_index].strip().upper()
+            for row in rows if len(row) > symbol_index and row[symbol_index].strip()
+        }
+        if len(symbols) < 10:
+            raise RuntimeError("NSE F&O permitted-lot CSV returned too few eligible symbols")
+        self._fo_symbols_cache = symbols
+        self._fo_symbols_cache_until = now + 3600
+        return set(symbols), NSE_FO_PERMITTED_LOTS_URL
 
     async def sync_constituents(self) -> Dict[str, Any]:
         """Fetch official list, save to local cache and CSVs with timestamp."""

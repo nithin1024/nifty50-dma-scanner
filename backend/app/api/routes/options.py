@@ -53,6 +53,8 @@ async def get_fo_universe() -> Dict[str, Any]:
             return {"universe": subscription_manager.universe_cache,
                     "subscription_monitor": subscription_manager.get_status(),
                     "constituents_source": constituents_service.last_fetch_source,
+                    "fo_eligibility_source": (subscription_manager.universe_cache[0].get("nse_fo_source")
+                                               if subscription_manager.universe_cache else None),
                     "cached": True}
 
         try:
@@ -77,23 +79,41 @@ async def get_fo_universe() -> Dict[str, Any]:
         # for the selected symbol's actual option-chain view.
         semaphore = asyncio.Semaphore(5)
         current_constituents = await constituents_service.fetch_from_nse()
+        try:
+            nse_fo_symbols, nse_fo_source = await constituents_service.fetch_official_fo_eligible_symbols()
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503,
+                                detail={"message": "Cannot verify the current NSE F&O-eligible universe",
+                                        "source": "NSE Permitted Lot Sizes CSV",
+                                        "endpoint": "/content/fo/fo_mktlots.csv"}) from exc
 
         async def discover(stock: Dict[str, Any]) -> Dict[str, Any]:
             key = stock["upstox_instrument_key"]
+            symbol = stock["symbol"]
+            nse_eligible = symbol.upper() in nse_fo_symbols
+            result = {"symbol": symbol, "company_name": stock.get("company_name"),
+                      "instrument_key": key, "nse_fo_eligible": nse_eligible,
+                      "nse_fo_source": nse_fo_source,
+                      "is_fo_eligible": False,
+                      "verified_contract_count": 0, "expiries": [],
+                      "verification_source": "NSE Permitted Lot Sizes CSV + Upstox Option Contracts API",
+                      "option_chain_source": None, "selected_contracts": 0, "subscribed_contracts": 0,
+                      "selection_status": "NOT_NSE_FO_ELIGIBLE" if not nse_eligible else "WAITING_FOR_SPOT"}
+            if not nse_eligible:
+                return result
             async with semaphore:
                 try:
                     contracts = await upstox.get_option_contracts(key)
                 except UpstoxApiError as exc:
                     return {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
+                            **{field: value for field, value in result.items() if field not in ("symbol", "company_name", "instrument_key")},
                             "instrument_key": key, "is_fo_eligible": None,
                             "verification_error": f"Upstox HTTP {exc.status_code}", "endpoint": exc.endpoint}
                 expiries = upstox.unique_expiries(contracts)
-                result = {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
-                          "instrument_key": key, "is_fo_eligible": bool(contracts),
-                          "verified_contract_count": len(contracts), "expiries": expiries,
-                          "verification_source": "/v2/option/contract",
-                          "selected_contracts": 0, "subscribed_contracts": 0,
-                          "selection_status": "NO_VERIFIED_CONTRACTS" if not contracts else "WAITING_FOR_SPOT"}
+                result.update({"is_fo_eligible": bool(contracts),
+                               "verified_contract_count": len(contracts), "expiries": expiries,
+                               "verification_source": "NSE Permitted Lot Sizes CSV + /v2/option/contract",
+                               "selection_status": "NO_UPSTOX_CONTRACTS" if not contracts else "WAITING_FOR_SPOT"})
                 if not contracts:
                     return result
                 if not expiries:
@@ -185,11 +205,13 @@ async def get_fo_universe() -> Dict[str, Any]:
         universe = [{"symbol": "NIFTY", "instrument_key": upstox.NIFTY_INSTRUMENT_KEY,
                      "is_index": True, "is_fo_eligible": True,
                      "verified_contract_count": subscription_manager.contract_count,
-                     "verification_source": "/v2/option/contract"}, *results]
+                     "nse_fo_eligible": True, "nse_fo_source": nse_fo_source,
+                     "verification_source": "NSE Permitted Lot Sizes CSV + /v2/option/contract"}, *results]
         subscription_manager.universe_cache = universe
         subscription_manager.universe_cache_at = asyncio.get_running_loop().time()
         return {"universe": universe, "subscription_monitor": subscription_manager.get_status(),
-                "constituents_source": constituents_service.last_fetch_source, "cached": False}
+                "constituents_source": constituents_service.last_fetch_source,
+                "fo_eligibility_source": nse_fo_source, "cached": False}
 
 
 @router.get("/expiries")
