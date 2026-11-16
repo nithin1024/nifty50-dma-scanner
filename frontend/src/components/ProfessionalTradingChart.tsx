@@ -788,13 +788,15 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-slate-400">
-          <span>Instrument</span>
-          <select value={chartSymbol} onChange={event => handleSymbolChange(event.target.value)}
-            className="max-w-48 rounded-lg border border-[#232E47] bg-[#121824] px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-sky-500">
-            {chartSymbols.map(item => <option key={item} value={item}>{item === 'NIFTY' ? 'NIFTY 50' : item === 'BANKNIFTY' ? 'BANK NIFTY' : item}</option>)}
-          </select>
-        </label>
+        {!instrumentKey && (
+          <label className="flex items-center gap-2 text-xs text-slate-400">
+            <span>Instrument</span>
+            <select value={chartSymbol} onChange={event => handleSymbolChange(event.target.value)}
+              className="max-w-48 rounded-lg border border-[#232E47] bg-[#121824] px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-sky-500">
+              {chartSymbols.map(item => <option key={item} value={item}>{item === 'NIFTY' ? 'NIFTY 50' : item === 'BANKNIFTY' ? 'BANK NIFTY' : item}</option>)}
+            </select>
+          </label>
+        )}
 
         {/* Chart Type & Actions */}
         <div className="flex items-center space-x-2">

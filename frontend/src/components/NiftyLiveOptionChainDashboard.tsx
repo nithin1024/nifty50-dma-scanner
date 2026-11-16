@@ -10,8 +10,10 @@ import {
   BarChart3, 
   AlertCircle,
   CheckCircle2,
-  PieChart
+  PieChart,
+  X
 } from 'lucide-react';
+import { ProfessionalTradingChart } from './ProfessionalTradingChart';
 import { 
   fetchFoUniverse, 
   fetchOptionChain, 
@@ -41,6 +43,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [symbol, setSymbol] = useState<string>('NIFTY');
   const [strikeRange, setStrikeRange] = useState<number>(10);
   const [selectedExpiry, setSelectedExpiry] = useState<string>('');
+  const [selectedOptionChart, setSelectedOptionChart] = useState<{ instrumentKey: string; label: string } | null>(null);
   
   // Data states
   const [universe, setUniverse] = useState<any[]>([]);
@@ -668,7 +671,15 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                         {row.ce.previous_close == null ? 'N/A' : `₹${displayMetric(row.ce.previous_close)}`}
                       </td>
                       <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
-                        {row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
+                        {row.ce.instrument_key ? (
+                          <button type="button" onClick={() => setSelectedOptionChart({
+                            instrumentKey: row.ce.instrument_key,
+                            label: `${symbol} ${selectedExpiry} ${row.strike_price} CE`
+                          })} title={`Open chart for ${symbol} ${row.strike_price} CE`} className="text-right hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
+                            <span>{row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}</span>
+                            <span className="block text-[8px] font-normal text-sky-400">Chart</span>
+                          </button>
+                        ) : row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
                       </td>
 
                       {/* STRIKE PRICE */}
@@ -680,7 +691,15 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
 
                       {/* PE Cells */}
                       <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
-                        {row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
+                        {row.pe.instrument_key ? (
+                          <button type="button" onClick={() => setSelectedOptionChart({
+                            instrumentKey: row.pe.instrument_key,
+                            label: `${symbol} ${selectedExpiry} ${row.strike_price} PE`
+                          })} title={`Open chart for ${symbol} ${row.strike_price} PE`} className="text-left hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
+                            <span>{row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}</span>
+                            <span className="block text-[8px] font-normal text-sky-400">Chart</span>
+                          </button>
+                        ) : row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
                       </td>
                       <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
                         {row.pe.previous_close == null ? 'N/A' : `₹${displayMetric(row.pe.previous_close)}`}
@@ -720,6 +739,27 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {selectedOptionChart && (
+            <section className="mt-4 rounded-xl border border-[#232E47] bg-[#080b11] p-3" aria-label="Selected option contract chart">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-white">{selectedOptionChart.label} premium chart</h4>
+                  <p className="text-[10px] text-slate-400">Historical candles and live updates use the selected verified contract key.</p>
+                </div>
+                <button type="button" onClick={() => setSelectedOptionChart(null)} aria-label="Close option chart" className="rounded-md border border-[#232E47] p-1.5 text-slate-300 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <ProfessionalTradingChart
+                key={selectedOptionChart.instrumentKey}
+                symbol={symbol}
+                instrumentKey={selectedOptionChart.instrumentKey}
+                displayName={selectedOptionChart.label}
+                height={420}
+                initialTimeframe="5m"
+              />
+            </section>
+          )}
         </div>
       )}
 

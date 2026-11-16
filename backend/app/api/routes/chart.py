@@ -81,11 +81,12 @@ async def get_chart_candles(
 async def export_chart_csv(
     symbol: str = Query("NIFTY"),
     timeframe: str = Query("15m"),
-    chart_type: str = Query("CANDLESTICK")
+    chart_type: str = Query("CANDLESTICK"),
+    instrument_key: Optional[str] = Query(None, description="Optional verified Upstox instrument key")
 ):
     """Download synchronized historical numerical candle data as CSV."""
     data = await get_chart_candles(symbol=symbol, timeframe=timeframe, chart_type=chart_type,
-                                   before=None, instrument_key=None)
+                                   before=None, instrument_key=instrument_key)
     candles = data.get("candles", [])
 
     output = io.StringIO()
