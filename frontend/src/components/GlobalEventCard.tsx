@@ -186,17 +186,17 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
       {/* Accordion Trigger */}
       <div 
         onClick={() => setExpanded(!expanded)}
-        className="px-4 py-2.5 bg-[#141B29] hover:bg-slate-800/60 cursor-pointer flex items-center justify-between text-xs font-semibold text-slate-300 transition-colors"
+        className="px-4 py-2.5 bg-[#141B29] hover:bg-slate-800/60 cursor-pointer flex items-center justify-between gap-3 text-xs font-semibold text-slate-300 transition-colors"
       >
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="text-sky-400 font-bold">
+        <div className="flex items-center space-x-2 min-w-0 flex-1">
+          <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
+          <span className="text-sky-400 font-bold truncate">
             🇮🇳 India Market Impact Analysis &amp; Economic Insight
           </span>
         </div>
-        <div className="flex items-center space-x-1 text-slate-400 hover:text-white">
-          <span className="text-[11px]">{expanded ? 'Hide Insights' : 'Show Full Insights'}</span>
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <div className="flex items-center space-x-1 text-slate-400 hover:text-white shrink-0">
+          <span className="text-[11px] whitespace-nowrap">{expanded ? 'Hide Insights' : 'Show Full Insights'}</span>
+          {expanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
         </div>
       </div>
 

@@ -42,7 +42,7 @@ const displayMetric = (value: unknown, suffix = ''): string => {
 export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<OptionsTab>('CHAIN');
   const [symbol, setSymbol] = useState<string>('NIFTY');
-  const [strikeRange, setStrikeRange] = useState<number>(10);
+  const [strikeRange, setStrikeRange] = useState<number>(5);
   const [selectedExpiry, setSelectedExpiry] = useState<string>('');
   const [selectedOptionChart, setSelectedOptionChart] = useState<{ instrumentKey: string; label: string } | null>(null);
   
@@ -442,10 +442,10 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
               onChange={(e) => setStrikeRange(Number(e.target.value))}
               className="bg-[#121824] border border-[#232E47] text-white font-mono font-bold text-sm rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-sky-500"
             >
-              <option value={5}>ATM ±5</option>
-              <option value={10}>ATM ±10</option>
-              <option value={15}>ATM ±15</option>
-              <option value={20}>ATM ±20</option>
+              <option value={5}>ATM ±5 (5 Above &amp; 5 Below)</option>
+              <option value={10}>ATM ±10 (10 Above &amp; 10 Below)</option>
+              <option value={15}>ATM ±15 (15 Above &amp; 15 Below)</option>
+              <option value={20}>ATM ±20 (20 Above &amp; 20 Below)</option>
             </select>
           </div>
 

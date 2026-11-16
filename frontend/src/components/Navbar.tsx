@@ -33,10 +33,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
     { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'all-volume', label: '3. All 50 Volume', icon: <Activity className="w-4 h-4" /> },
     { id: 'heavyweights', label: '4. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
-    { id: 'volume-analytics', label: '5. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
-    { id: 'historical', label: '6. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'global-events', label: '7. Global Events', icon: <Globe className="w-4 h-4" /> },
-    { id: 'data-quality', label: '8. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'historical', label: '5. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'global-events', label: '6. Global Events', icon: <Globe className="w-4 h-4" /> },
+    { id: 'data-quality', label: '7. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   const newToolItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
@@ -90,8 +89,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 >
                   <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <div>
-                    <div className="font-bold">1. 50 DMA Scanner</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Pure 6-SMA Corridor (5, 10, 20, 50, 100, 200 SMA)</div>
+                    <div className="font-bold">1. Daily DMA Scanner</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Daily 6-SMA Corridor (5, 10, 20, 50, 100, 200 SMA)</div>
                   </div>
                 </button>
                 <button
@@ -102,8 +101,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 >
                   <Zap className="w-4 h-4 text-amber-400 shrink-0" />
                   <div>
-                    <div className="font-bold">2. EMA &amp; RSI Scanner</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Upstox Chart Style 9/21 EMA + Wilder's RSI 14</div>
+                    <div className="font-bold">2. Daily EMA Scanner</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Daily 9 &amp; 21 EMA + Wilder's RSI 14 (Upstox Pro Chart)</div>
                   </div>
                 </button>
               </div>

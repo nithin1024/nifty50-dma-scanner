@@ -178,7 +178,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   };
 
   // Timeframes supported
-  const timeframes = ['1m', '5m', '15m', '1h', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  const timeframes = ['1m', '5m', '15m', '1h', '1D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   // Load candle data
   useEffect(() => {
@@ -250,7 +250,11 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           last.close = Number(tick.ltp);
           last.high = Math.max(Number(last.high), Number(tick.ltp));
           last.low = Math.min(Number(last.low), Number(tick.ltp));
-          if (tick.incremental_volume != null) last.volume = Number(last.volume || 0) + increment;
+          if (tick.volume != null && Number(tick.volume) > Number(last.volume || 0)) {
+            last.volume = Number(tick.volume);
+          } else if (tick.incremental_volume != null) {
+            last.volume = Number(last.volume || 0) + increment;
+          }
           last.oi = tick.oi ?? last.oi;
           last.iv = tick.iv ?? last.iv;
           last.exchange_timestamp = tick.exchange_timestamp;

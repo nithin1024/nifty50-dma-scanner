@@ -42,19 +42,35 @@ async def get_chart_candles(
     start = end - timedelta(days=lookback)
     try:
         if not before and end == today:
-            historical_end = today - timedelta(days=1)
-            previous = await upstox.get_historical_candles_v3(
-                key, unit, interval, historical_end.isoformat(), start.isoformat())
-            try:
-                intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
-            except Exception:
-                intraday = []
-            raw = [*previous, *intraday]
+            if unit == "days":
+                raw = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
+                try:
+                    intraday = await upstox.get_intraday_candles_v3(key, "minutes", "1")
+                    if intraday:
+                        today_vol = sum(int(c[5]) for c in intraday if len(c) > 5 and c[5] is not None)
+                        if today_vol > 0 and raw:
+                            # Update today's candle with live aggregate volume if greater
+                            raw_last = raw[-1]
+                            raw_last_vol = raw_last[5] if isinstance(raw_last, (list, tuple)) and len(raw_last) > 5 else 0
+                            if isinstance(raw_last, list) and today_vol > (raw_last_vol or 0):
+                                raw_last[5] = today_vol
+                except Exception:
+                    pass
+            else:
+                historical_end = today - timedelta(days=1)
+                previous = await upstox.get_historical_candles_v3(
+                    key, unit, interval, historical_end.isoformat(), start.isoformat())
+                try:
+                    intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
+                except Exception:
+                    intraday = []
+                raw = [*previous, *intraday]
         else:
             raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())
     except (UpstoxApiError, Exception) as exc:
         # Fall back to verified historical daily candles if Upstox API is unavailable/unauthenticated
         from app.services.historical_data_service import historical_data_service
+        from app.services.db_service import db_service
         clean_sym = symbol.upper()
         if clean_sym in ("NIFTY", "NIFTY 50", "NIFTY50"):
             clean_sym = "RELIANCE"  # Proxy benchmark if index candles not separately cached
@@ -67,21 +83,30 @@ async def get_chart_candles(
         if before:
             candles_source = [c for c in candles_source if c["trading_date"] < before]
 
+        # Check live scan for today's live volume
+        scan = db_service.get_latest_daily_scan()
+        stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
+        live_vol = int(stock_live.get("volume") or 0) if stock_live else 0
+
         raw_fallback = []
         for c in candles_source:
             try:
                 dt = datetime.strptime(c["trading_date"], "%Y-%m-%d").replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                vol = int(c.get("volume", 0))
                 raw_fallback.append({
                     "time": int(dt.timestamp()),
                     "open": float(c["open"]),
                     "high": float(c["high"]),
                     "low": float(c["low"]),
                     "close": float(c["close"]),
-                    "volume": int(c.get("volume", 0)),
+                    "volume": vol,
                     "oi": c.get("oi", 0)
                 })
             except Exception:
                 continue
+
+        if raw_fallback and live_vol > 0 and not before:
+            raw_fallback[-1]["volume"] = max(raw_fallback[-1]["volume"], live_vol)
 
         raw = raw_fallback
         source_label = "NSE Verified Historical Archive"

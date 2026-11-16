@@ -124,44 +124,34 @@ export const GlobalEventsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [sumData, prefData] = await Promise.all([
+      const getEventsPromise = () => {
+        if (tab === 'all') return fetchGlobalEvents();
+        if (tab === 'india') return fetchSubCalendar('india');
+        if (tab === 'today') return fetchSubCalendar('today');
+        if (tab === '7days') return fetchGlobalEvents({ timeframe: '7d' });
+        if (tab === '30days') return fetchGlobalEvents({ timeframe: '30d' });
+        if (tab === '90days') return fetchGlobalEvents({ timeframe: '90d' });
+        if (tab === 'central-banks') return fetchSubCalendar('central-banks');
+        if (tab === 'inflation') return fetchSubCalendar('inflation');
+        if (tab === 'gdp-pmi') return fetchSubCalendar('gdp-pmi');
+        if (tab === 'geopolitical') return fetchSubCalendar('geopolitical');
+        if (tab === 'commodities') return fetchSubCalendar('commodities');
+        if (tab === 'holidays') return fetchSubCalendar('holidays');
+        return fetchGlobalEvents();
+      };
+
+      const [sumData, prefData, eventsData] = await Promise.all([
         fetchGlobalEventsSummary().catch(() => null),
         fetchUserPreferences().catch(() => ({
           alert_24h: true, alert_1h: true, alert_15m: true,
           alert_results: true, alert_postponed: false,
           preferred_countries: '', preferred_categories: ''
-        }))
+        })),
+        getEventsPromise().catch(() => [])
       ]);
       setSummary(sumData);
       setPreferences(prefData);
-
-      let eventsData: GlobalEvent[] = [];
-      if (tab === 'all') {
-        eventsData = await fetchGlobalEvents();
-      } else if (tab === 'india') {
-        eventsData = await fetchSubCalendar('india');
-      } else if (tab === 'today') {
-        eventsData = await fetchSubCalendar('today');
-      } else if (tab === '7days') {
-        eventsData = await fetchGlobalEvents({ timeframe: '7d' });
-      } else if (tab === '30days') {
-        eventsData = await fetchGlobalEvents({ timeframe: '30d' });
-      } else if (tab === '90days') {
-        eventsData = await fetchGlobalEvents({ timeframe: '90d' });
-      } else if (tab === 'central-banks') {
-        eventsData = await fetchSubCalendar('central-banks');
-      } else if (tab === 'inflation') {
-        eventsData = await fetchSubCalendar('inflation');
-      } else if (tab === 'gdp-pmi') {
-        eventsData = await fetchSubCalendar('gdp-pmi');
-      } else if (tab === 'geopolitical') {
-        eventsData = await fetchSubCalendar('geopolitical');
-      } else if (tab === 'commodities') {
-        eventsData = await fetchSubCalendar('commodities');
-      } else if (tab === 'holidays') {
-        eventsData = await fetchSubCalendar('holidays');
-      }
-      setEvents(eventsData);
+      setEvents(eventsData || []);
     } catch (err: any) {
       console.error('Failed to load global events calendar:', err);
       setError('Failed to fetch global events. Please check backend connection.');

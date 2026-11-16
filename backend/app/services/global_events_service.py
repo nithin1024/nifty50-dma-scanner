@@ -9,6 +9,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 import json
 import logging
+import time
 from app.database.session import SessionLocal
 from app.models.global_event import GlobalEventModel, EventUpdateHistoryModel, UserEventPreferenceModel
 from app.services.timezone_service import (
@@ -1106,13 +1107,21 @@ class GlobalEventsService:
 
     def __init__(self):
         self._initialized = False
+        self._events_cache: Dict[str, Any] = {}
 
     def init_database_events(self):
-        """Seeds master global events into database if missing."""
+        """Seeds master global events into database if missing with bulk fast-path."""
         db = SessionLocal()
         try:
+            existing_count = db.query(GlobalEventModel).count()
+            if existing_count >= len(MASTER_GLOBAL_EVENTS):
+                self._initialized = True
+                return
+
+            existing_ids = {r[0] for r in db.query(GlobalEventModel.id).all()}
             for item in MASTER_GLOBAL_EVENTS:
-                existing = db.query(GlobalEventModel).filter(GlobalEventModel.id == item["id"]).first()
+                if item["id"] in existing_ids:
+                    continue
                 # Compute exact timestamps
                 time_info = convert_local_to_utc_and_ist(
                     year=item["year"],
@@ -1200,6 +1209,12 @@ class GlobalEventsService:
         timeframe: Optional[str] = None  # TODAY, 7_DAYS, 30_DAYS, 90_DAYS
     ) -> List[Dict[str, Any]]:
         """Queries events with advanced filtering and dynamically attaches live countdowns."""
+        cache_key = f"{category}_{country_code}_{importance}_{search_query}_{timeframe}"
+        now_ts = time.time()
+        cached = self._events_cache.get(cache_key)
+        if cached and (now_ts - cached.get("ts", 0)) < 15.0:
+            return cached["data"]
+
         if not self._initialized:
             self.init_database_events()
 
@@ -1293,6 +1308,7 @@ class GlobalEventsService:
                     "last_verified_timestamp": r.last_verified_timestamp.isoformat() if r.last_verified_timestamp else None,
                 })
 
+            self._events_cache[cache_key] = {"data": results, "ts": now_ts}
             return results
         finally:
             db.close()

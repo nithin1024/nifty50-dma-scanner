@@ -346,7 +346,7 @@ async def get_technical_support_resistance(symbol: str = Query("NIFTY")) -> Dict
 @router.get("/chain")
 async def get_option_chain(
     symbol: str = Query("NIFTY", description="NIFTY, BANKNIFTY or F&O constituent stock"),
-    strike_range: int = Query(10, ge=5, le=25, description="Number of strikes above and below ATM"),
+    strike_range: int = Query(5, ge=5, le=25, description="Number of strikes above and below ATM"),
     expiry: Optional[str] = Query(None, description="Target expiry date (e.g. 20-NOV-2026)"),
     snapshot_time: Optional[str] = Query(None, description="Optional ISO timestamp of a past snapshot")
 ) -> Dict[str, Any]:

@@ -454,7 +454,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
               symbol={selectedSymbol}
               availableSymbols={availableSymbols}
               onSymbolChange={setSelectedSymbol}
-              initialTimeframe="1Y"
+              initialTimeframe="1D"
               height={460}
             />
           </div>
