@@ -39,11 +39,21 @@ class HistoricalDataService:
         for d in [HISTORICAL_DATA_DIR, ROOT_HISTORICAL_DIR, CACHE_DIR, ROOT_CACHE_DIR, LOGS_DIR, ROOT_LOGS_DIR]:
             d.mkdir(parents=True, exist_ok=True)
 
-    def _get_cache_paths(self, symbol: str) -> List[Path]:
+    def _get_cache_paths(self, symbol: str, range_period: str = "1y", *args, **kwargs) -> List[Path]:
+        suffix = f"_{range_period.upper()}" if str(range_period).lower() not in ("1y", "1year", "") else ""
         return [
-            HISTORICAL_DATA_DIR / f"{symbol.upper()}.json",
-            ROOT_HISTORICAL_DIR / f"{symbol.upper()}.json"
+            HISTORICAL_DATA_DIR / f"{symbol.upper()}{suffix}.json",
+            ROOT_HISTORICAL_DIR / f"{symbol.upper()}{suffix}.json"
         ]
+
+    def _resolve_cache_paths(self, symbol: str, range_period: str = "1y") -> List[Path]:
+        try:
+            return self._get_cache_paths(symbol, range_period=range_period)
+        except TypeError:
+            try:
+                return self._get_cache_paths(symbol, range_period)
+            except TypeError:
+                return self._get_cache_paths(symbol)
 
     def validate_candle(self, c: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate candle OHLC integrity."""
@@ -117,16 +127,18 @@ class HistoricalDataService:
         3. Fallback to local verified cache if network error.
         """
         clean_symbol = symbol.strip().upper()
+        clean_range = range_period.lower().strip()
+        min_sessions = 1000 if clean_range in ("5y", "5-year") else (500 if clean_range in ("3y", "2y") else MIN_REQUIRED_SESSIONS)
 
         if not force_refresh:
-            cached = self.get_cached_history(clean_symbol)
-            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+            cached = self.get_cached_history(clean_symbol, range_period=clean_range)
+            if cached and len(cached.get("candles", [])) >= min_sessions:
                 return cached
 
         try:
-            upstox_history = await self._fetch_upstox_daily(clean_symbol, range_period)
+            upstox_history = await self._fetch_upstox_daily(clean_symbol, clean_range)
             if upstox_history and len(upstox_history.get("candles", [])) > 0:
-                for cache_path in self._get_cache_paths(clean_symbol):
+                for cache_path in self._resolve_cache_paths(clean_symbol, range_period=clean_range):
                     try:
                         with open(cache_path, "w", encoding="utf-8") as cache_file:
                             json.dump(upstox_history, cache_file, indent=2)
@@ -135,13 +147,13 @@ class HistoricalDataService:
                 return upstox_history
         except upstox.UpstoxApiError as exc:
             logger.warning("Upstox historical data not authenticated or unavailable for %s (%s)", clean_symbol, exc.message)
-            cached = self.get_cached_history(clean_symbol)
-            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+            cached = self.get_cached_history(clean_symbol, range_period=clean_range)
+            if cached and len(cached.get("candles", [])) >= min_sessions:
                 return cached
         except Exception as exc:
             logger.warning("Upstox historical data unavailable for %s (%s)", clean_symbol, type(exc).__name__)
-            cached = self.get_cached_history(clean_symbol)
-            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+            cached = self.get_cached_history(clean_symbol, range_period=clean_range)
+            if cached and len(cached.get("candles", [])) >= min_sessions:
                 return cached
 
         tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
@@ -260,8 +272,8 @@ class HistoricalDataService:
             "candles": []
         }
 
-    def get_cached_history(self, symbol: str) -> Optional[Dict[str, Any]]:
-        for cache_file in self._get_cache_paths(symbol):
+    def get_cached_history(self, symbol: str, range_period: str = "1y") -> Optional[Dict[str, Any]]:
+        for cache_file in self._resolve_cache_paths(symbol, range_period=range_period):
             if cache_file.exists():
                 try:
                     with open(cache_file, "r", encoding="utf-8") as f:

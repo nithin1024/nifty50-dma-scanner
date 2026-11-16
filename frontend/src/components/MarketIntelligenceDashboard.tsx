@@ -101,7 +101,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
     }
   };
 
-  const data = (intelligence?.fii_dii_cash_activity ? intelligence : upstoxReport) || {};
+  const data = (upstoxReport?.fii_dii_cash_activity ? upstoxReport : intelligence) || {};
 
   if (!data?.fii_dii_cash_activity) {
     return (
@@ -145,11 +145,12 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   const historySlice = cashTimeframe === '5D' ? rawHistory.slice(0, 5) : cashTimeframe === '10D' ? rawHistory.slice(0, 10) : rawHistory.slice(0, 20);
   const chronologicalHistory = [...historySlice].reverse();
 
-  // Find max absolute flow for dual-series graph scaling
-  const maxAbsFlow = Math.max(
+  // Find max absolute flow for dual-series graph scaling with dynamic padding
+  const peakFlow = Math.max(
     ...chronologicalHistory.map(s => Math.max(Math.abs(s.fii_net || 0), Math.abs(s.dii_net || 0))),
-    10000
+    1000
   );
+  const maxAbsFlow = Math.ceil(peakFlow / 500) * 500 || 5000;
 
   const navTabs: { id: MacroTab; label: string; icon: React.ReactNode }[] = [
     { id: 'ALL', label: 'All Intelligence', icon: <Globe className="w-3.5 h-3.5" /> },
@@ -306,7 +307,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     <span>1. FII &amp; DII Institutional Cash Market Activity (Equity &amp; Debt)</span>
                   </h3>
                   <span className="text-[11px] text-slate-400 font-mono">
-                    Session Date: {fii_dii_cash_activity.session_date} &bull; Net Flow = Gross Purchases - Gross Sales
+                    Session Date: <strong className="text-white">{fii_dii_cash_activity.session_date}</strong> &bull; Released Daily Post-Market Close by NSE (~7:15 PM IST) &bull; Net Flow = Gross Purchases - Gross Sales
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -318,8 +319,8 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     <Download className="w-3.5 h-3.5" />
                     <span>Export CSV</span>
                   </a>
-                  <span className="text-xs px-2.5 py-1 rounded bg-sky-500/10 text-sky-400 font-mono font-bold border border-sky-500/20">
-                    NSE OFFICIAL
+                  <span className="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-mono font-bold border border-emerald-500/20" title="NSE official institutional cash turnover (released post-market each trading session)">
+                    NSE OFFICIAL EOD
                   </span>
                 </div>
               </div>

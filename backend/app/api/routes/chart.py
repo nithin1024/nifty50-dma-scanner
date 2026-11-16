@@ -41,11 +41,14 @@ async def get_chart_candles(
                     "3Y": 365 * 3 + 5, "5Y": 365 * 5 + 10}.get(timeframe, 370)
     start = end - timedelta(days=lookback)
     try:
-        if unit in ("minutes", "hours") and not before and end == today:
+        if not before and end == today:
             historical_end = today - timedelta(days=1)
             previous = await upstox.get_historical_candles_v3(
                 key, unit, interval, historical_end.isoformat(), start.isoformat())
-            intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
+            try:
+                intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
+            except Exception:
+                intraday = []
             raw = [*previous, *intraday]
         else:
             raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { fetchEmaScanner, fetchStockDetails } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { ProfessionalTradingChart } from '../components/ProfessionalTradingChart';
 import type { StockDetailsResponse } from '../types';
 
 interface EmaRecord {
@@ -114,6 +115,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
 
   // Selected Stock for Interactive Line Chart
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE');
+  const [chartView, setChartView] = useState<'upstox' | 'corridor'>('upstox');
   const [chartSessions, setChartSessions] = useState<number>(15);
   const [stockDetails, setStockDetails] = useState<StockDetailsResponse | null>(null);
   const [chartLoading, setChartLoading] = useState<boolean>(false);
@@ -168,6 +170,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
 
   const records: EmaRecord[] = data?.all_results || [];
   const selectedRecord = records.find(r => r.symbol === selectedSymbol);
+  const availableSymbols = useMemo(() => records.map(r => r.symbol), [records]);
 
   // Filtered by search and active group
   const filteredRecords = useMemo(() => {
@@ -367,24 +370,53 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Session Count Selector */}
-            <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
-              {[10, 15, 30].map(s => (
-                <button
-                  key={s}
-                  onClick={() => setChartSessions(s)}
-                  className={`px-2.5 py-1 rounded font-bold transition-all ${
-                    chartSessions === s ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {s}-Sessions
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Switcher: Upstox Pro Candlestick vs Corridor */}
+            <div className="flex items-center bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setChartView('upstox')}
+                className={`px-3 py-1 rounded font-bold transition-all flex items-center space-x-1.5 ${
+                  chartView === 'upstox'
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>Upstox Pro Chart</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartView('corridor')}
+                className={`px-3 py-1 rounded font-bold transition-all flex items-center space-x-1.5 ${
+                  chartView === 'corridor'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>RSI Corridor</span>
+              </button>
             </div>
+
+            {chartView === 'corridor' && (
+              <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
+                {[10, 15, 30].map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setChartSessions(s)}
+                    className={`px-2.5 py-1 rounded font-bold transition-all ${
+                      chartSessions === s ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s}-Sessions
+                  </button>
+                ))}
+              </div>
+            )}
 
             {onSelectStock && (
               <button
+                type="button"
                 onClick={() => onSelectStock(selectedSymbol)}
                 className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold"
                 title="Inspect 5-year multi-year candles in Historical view"
@@ -399,9 +431,10 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
         {/* Quick Stock Selector Chips */}
         <div className="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar text-xs font-mono">
           <span className="text-[11px] text-slate-500 font-sans uppercase font-bold shrink-0">Quick Inspect:</span>
-          {records.slice(0, 8).map(stock => (
+          {records.slice(0, 10).map(stock => (
             <button
               key={stock.symbol}
+              type="button"
               onClick={() => setSelectedSymbol(stock.symbol)}
               className={`px-2 py-0.5 rounded-md text-[11px] transition-all shrink-0 border ${
                 selectedSymbol === stock.symbol
@@ -414,8 +447,19 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
           ))}
         </div>
 
-        {/* SVG Line Graph Area */}
-        <div className="bg-[#0B0E14] rounded-lg border border-[#232E47]/70 p-3">
+        {/* Primary Chart Area: Upstox Pro Chart or Corridor View */}
+        {chartView === 'upstox' ? (
+          <div className="rounded-xl overflow-hidden border border-[#232E47] bg-[#0B0E14]">
+            <ProfessionalTradingChart
+              symbol={selectedSymbol}
+              availableSymbols={availableSymbols}
+              onSymbolChange={setSelectedSymbol}
+              initialTimeframe="1Y"
+              height={460}
+            />
+          </div>
+        ) : (
+          <div className="bg-[#0B0E14] rounded-lg border border-[#232E47]/70 p-3">
           {chartLoading ? (
             <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs">
               <RefreshCw className="w-6 h-6 text-amber-400 animate-spin mb-2" />
@@ -687,6 +731,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* 3. Controls & Configurable RSI Corridor Toolbar */}

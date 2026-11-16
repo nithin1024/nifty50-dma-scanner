@@ -37,6 +37,39 @@ const getIstSessionDate = (timestampMs: number): string => new Intl.DateTimeForm
   timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
 }).format(new Date(timestampMs));
 
+const formatCandleLegendTime = (
+  timeVal: any,
+  tf: string,
+  isLatest: boolean = false,
+  isLive: boolean = false
+): string => {
+  if (timeVal == null) return '—';
+  const timestampMs = typeof timeVal === 'number' ? timeVal * 1000 : new Date(timeVal).getTime();
+  if (isNaN(timestampMs)) return String(timeVal);
+
+  const intraday = ['1m', '5m', '15m', '1h'].includes(tf);
+  if (intraday) {
+    const formatted = new Date(timestampMs).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    return isLatest && isLive ? `${formatted} (Live Bar)` : formatted;
+  } else {
+    const formatted = new Date(timestampMs).toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    return isLatest && isLive ? `${formatted} (Today Live)` : formatted;
+  }
+};
+
 interface ProfessionalTradingChartProps {
   symbol?: string;
   className?: string;
@@ -103,6 +136,14 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   } | null>(null);
   const [feedStatus, setFeedStatus] = useState('WAITING');
   const [feedTimestamps, setFeedTimestamps] = useState<{ exchange: string | null; received: string | null; frontend: string | null }>({ exchange: null, received: null, frontend: null });
+  const [liveClock, setLiveClock] = useState<string>(() => new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveClock(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   const [liveFollow, setLiveFollow] = useState(true);
   const [olderLoading, setOlderLoading] = useState(false);
   const [hasOlder, setHasOlder] = useState(true);
@@ -491,7 +532,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
       const prevClose = selectedIndex > 0 ? candlesData[selectedIndex - 1].close : selected.open;
       const chg = selected.close - prevClose;
       setActiveLegend({
-        time: typeof selected.time === 'number' ? new Date(selected.time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : String(selected.time),
+        time: formatCandleLegendTime(selected.time, timeframe, selectedIndex === latestIndex, feedStatus === 'LIVE'),
         open: selected.open,
         high: selected.high,
         low: selected.low,
@@ -542,7 +583,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         const chg = match ? closeVal - prevClose : 0;
 
         setActiveLegend({
-          time: typeof param.time === 'number' ? new Date((param.time as number) * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : String(param.time),
+          time: formatCandleLegendTime(param.time, timeframe, matchedIndex === currentCandles.length - 1, feedStatus === 'LIVE'),
           open: openVal,
           high: highVal,
           low: lowVal,
@@ -698,7 +739,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     const previousClose = resolvedIndex > 0 ? candlesData[resolvedIndex - 1].close : selected.open;
     const change = selected.close - previousClose;
     setActiveLegend({
-      time: typeof selected.time === 'number' ? new Date(selected.time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : String(selected.time),
+      time: formatCandleLegendTime(selected.time, timeframe, resolvedIndex === latestIndex, feedStatus === 'LIVE'),
       open: selected.open, high: selected.high, low: selected.low, close: selected.close,
       volume: selected.volume, vwap: selected.vwap, oi: selected.oi, iv: selected.iv,
       delta: selected.delta, gamma: selected.gamma, theta: selected.theta, vega: selected.vega,
@@ -762,11 +803,14 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
             <h3 className="text-sm sm:text-base font-black text-white tracking-wide font-mono">
               {displayName && chartSymbol === symbol ? displayName : chartSymbol} &bull; {timeframe.toUpperCase()}
             </h3>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${feedStatus === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}`}>
               {feedStatus}
             </span>
-            <span className="inline text-[8px] sm:text-[9px] text-slate-500" title={`Exchange timestamp: ${feedTimestamps.exchange || 'waiting'}; server received: ${feedTimestamps.received || 'waiting'}; frontend received: ${feedTimestamps.frontend || 'waiting'}`}>
-              Exch {feedTimestamps.exchange ? new Date(feedTimestamps.exchange).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'} · Srv {feedTimestamps.received ? new Date(feedTimestamps.received).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'} · UI {feedTimestamps.frontend ? new Date(feedTimestamps.frontend).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
+            <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              IST {liveClock}
+            </span>
+            <span className="hidden sm:inline text-[8px] sm:text-[9px] text-slate-500" title={`Exchange timestamp: ${feedTimestamps.exchange || 'waiting'}; server received: ${feedTimestamps.received || 'waiting'}; frontend received: ${feedTimestamps.frontend || 'waiting'}`}>
+              {feedTimestamps.exchange ? `Exch ${new Date(feedTimestamps.exchange).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}` : ''}
             </span>
           </div>
 
@@ -883,8 +927,11 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
 
       {/* Synchronized OHLC Legend Header */}
       {activeLegend && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-slate-300 bg-[#121824] px-3 py-1.5 rounded-lg border border-[#232E47]/70">
-          <span className="text-slate-400">Time: <strong className="text-white">{activeLegend.time}</strong></span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-slate-300 bg-[#121824] px-3 py-1.5 rounded-lg border border-[#232E47]/70">
+          <span className="text-slate-400">
+            {['1m', '5m', '15m', '1h'].includes(timeframe) ? 'Bar: ' : 'Session: '}
+            <strong className="text-white">{activeLegend.time}</strong>
+          </span>
           <span>O: <strong className="text-white">₹{activeLegend.open?.toLocaleString()}</strong></span>
           <span>H: <strong className="text-emerald-400">₹{activeLegend.high?.toLocaleString()}</strong></span>
           <span>L: <strong className="text-rose-400">₹{activeLegend.low?.toLocaleString()}</strong></span>
@@ -958,8 +1005,11 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
             </thead>
             <tbody className="divide-y divide-[#232E47]/40 text-slate-300">
               {candlesData.slice().reverse().map((c, idx) => {
+                const isIntraday = ['1m', '5m', '15m', '1h'].includes(timeframe);
                 const timeLabel = typeof c.time === 'number' 
-                  ? new Date(c.time * 1000).toLocaleString('en-IN') 
+                  ? (isIntraday 
+                      ? new Date(c.time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+                      : new Date(c.time * 1000).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }))
                   : String(c.time);
                 const isBullish = c.close >= c.open;
                 return (

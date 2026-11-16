@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, Dict, Any
 import asyncio
+import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 from app.services.options_universe_service import options_universe_service
 from app.services.options_analytics_engine import options_analytics_engine
@@ -348,7 +351,7 @@ async def get_option_chain(
     snapshot_time: Optional[str] = Query(None, description="Optional ISO timestamp of a past snapshot")
 ) -> Dict[str, Any]:
     """Return a chain built from Upstox's official option-chain response or historical snapshot."""
-    if snapshot_time:
+    if snapshot_time and isinstance(snapshot_time, str):
         from app.database.session import SessionLocal
         from app.models.option_snapshot import OptionOISnapshotModel
         db = SessionLocal()
