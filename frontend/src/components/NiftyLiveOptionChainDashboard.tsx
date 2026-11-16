@@ -17,6 +17,7 @@ import { ProfessionalTradingChart } from './ProfessionalTradingChart';
 import { 
   fetchFoUniverse, 
   fetchOptionChain, 
+  fetchOptionSnapshots,
   fetchExpiries, 
   fetchStrategyPayoff, 
   fetchOptionsAlerts, 
@@ -44,6 +45,11 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [strikeRange, setStrikeRange] = useState<number>(10);
   const [selectedExpiry, setSelectedExpiry] = useState<string>('');
   const [selectedOptionChart, setSelectedOptionChart] = useState<{ instrumentKey: string; label: string } | null>(null);
+  
+  // Snapshot mode states (Live vs Historical Past Data)
+  const [dataMode, setDataMode] = useState<'LIVE' | 'HISTORICAL'>('LIVE');
+  const [pastSnapshots, setPastSnapshots] = useState<any[]>([]);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<string>('');
   
   // Data states
   const [universe, setUniverse] = useState<any[]>([]);
@@ -296,7 +302,18 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
     return () => { cancelled = true; };
   }, [symbol]);
 
-  // Load option chain when symbol, strike range, or expiry changes
+  // Load available historical option-chain snapshots
+  useEffect(() => {
+    fetchOptionSnapshots(symbol).then(res => {
+      const snaps = res.snapshots || [];
+      setPastSnapshots(snaps);
+      if (snaps.length > 0 && !selectedSnapshot) {
+        setSelectedSnapshot(snaps[0].captured_at);
+      }
+    }).catch(() => {});
+  }, [symbol]);
+
+  // Load option chain when symbol, strike range, expiry, or snapshot mode changes
   const loadOptionChain = async () => {
     const requestId = ++chainRequestRef.current;
     if (expiriesForSymbol !== symbol || !selectedExpiry) {
@@ -307,19 +324,21 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
     setLoading(true);
     setChainError(null);
     try {
-      const data = await fetchOptionChain(symbol, strikeRange, selectedExpiry || undefined);
+      const snapTime = dataMode === 'HISTORICAL' ? selectedSnapshot : undefined;
+      const data = await fetchOptionChain(symbol, strikeRange, selectedExpiry || undefined, snapTime);
       if (requestId !== chainRequestRef.current) return;
       setChainData(data);
-      const instrumentKeys = (data.rows || []).flatMap((row: any) => [row.ce?.instrument_key, row.pe?.instrument_key]).filter(Boolean);
-      if (feedSocketRef.current?.readyState === WebSocket.OPEN) {
-        feedSocketRef.current.send(JSON.stringify({ mode: 'full', instrumentKeys }));
+      if (dataMode === 'LIVE') {
+        const instrumentKeys = (data.rows || []).flatMap((row: any) => [row.ce?.instrument_key, row.pe?.instrument_key]).filter(Boolean);
+        if (feedSocketRef.current?.readyState === WebSocket.OPEN) {
+          feedSocketRef.current.send(JSON.stringify({ mode: 'full', instrumentKeys }));
+        }
       }
-      
       setMarketRegime(null);
     } catch (err) {
       if (requestId !== chainRequestRef.current) return;
       console.error('Error fetching option chain:', err);
-      setChainError(err instanceof Error ? err.message : 'Unable to retrieve verified Upstox option-chain data.');
+      setChainError(err instanceof Error ? err.message : 'Unable to retrieve verified option-chain data.');
     } finally {
       if (requestId === chainRequestRef.current) {
         setLoading(false);
@@ -331,7 +350,7 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   useEffect(() => {
     if (expiriesForSymbol !== symbol || !selectedExpiry) return;
     loadOptionChain();
-  }, [symbol, strikeRange, selectedExpiry, expiriesForSymbol]);
+  }, [symbol, strikeRange, selectedExpiry, expiriesForSymbol, dataMode, selectedSnapshot]);
 
   // Strategy payoff calculation
   useEffect(() => {
@@ -429,6 +448,45 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
               <option value={20}>ATM ±20</option>
             </select>
           </div>
+
+          {/* Data Mode Selector: Live vs Historical Past Snapshots */}
+          <div className="flex items-center space-x-1 p-0.5 bg-[#121824] rounded-lg border border-[#232E47]">
+            <button
+              onClick={() => setDataMode('LIVE')}
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                dataMode === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🔴 Live
+            </button>
+            <button
+              onClick={() => setDataMode('HISTORICAL')}
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                dataMode === 'HISTORICAL' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🕒 Past Snapshots
+            </button>
+          </div>
+
+          {dataMode === 'HISTORICAL' && (
+            <div className="flex items-center space-x-2 animate-in fade-in">
+              <span className="text-xs font-mono text-slate-400 font-bold uppercase">Snapshot:</span>
+              <select
+                value={selectedSnapshot}
+                onChange={(e) => setSelectedSnapshot(e.target.value)}
+                className="bg-[#121824] border border-sky-500/40 text-sky-300 font-mono font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-sky-400"
+              >
+                {pastSnapshots.length ? pastSnapshots.map(snap => (
+                  <option key={snap.captured_at} value={snap.captured_at}>
+                    {snap.display_time} ({snap.contracts} contracts)
+                  </option>
+                )) : (
+                  <option value="">No historical snapshots archived yet</option>
+                )}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Live Feed Status & Quick Stats */}
@@ -625,117 +683,162 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232E47]/40">
-                {chainData.rows.map((row: any) => {
-                  const isAtm = row.is_atm;
-                  const ceItm = row.ce.classification === 'ITM';
-                  const peItm = row.pe.classification === 'ITM';
+                {(() => {
+                  const supportStrike = chainData?.support_resistance?.strong_support?.strike;
+                  const resistanceStrike = chainData?.support_resistance?.strong_resistance?.strike;
+                  const maxPainStrike = chainData?.max_pain?.max_pain_strike;
 
-                  return (
-                    <tr 
-                      key={row.strike_price}
-                      className={`hover:bg-[#1a2334] transition-colors ${
-                        isAtm ? 'bg-amber-500/10 font-bold' : ''
-                      }`}
-                    >
-                      {/* CE Cells */}
-                      <td className={`py-1.5 px-1.5 text-left text-[10px] ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        <span className={`px-1 py-0.5 rounded ${
-                          row.ce.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
-                          row.ce.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
-                          'text-slate-400'
+                  return chainData.rows.map((row: any) => {
+                    const isAtm = row.is_atm;
+                    const ceItm = row.ce.classification === 'ITM';
+                    const peItm = row.pe.classification === 'ITM';
+                    const isResistance = row.strike_price === resistanceStrike;
+                    const isSupport = row.strike_price === supportStrike;
+                    const isMaxPain = row.strike_price === maxPainStrike;
+
+                    return (
+                      <tr 
+                        key={row.strike_price}
+                        className={`hover:bg-[#1a2334] transition-colors ${
+                          isAtm ? 'bg-amber-500/10 font-bold' : ''
+                        }`}
+                      >
+                        {/* CE Cells */}
+                        <td className={`py-1.5 px-1.5 text-left text-[10px] ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          <span className={`px-1 py-0.5 rounded ${
+                            row.ce.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
+                            row.ce.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
+                            'text-slate-400'
+                          }`}>
+                            {row.ce.buildup}
+                          </span>
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {displayMetric(row.ce.previous_oi)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right font-medium text-slate-300 ${ceItm ? 'bg-emerald-950/20' : ''} ${
+                          isResistance ? 'bg-rose-950/40 ring-1 ring-rose-500/50' : ''
                         }`}>
-                          {row.ce.buildup}
-                        </span>
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {displayMetric(row.ce.previous_oi)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right font-medium text-slate-300 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {displayMetric(row.ce.oi)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right font-medium ${
-                        row.ce.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      } ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.oi_change == null ? 'N/A' : `${row.ce.oi_change >= 0 ? '+' : ''}${displayMetric(row.ce.oi_change)}`}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {displayMetric(row.ce.volume)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {displayMetric(row.ce.iv, row.ce.iv == null ? '' : '%')}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-sky-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {displayMetric(row.ce.delta)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                        {row.ce.previous_close == null ? 'N/A' : `₹${displayMetric(row.ce.previous_close)}`}
-                      </td>
-                      <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
-                        {row.ce.instrument_key ? (
-                          <button type="button" onClick={() => setSelectedOptionChart({
-                            instrumentKey: row.ce.instrument_key,
-                            label: `${symbol} ${selectedExpiry} ${row.strike_price} CE`
-                          })} title={`Open chart for ${symbol} ${row.strike_price} CE`} className="text-right hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
-                            <span>{row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}</span>
-                            <span className="block text-[8px] font-normal text-sky-400">Chart</span>
-                          </button>
-                        ) : row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
-                      </td>
+                          {isResistance && (
+                            <div className="text-[8px] font-bold text-rose-400 font-mono tracking-wider">RESISTANCE WALL</div>
+                          )}
+                          <span className={isResistance ? 'text-white font-bold text-xs' : ''}>
+                            {displayMetric(row.ce.oi)}
+                          </span>
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right font-medium ${
+                          row.ce.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        } ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {row.ce.oi_change == null ? 'N/A' : `${row.ce.oi_change >= 0 ? '+' : ''}${displayMetric(row.ce.oi_change)}`}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {displayMetric(row.ce.volume)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {displayMetric(row.ce.iv, row.ce.iv == null ? '' : '%')}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-sky-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {displayMetric(row.ce.delta)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {row.ce.previous_close == null ? 'N/A' : `₹${displayMetric(row.ce.previous_close)}`}
+                        </td>
+                        <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
+                          {row.ce.instrument_key ? (
+                            <button type="button" onClick={() => setSelectedOptionChart({
+                              instrumentKey: row.ce.instrument_key,
+                              label: `${symbol} ${selectedExpiry} ${row.strike_price} CE`
+                            })} title={`Open chart for ${symbol} ${row.strike_price} CE`} className="text-right hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
+                              <span>{row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}</span>
+                              <span className="block text-[8px] font-normal text-sky-400">Chart</span>
+                            </button>
+                          ) : row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
+                        </td>
 
-                      {/* STRIKE PRICE */}
-                      <td className={`py-1.5 px-3 font-black text-white bg-[#121824] ${
-                        isAtm ? 'bg-amber-500/25 text-amber-300 border-x-2 border-amber-500' : ''
-                      }`}>
-                        {row.strike_price.toLocaleString()}
-                      </td>
+                        {/* STRIKE PRICE WITH EXPLICIT SUPPORT / RESISTANCE / MAX PAIN / ATM BADGES */}
+                        <td className={`py-1.5 px-3 font-black text-white bg-[#121824] text-center relative ${
+                          isAtm ? 'bg-amber-500/25 text-amber-300 border-x-2 border-amber-500' : ''
+                        } ${isSupport ? 'bg-emerald-950/35 border-x-2 border-emerald-500' : ''} ${isResistance ? 'bg-rose-950/35 border-x-2 border-rose-500' : ''}`}>
+                          <div className="flex flex-col items-center justify-center">
+                            {isResistance && (
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-500/25 text-rose-300 border border-rose-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
+                                🛡️ RESISTANCE
+                              </span>
+                            )}
+                            {isSupport && (
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
+                                🟢 SUPPORT
+                              </span>
+                            )}
+                            {isMaxPain && (
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
+                                🎯 MAX PAIN
+                              </span>
+                            )}
+                            <span className="text-sm font-mono font-bold tracking-tight">{row.strike_price.toLocaleString()}</span>
+                            {isAtm && (
+                              <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 mt-0.5">
+                                ATM
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* PE Cells */}
-                      <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
-                        {row.pe.instrument_key ? (
-                          <button type="button" onClick={() => setSelectedOptionChart({
-                            instrumentKey: row.pe.instrument_key,
-                            label: `${symbol} ${selectedExpiry} ${row.strike_price} PE`
-                          })} title={`Open chart for ${symbol} ${row.strike_price} PE`} className="text-left hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
-                            <span>{row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}</span>
-                            <span className="block text-[8px] font-normal text-sky-400">Chart</span>
-                          </button>
-                        ) : row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.previous_close == null ? 'N/A' : `₹${displayMetric(row.pe.previous_close)}`}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left text-sky-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {displayMetric(row.pe.delta)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {displayMetric(row.pe.iv, row.pe.iv == null ? '' : '%')}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {displayMetric(row.pe.volume)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left font-medium ${
-                        row.pe.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      } ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {row.pe.oi_change == null ? 'N/A' : `${row.pe.oi_change >= 0 ? '+' : ''}${displayMetric(row.pe.oi_change)}`}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left font-medium text-slate-300 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {displayMetric(row.pe.oi)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        {displayMetric(row.pe.previous_oi)}
-                      </td>
-                      <td className={`py-1.5 px-1.5 text-right text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
-                        <span className={`px-1 py-0.5 rounded ${
-                          row.pe.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
-                          row.pe.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
-                          'text-slate-400'
+                        {/* PE Cells */}
+                        <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
+                          {row.pe.instrument_key ? (
+                            <button type="button" onClick={() => setSelectedOptionChart({
+                              instrumentKey: row.pe.instrument_key,
+                              label: `${symbol} ${selectedExpiry} ${row.strike_price} PE`
+                            })} title={`Open chart for ${symbol} ${row.strike_price} PE`} className="text-left hover:text-sky-300 focus-visible:outline focus-visible:outline-sky-400">
+                              <span>{row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}</span>
+                              <span className="block text-[8px] font-normal text-sky-400">Chart</span>
+                            </button>
+                          ) : row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {row.pe.previous_close == null ? 'N/A' : `₹${displayMetric(row.pe.previous_close)}`}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left text-sky-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {displayMetric(row.pe.delta)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {displayMetric(row.pe.iv, row.pe.iv == null ? '' : '%')}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {displayMetric(row.pe.volume)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left font-medium ${
+                          row.pe.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        } ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {row.pe.oi_change == null ? 'N/A' : `${row.pe.oi_change >= 0 ? '+' : ''}${displayMetric(row.pe.oi_change)}`}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left font-medium text-slate-300 ${peItm ? 'bg-rose-950/20' : ''} ${
+                          isSupport ? 'bg-emerald-950/40 ring-1 ring-emerald-500/50' : ''
                         }`}>
-                          {row.pe.buildup}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          {isSupport && (
+                            <div className="text-[8px] font-bold text-emerald-400 font-mono tracking-wider">SUPPORT BASE</div>
+                          )}
+                          <span className={isSupport ? 'text-white font-bold text-xs' : ''}>
+                            {displayMetric(row.pe.oi)}
+                          </span>
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {displayMetric(row.pe.previous_oi)}
+                        </td>
+                        <td className={`py-1.5 px-1.5 text-right text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          <span className={`px-1 py-0.5 rounded ${
+                            row.pe.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
+                            row.pe.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
+                            'text-slate-400'
+                          }`}>
+                            {row.pe.buildup}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>

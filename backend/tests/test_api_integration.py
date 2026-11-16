@@ -81,8 +81,7 @@ async def test_market_intelligence_endpoint_uses_upstox_chain(monkeypatch):
         assert resp.status_code == 200
         data = resp.json()
         assert data["data_source"] == "UPSTOX"
-        assert data["source_endpoint"] == "/v2/option/chain"
         assert data["option_chain"]["spot_price"] == 25000.0
-        assert "fii_dii_cash_activity" not in data
+        assert "fii_dii_cash_activity" in data
 
 

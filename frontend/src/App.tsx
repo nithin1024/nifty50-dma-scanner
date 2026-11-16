@@ -12,7 +12,6 @@ import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
 import { NiftyLiveOptionChainDashboard } from './components/NiftyLiveOptionChainDashboard';
-import { ProfessionalTradingChart } from './components/ProfessionalTradingChart';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -128,14 +127,14 @@ export const App: React.FC = () => {
     : ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK'];
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#0B0E14] text-slate-100 flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       <Navbar 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         backendOnline={backendOnline} 
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
         {activeTab === 'overview' && (
           <MarketOverview 
             health={health}
@@ -154,12 +153,11 @@ export const App: React.FC = () => {
           <NiftyLiveOptionChainDashboard />
         )}
 
-        {activeTab === 'trading-chart' && (
-          <ProfessionalTradingChart
-            symbol={selectedStock || 'NIFTY'}
-            availableSymbols={availableSymbols}
+        {(activeTab === 'historical' || activeTab === 'trading-chart') && (
+          <StockDetails
+            selectedSymbol={selectedStock}
             onSymbolChange={setSelectedStock}
-            height={560}
+            availableSymbols={availableSymbols}
           />
         )}
 

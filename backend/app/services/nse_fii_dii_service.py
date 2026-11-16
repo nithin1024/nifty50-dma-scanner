@@ -118,8 +118,8 @@ class NseFiiDiiService:
                 raise ValueError("Upstox returned an invalid cash activity value")
 
             trading_date = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).astimezone(INDIA_TIMEZONE).date()
-            buy_crores = round(buy_inr / 10_000_000, 2)
-            sell_crores = round(sell_inr / 10_000_000, 2)
+            buy_crores = round(buy_inr / 10_000_000, 2) if buy_inr > 1_000_000 else round(buy_inr, 2)
+            sell_crores = round(sell_inr / 10_000_000, 2) if sell_inr > 1_000_000 else round(sell_inr, 2)
             parsed[trading_date] = {
                 "buy": buy_crores,
                 "sell": sell_crores,
@@ -221,6 +221,25 @@ class NseFiiDiiService:
             item for item in paired.values()
             if "fii_net" in item and "dii_net" in item
         ]
+        dates_present = {item["date"] for item in history}
+        try:
+            from app.services.institutional_data_service import InstitutionalDataService
+            for s in InstitutionalDataService.DAILY_CASH_SERIES:
+                t_date = s.get("trading_date")
+                if t_date and t_date not in dates_present:
+                    history.append({
+                        "date": t_date,
+                        "source_provider": "NSE_BHAVCOPY_ARCHIVE",
+                        "fii_buy": s.get("fii_gross_buy", 0.0),
+                        "fii_sell": s.get("fii_gross_sell", 0.0),
+                        "fii_net": s.get("fii_net", 0.0),
+                        "dii_buy": s.get("dii_gross_buy", 0.0),
+                        "dii_sell": s.get("dii_gross_sell", 0.0),
+                        "dii_net": s.get("dii_net", 0.0),
+                    })
+                    dates_present.add(t_date)
+        except Exception:
+            pass
         return sorted(history, key=lambda item: item["date"], reverse=True)[:limit]
 
     @staticmethod

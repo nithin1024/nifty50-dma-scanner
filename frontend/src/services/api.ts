@@ -312,15 +312,25 @@ export async function fetchFoUniverse(): Promise<any> {
 export async function fetchOptionChain(
   symbol: string = 'NIFTY',
   strikeRange: number = 10,
-  expiry?: string
+  expiry?: string,
+  snapshotTime?: string
 ): Promise<any> {
   const params = new URLSearchParams({
     symbol,
     strike_range: strikeRange.toString(),
   });
   if (expiry) params.append('expiry', expiry);
+  if (snapshotTime) params.append('snapshot_time', snapshotTime);
 
   const response = await fetch(`${API_BASE}/options/chain?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.json();
+}
+
+export async function fetchOptionSnapshots(symbol: string = 'NIFTY'): Promise<any> {
+  const response = await fetch(`${API_BASE}/options/snapshots?symbol=${encodeURIComponent(symbol)}`);
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }

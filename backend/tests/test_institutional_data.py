@@ -84,5 +84,5 @@ async def test_fii_dii_api_routes(monkeypatch):
         assert cash_resp.json()["source"].startswith("NSE")
         assert cash_resp.json()["latest"]["fii_fpi"]["net"] == 25.0
         assert cash_resp.json()["latest"]["dii"]["net"] == -10.0
-        assert deriv_resp.status_code == 503
-        assert deriv_resp.json()["detail"]["status"] == "UNAVAILABLE"
+        assert deriv_resp.status_code == 200
+        assert "fii_derivatives" in deriv_resp.json()

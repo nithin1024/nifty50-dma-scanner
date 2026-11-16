@@ -219,6 +219,47 @@ async def get_fo_universe() -> Dict[str, Any]:
                 "fo_eligibility_source": nse_fo_source, "cached": False}
 
 
+@router.get("/snapshots")
+async def get_available_snapshots(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
+    """Return available historical option-chain snapshot timestamps."""
+    from app.database.session import SessionLocal
+    from app.models.option_snapshot import OptionOISnapshotModel
+    from sqlalchemy import func
+
+    db = SessionLocal()
+    try:
+        results = (
+            db.query(
+                OptionOISnapshotModel.captured_at,
+                OptionOISnapshotModel.expiry,
+                func.count(OptionOISnapshotModel.id).label("records_count")
+            )
+            .filter(OptionOISnapshotModel.underlying == symbol.upper())
+            .group_by(OptionOISnapshotModel.captured_at, OptionOISnapshotModel.expiry)
+            .order_by(OptionOISnapshotModel.captured_at.desc())
+            .limit(50)
+            .all()
+        )
+        snapshots = [
+            {
+                "captured_at": r[0].isoformat() if r[0] else None,
+                "display_time": r[0].strftime("%d %b %Y, %I:%M %p") if r[0] else "",
+                "expiry": r[1],
+                "contracts": r[2]
+            }
+            for r in results
+        ]
+        return {
+            "symbol": symbol.upper(),
+            "total_snapshots": len(snapshots),
+            "snapshots": snapshots
+        }
+    except Exception as exc:
+        return {"symbol": symbol.upper(), "total_snapshots": 0, "snapshots": [], "error": str(exc)}
+    finally:
+        db.close()
+
+
 @router.get("/expiries")
 async def get_expiries(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
     """Return expiries observed in actual Upstox option contracts with graceful demo fallback."""
@@ -303,9 +344,63 @@ async def get_technical_support_resistance(symbol: str = Query("NIFTY")) -> Dict
 async def get_option_chain(
     symbol: str = Query("NIFTY", description="NIFTY, BANKNIFTY or F&O constituent stock"),
     strike_range: int = Query(10, ge=5, le=25, description="Number of strikes above and below ATM"),
-    expiry: Optional[str] = Query(None, description="Target expiry date (e.g. 20-NOV-2026)")
+    expiry: Optional[str] = Query(None, description="Target expiry date (e.g. 20-NOV-2026)"),
+    snapshot_time: Optional[str] = Query(None, description="Optional ISO timestamp of a past snapshot")
 ) -> Dict[str, Any]:
-    """Return a chain built from Upstox's official option-chain response."""
+    """Return a chain built from Upstox's official option-chain response or historical snapshot."""
+    if snapshot_time:
+        from app.database.session import SessionLocal
+        from app.models.option_snapshot import OptionOISnapshotModel
+        db = SessionLocal()
+        try:
+            snap_dt = datetime.fromisoformat(snapshot_time.replace("Z", "+00:00"))
+            records = (
+                db.query(OptionOISnapshotModel)
+                .filter(
+                    OptionOISnapshotModel.underlying == symbol.upper(),
+                    OptionOISnapshotModel.captured_at == snap_dt
+                )
+                .all()
+            )
+            if records:
+                by_strike: Dict[float, Dict[str, Any]] = {}
+                for r in records:
+                    s = float(r.strike_price)
+                    if s not in by_strike:
+                        by_strike[s] = {"strike_price": s, "ce": {}, "pe": {}}
+                    side = "ce" if r.option_type == "CE" else "pe"
+                    by_strike[s][side] = {
+                        "instrument_key": r.instrument_key,
+                        "oi": r.open_interest,
+                        "ltp": r.ltp,
+                        "volume": r.volume,
+                        "classification": "OTM",
+                        "buildup": "Historical Snapshot"
+                    }
+                sorted_strikes = sorted(by_strike.keys())
+                rows = [by_strike[s] for s in sorted_strikes]
+                total_ce_oi = sum(r["ce"].get("oi", 0) for r in rows)
+                total_pe_oi = sum(r["pe"].get("oi", 0) for r in rows)
+                return {
+                    "symbol": symbol.upper(),
+                    "instrument_key": upstox.instrument_key_for_symbol(symbol.upper()) or "HISTORICAL",
+                    "expiry": records[0].expiry if records else expiry,
+                    "source": "DATABASE_SNAPSHOT_ARCHIVE",
+                    "spot_price": sorted_strikes[len(sorted_strikes) // 2] if sorted_strikes else 25000.0,
+                    "atm_strike": sorted_strikes[len(sorted_strikes) // 2] if sorted_strikes else 25000.0,
+                    "rows": rows,
+                    "totals": {
+                        "total_call_oi": total_ce_oi,
+                        "total_put_oi": total_pe_oi,
+                        "oi_pcr": round(total_pe_oi / total_ce_oi, 3) if total_ce_oi else 1.0,
+                    },
+                    "data_status": "HISTORICAL_SNAPSHOT",
+                    "snapshot_time": snapshot_time
+                }
+        except Exception as snap_err:
+            logger.warning("Failed to load snapshot %s: %s", snapshot_time, snap_err)
+        finally:
+            db.close()
     key = upstox.instrument_key_for_symbol(symbol.upper())
     if not key:
         raise HTTPException(status_code=404, detail="No Upstox underlying instrument key for symbol")

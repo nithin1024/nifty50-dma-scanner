@@ -41,6 +41,7 @@ async def test_macro_api_routes():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         list_resp = await client.get("/api/v1/market-intelligence/macro-topics")
         gdp_resp = await client.get("/api/v1/market-intelligence/macro-topics/real-gdp")
-        assert list_resp.status_code == gdp_resp.status_code == 503
-        assert list_resp.json()["detail"]["status"] == "UNAVAILABLE"
-        assert gdp_resp.json()["detail"]["status"] == "UNAVAILABLE"
+        assert list_resp.status_code == 200
+        assert len(list_resp.json()) >= 20
+        assert gdp_resp.status_code == 200
+        assert gdp_resp.json()["id"] == "real-gdp"

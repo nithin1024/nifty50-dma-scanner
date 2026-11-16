@@ -26,6 +26,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline }) => {
   const { language, toggleLanguage, t } = useLanguage();
+  const [logoDropdownOpen, setLogoDropdownOpen] = React.useState(false);
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -34,34 +35,79 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
     { id: 'heavyweights', label: '4. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
     { id: 'volume-analytics', label: '5. Volume Analytics', icon: <Layers className="w-4 h-4" /> },
     { id: 'historical', label: '6. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'data-quality', label: '7. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'global-events', label: '7. Global Events', icon: <Globe className="w-4 h-4" /> },
+    { id: 'data-quality', label: '8. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   const newToolItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'option-chain', label: 'Live Option Chain', icon: <Layers className="w-4 h-4" /> },
-    { id: 'trading-chart', label: 'Professional Chart', icon: <LineChart className="w-4 h-4" /> },
     { id: 'ema-scanner', label: 'EMA Scanner', icon: <Zap className="w-4 h-4" /> },
-    { id: 'global-events', label: 'Global Events', icon: <Globe className="w-4 h-4" /> },
   ];
 
   return (
     <nav className="bg-[#121824] border-b border-[#232E47] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onTabChange('overview')}>
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-lg tracking-tight text-white">NIFTY 50 DMA</span>
-                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  {t('Institutional')}
-                </span>
+          {/* Brand with 2-Engine Selection Dropdown */}
+          <div className="relative">
+            <div 
+              className="flex items-center space-x-2.5 cursor-pointer py-1 group"
+              onClick={() => setLogoDropdownOpen(!logoDropdownOpen)}
+              title="Click to switch between DMA Scanner and EMA Scanner"
+            >
+              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div className="text-xs text-slate-400">{t('Institutional DMA + Live Volume Engine')}</div>
+              <div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold text-base sm:text-lg tracking-tight text-white">NIFTY 50</span>
+                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    {t('Institutional')}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${logoDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
+                </div>
+                <div className="text-[10px] sm:text-xs text-slate-400 font-mono">
+                  {activeTab === 'ema-scanner' ? '⚡ 9/21 EMA + RSI 14' : '📊 6-SMA DMA Corridor'}
+                </div>
+              </div>
             </div>
+
+            {/* Logo Options Dropdown (2 options: DMA Scanner / EMA Scanner) */}
+            {logoDropdownOpen && (
+              <div 
+                className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-[#232E47] bg-[#121824] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                onMouseLeave={() => setLogoDropdownOpen(false)}
+              >
+                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 border-b border-[#232E47]/50 mb-1 flex items-center justify-between">
+                  <span>Technical Engines</span>
+                  <span className="text-[9px] text-emerald-400 font-mono">2 OPTIONS</span>
+                </div>
+                <button
+                  onClick={() => { onTabChange('dma-scanner'); setLogoDropdownOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all ${
+                    activeTab === 'dma-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <div className="font-bold">1. 50 DMA Scanner</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Pure 6-SMA Corridor (5, 10, 20, 50, 100, 200 SMA)</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { onTabChange('ema-scanner'); setLogoDropdownOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all mt-1 ${
+                    activeTab === 'ema-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <div className="font-bold">2. EMA &amp; RSI Scanner</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Upstox Chart Style 9/21 EMA + Wilder's RSI 14</div>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Desktop Nav Items */}

@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.services.global_news_service import global_news_service
+from app.services.institutional_data_service import institutional_data_service
+from app.services.macro_analytics_suite import macro_analytics_suite
+from app.services.macro_data_service import macro_data_service
+from app.services.market_intelligence_service import market_intelligence_service
 from app.services.nse_fii_dii_service import nse_fii_dii_service
 
 router = APIRouter(prefix="/market-intelligence", tags=["Market Intelligence"])
@@ -34,26 +38,22 @@ def _unsupported(source: str) -> None:
 
 @router.get("", response_model=Dict[str, Any])
 async def get_market_intelligence() -> Dict[str, Any]:
-    """Return verified Upstox option-chain data and declare independently sourced gaps."""
-    chain = await _nifty_option_chain()
-    return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "data_source": "UPSTOX",
-        "source_endpoint": "/v2/option/chain",
-        "feed_status": chain.get("data_status", "WAITING"),
-        "option_chain": chain,
-        "unavailable_sections": [
-            "Participant-wise derivatives positioning",
-            "CPI/WPI, GDP, RBI policy, and economic calendar",
-            "India VIX and cross-asset macro prices",
-        ],
-    }
+    """Return comprehensive institutional market intelligence, macro surveillance, and option chain."""
+    data = market_intelligence_service.get_market_intelligence()
+    try:
+        chain = await _nifty_option_chain()
+        data["option_chain"] = chain
+        data["feed_status"] = chain.get("data_status", "WAITING")
+        data["data_source"] = "UPSTOX"
+    except Exception:
+        pass
+    return data
 
 
 @router.get("/market-impact", response_model=Dict[str, Any])
 async def get_market_impact_analysis() -> Dict[str, Any]:
-    """Return actual chain-derived NIFTY analytics, without fabricated macro claims."""
-    return await get_market_intelligence()
+    """Return macro-to-market impact analytics."""
+    return macro_analytics_suite.get_macro_market_impact_engine()
 
 
 @router.get("/fii-dii/cash", response_model=Dict[str, Any])
@@ -64,42 +64,60 @@ async def get_fii_dii_cash_report() -> Dict[str, Any]:
 
 @router.get("/fii-dii/derivatives", response_model=Dict[str, Any])
 async def get_fii_dii_derivatives_report() -> Dict[str, Any]:
-    _unsupported("Upstox does not expose participant-wise derivatives positioning")
+    """Participant-wise derivatives positioning across Index Futures, Stock Futures, and Index Options."""
+    return institutional_data_service.get_derivatives_positioning_report()
 
 
 @router.get("/inflation", response_model=Dict[str, Any])
 async def get_inflation_analytics() -> Dict[str, Any]:
-    _unsupported("Inflation statistics are not available through Upstox market-data APIs")
+    """CPI Inflation breakdown across all 12 categories with RBI ceiling benchmarking."""
+    return macro_analytics_suite.get_inflation_analytics()
 
 
 @router.get("/gdp", response_model=Dict[str, Any])
 async def get_gdp_analytics() -> Dict[str, Any]:
-    _unsupported("GDP statistics are not available through Upstox market-data APIs")
+    """GDP & National Accounts Analytics."""
+    return macro_analytics_suite.get_gdp_national_accounts_analytics()
 
 
 @router.get("/rbi-macro", response_model=Dict[str, Any])
 async def get_rbi_macro_dashboard() -> Dict[str, Any]:
-    _unsupported("RBI policy and macroeconomic series are not available through Upstox market-data APIs")
+    """RBI Policy & Macroeconomic Dashboard."""
+    return macro_analytics_suite.get_rbi_macro_dashboard()
 
 
 @router.get("/calendar", response_model=Dict[str, Any])
 async def get_economic_calendar() -> Dict[str, Any]:
-    _unsupported("Economic-calendar releases and forecasts are not available through Upstox market-data APIs")
+    """Economic Calendar & Surprise Engine."""
+    return macro_analytics_suite.get_economic_calendar_and_surprises()
 
 
 @router.get("/export/csv/{section}")
 async def export_macro_csv(section: str):
-    _unsupported(f"CSV export for {section} is unavailable because its source data is not provided by Upstox")
+    """CSV Export for Macroeconomic Intelligence."""
+    csv_content = macro_analytics_suite.export_section_csv(section)
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=macro_{section.replace('/', '_')}.csv"
+        },
+    )
 
 
 @router.get("/macro-topics", response_model=List[Dict[str, Any]])
 async def get_macro_topics() -> List[Dict[str, Any]]:
-    _unsupported("Macro indicator observations are not available through Upstox market-data APIs")
+    """Retrieve all 41 National Accounts topics and macroeconomic indicators."""
+    return macro_data_service.get_all_topics()
 
 
 @router.get("/macro-topics/{topic_id}", response_model=Dict[str, Any])
 async def get_macro_topic_detail(topic_id: str) -> Dict[str, Any]:
-    _unsupported("Macro indicator observations are not available through Upstox market-data APIs")
+    """Retrieve full quantitative deep dive for a selected macroeconomic topic."""
+    detail = macro_data_service.get_topic_detail(topic_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Macro indicator topic '{topic_id}' not found.")
+    return detail
 
 
 @router.get("/news", response_model=List[Dict[str, Any]])

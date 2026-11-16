@@ -66,7 +66,9 @@ def test_constituents_weightages_and_csv():
         assert "sector" in s and len(s["sector"]) > 0
 
     csv_path = Path("backend/data/nifty50_constituents.csv")
-    assert csv_path.exists(), "Constituents CSV not found in backend/data"
+    if not csv_path.exists():
+        csv_path = Path("data/nifty50_constituents.csv")
+    assert csv_path.exists(), "Constituents CSV not found in backend/data or data"
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = list(csv.DictReader(f))
         assert len(reader) == 50
