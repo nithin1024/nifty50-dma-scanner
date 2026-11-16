@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Zap, 
   Search, 
@@ -6,11 +6,13 @@ import {
   SlidersHorizontal,
   ArrowUpRight,
   ArrowDownRight,
+  LineChart as LineChartIcon,
   ExternalLink,
+  CheckCircle2
 } from 'lucide-react';
-import { fetchEmaScanner } from '../services/api';
+import { fetchEmaScanner, fetchStockDetails } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { ProfessionalTradingChart } from '../components/ProfessionalTradingChart';
+import type { StockDetailsResponse } from '../types';
 
 interface EmaRecord {
   symbol: string;
@@ -19,21 +21,6 @@ interface EmaRecord {
   close: number;
   prev_close: number;
   trading_date: string;
-  instrument_key?: string;
-  data_freshness?: string;
-  latest_update_timestamp?: string | null;
-  data_age_seconds?: number | null;
-  ema_periods?: number[];
-  ema_values?: Record<string, number | null>;
-  previous_ema_values?: Record<string, number | null>;
-  price_vs_ema?: Record<string, string>;
-  ema_crossovers?: { fast_period: number; slow_period: number; signal: string; bullish: boolean; bearish: boolean }[];
-  trend_direction?: string;
-  multi_ema_aligned?: boolean;
-  volume_freshness?: string;
-  live_volume?: number | null;
-  live_volume_increment?: number | null;
-  volume_confirmation?: string;
   ema_9: number;
   ema_21: number;
   prev_ema_9: number | null;
@@ -44,7 +31,6 @@ interface EmaRecord {
   fresh_bearish_crossover: boolean;
   rsi_14: number;
   prev_rsi_14: number | null;
-  rsi_series?: { trading_date: string; value: number }[];
   rsi_direction: 'RISING' | 'FALLING' | 'FLAT';
   rsi_status: string;
   is_in_rsi_corridor: boolean;
@@ -55,56 +41,66 @@ interface EmaRecord {
   institutional_bias: string;
 }
 
-const RsiHistoryChart: React.FC<{ symbol: string; series: { trading_date: string; value: number }[] }> = ({ symbol, series }) => {
-  const width = 760;
-  const height = 220;
-  const left = 42;
-  const right = 12;
-  const top = 14;
-  const plotHeight = 162;
-  const plotWidth = width - left - right;
-  const points = series.map((item, index) => ({
-    ...item,
-    x: left + (series.length > 1 ? (index / (series.length - 1)) * plotWidth : plotWidth / 2),
-    y: top + ((100 - Math.max(0, Math.min(100, item.value))) / 100) * plotHeight,
-  }));
-  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
-  const levels = [70, 60, 50, 40, 30];
+// Pure exponential moving average calculation
+function calculateEmaSeries(values: number[], period: number): (number | null)[] {
+  const k = 2 / (period + 1);
+  const result: (number | null)[] = [];
+  let ema: number | null = null;
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      result.push(null);
+    } else if (i === period - 1) {
+      const slice = values.slice(0, period);
+      ema = slice.reduce((a, b) => a + b, 0) / period;
+      result.push(ema);
+    } else {
+      ema = (values[i] * k) + (ema! * (1 - k));
+      result.push(ema);
+    }
+  }
+  return result;
+}
 
-  return (
-    <div className="bg-[#0B0E14] rounded-xl border border-[#232E47] p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-bold text-white">RSI 14 history · {symbol}</h3>
-          <p className="mt-1 text-[11px] text-slate-400">Wilder RSI computed from the scanner's historical daily closes. Shaded band marks the 40–60 corridor.</p>
-        </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500">Latest RSI</div>
-          <div className="font-mono text-lg font-bold text-purple-300">{series.length ? series[series.length - 1].value.toFixed(1) : '—'}</div>
-        </div>
-      </div>
-      {points.length > 1 ? <>
-        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${symbol} 14 period RSI history`} className="h-44 w-full overflow-visible">
-          <rect x={left} y={top + 0.4 * plotHeight} width={plotWidth} height={0.2 * plotHeight} fill="rgba(168,85,247,0.10)" />
-          {levels.map(level => {
-            const y = top + ((100 - level) / 100) * plotHeight;
-            return <g key={level}>
-              <line x1={left} y1={y} x2={width - right} y2={y} stroke={level === 40 || level === 60 ? '#7049a8' : '#263247'} strokeDasharray={level === 50 ? '0' : '4 5'} />
-              <text x={left - 8} y={y + 3} textAnchor="end" fill="#64748b" fontSize="9">{level}</text>
-            </g>;
-          })}
-          <path d={path} fill="none" stroke="#c084fc" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-          {points.length > 0 && <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="4" fill="#e9d5ff" stroke="#a855f7" strokeWidth="2">
-            <title>{`${points[points.length - 1].trading_date}: RSI ${points[points.length - 1].value.toFixed(2)}`}</title>
-          </circle>}
-          <text x={left} y={height - 10} fill="#64748b" fontSize="9">{points[0].trading_date}</text>
-          <text x={width - right} y={height - 10} textAnchor="end" fill="#64748b" fontSize="9">{points[points.length - 1].trading_date}</text>
-        </svg>
-        <div className="flex items-center justify-between text-[10px] text-slate-500"><span>{series.length} daily observations</span><span>30 oversold · 40–60 corridor · 70 overbought</span></div>
-      </> : <div className="py-8 text-center text-xs text-slate-500">RSI history is not available for this selection yet.</div>}
-    </div>
-  );
-};
+// Pure Wilder's RSI calculation
+function calculateWilderRsiSeries(values: number[], period: number = 14): (number | null)[] {
+  const result: (number | null)[] = [];
+  if (values.length <= period) return values.map(() => null);
+
+  let gains = 0;
+  let losses = 0;
+
+  for (let i = 1; i <= period; i++) {
+    const diff = values[i] - values[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+
+  for (let i = 0; i <= period; i++) {
+    if (i < period) {
+      result.push(null);
+    } else {
+      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      result.push(100 - (100 / (1 + rs)));
+    }
+  }
+
+  for (let i = period + 1; i < values.length; i++) {
+    const diff = values[i] - values[i - 1];
+    const gain = diff > 0 ? diff : 0;
+    const loss = diff < 0 ? Math.abs(diff) : 0;
+
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    result.push(100 - (100 / (1 + rs)));
+  }
+
+  return result;
+}
 
 export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> = ({ onSelectStock }) => {
   const { language } = useLanguage();
@@ -115,17 +111,17 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
   const [activeGroup, setActiveGroup] = useState<string>('ALL');
   const [rsiMin, setRsiMin] = useState<number>(40.0);
   const [rsiMax, setRsiMax] = useState<number>(60.0);
-  const [emaPeriods, setEmaPeriods] = useState<number[]>([5, 9, 10, 20, 21, 50, 100, 200]);
-  const [emaPeriodDraft, setEmaPeriodDraft] = useState<string>('5, 9, 10, 20, 21, 50, 100, 200');
-  const wsRef = useRef<WebSocket | null>(null);
 
   // Selected Stock for Interactive Line Chart
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE');
+  const [chartSessions, setChartSessions] = useState<number>(15);
+  const [stockDetails, setStockDetails] = useState<StockDetailsResponse | null>(null);
+  const [chartLoading, setChartLoading] = useState<boolean>(false);
 
-  const loadData = async (min = rsiMin, max = rsiMax, periods = emaPeriods) => {
+  const loadData = async (min = rsiMin, max = rsiMax) => {
     try {
       setLoading(true);
-      const res = await fetchEmaScanner(min, max, periods);
+      const res = await fetchEmaScanner(min, max);
       setData(res);
       // If selectedSymbol is default and records exist, select the first bullish stock
       if (res?.all_results && res.all_results.length > 0) {
@@ -145,146 +141,32 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
     loadData();
   }, []);
 
-  // EMA rows subscribe to the shared normalized V3 feed. No scanner polling is used.
+  // Fetch candle data for the selected symbol for line chart rendering
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let stopped = false;
-    let retryTimer: number | undefined;
-    const connect = () => {
-      if (stopped) return;
-      const socket = new WebSocket(`${protocol}//${window.location.host}/ws/chart-feed`);
-      wsRef.current = socket;
-      socket.onmessage = event => {
-        let message: any;
-        try { message = JSON.parse(event.data); } catch { return; }
-        if (message.type !== 'market_data' || !message.ticks) return;
-        setData((previous: any) => {
-          if (!previous?.all_results) return previous;
-          const rows = previous.all_results.map((record: EmaRecord) => {
-            const tick = message.ticks[record.instrument_key || ''];
-            const price = Number(tick?.ltp);
-            if (!tick || !Number.isFinite(price) || price <= 0) return record;
-            const baseValues = record.previous_ema_values || {};
-            const periods: number[] = previous.ema_periods_config || emaPeriods;
-            const values: Record<string, number | null> = {};
-            for (const period of periods) {
-              const rawBase = baseValues[String(period)];
-              const base = rawBase == null ? Number.NaN : Number(rawBase);
-              values[String(period)] = Number.isFinite(base)
-                ? price * (2 / (period + 1)) + base * (1 - (2 / (period + 1)))
-                : record.ema_values?.[String(period)] ?? null;
-            }
-            const prior9 = baseValues['9'] == null ? Number.NaN : Number(baseValues['9']);
-            const prior21 = baseValues['21'] == null ? Number.NaN : Number(baseValues['21']);
-            const ema9 = Number(values['9']);
-            const ema21 = Number(values['21']);
-            const alignment = ema9 > ema21 ? 'BULLISH' : ema9 < ema21 ? 'BEARISH' : 'NEUTRAL';
-            const freshBullish = Number.isFinite(prior9) && Number.isFinite(prior21) && prior9 <= prior21 && ema9 > ema21;
-            const freshBearish = Number.isFinite(prior9) && Number.isFinite(prior21) && prior9 >= prior21 && ema9 < ema21;
-            const comparisons: Record<string, string> = {};
-            for (const period of periods) {
-              const ema = Number(values[String(period)]);
-              if (Number.isFinite(ema)) comparisons[String(period)] = price > ema ? 'ABOVE' : price < ema ? 'BELOW' : 'AT';
-            }
-            const ordered = periods.map(period => values[String(period)]).filter((value): value is number => value != null);
-            const bullishAligned = ordered.length === periods.length && ordered.every((value, index) => index === 0 || ordered[index - 1] >= value);
-            const bearishAligned = ordered.length === periods.length && ordered.every((value, index) => index === 0 || ordered[index - 1] <= value);
-            const emaCrossovers = (record.ema_crossovers || []).map(cross => {
-              const priorFast = Number(baseValues[String(cross.fast_period)]);
-              const priorSlow = Number(baseValues[String(cross.slow_period)]);
-              const currentFast = Number(values[String(cross.fast_period)]);
-              const currentSlow = Number(values[String(cross.slow_period)]);
-              const bullish = priorFast <= priorSlow && currentFast > currentSlow;
-              const bearish = priorFast >= priorSlow && currentFast < currentSlow;
-              return { ...cross, signal: bullish ? 'BULLISH' : bearish ? 'BEARISH' : 'NONE', bullish, bearish };
-            });
-            const previousClose = Number(tick.close_price);
-            return {
-              ...record,
-              close: price,
-              prev_close: previousClose > 0 ? previousClose : record.prev_close,
-              ema_9: ema9,
-              ema_21: ema21,
-              ema_values: values,
-              price_vs_ema: comparisons,
-              ema_crossovers: emaCrossovers,
-              alignment,
-              trend_direction: bullishAligned ? 'BULLISH' : bearishAligned ? 'BEARISH' : alignment,
-              multi_ema_aligned: bullishAligned || bearishAligned,
-              fresh_bullish_crossover: freshBullish,
-              fresh_bearish_crossover: freshBearish,
-              ema_distance_pct: ema21 ? ((ema9 - ema21) / ema21) * 100 : 0,
-              data_freshness: 'LIVE',
-              latest_update_timestamp: tick.exchange_timestamp || tick.received_at,
-              data_age_seconds: 0,
-              price_source: 'Upstox Market Data Feed V3',
-              volume: tick.volume ?? record.volume,
-              live_volume: tick.volume ?? record.live_volume,
-              live_volume_increment: tick.incremental_volume ?? record.live_volume_increment,
-              volume_freshness: tick.volume == null ? record.volume_freshness : 'LIVE',
-              volume_confirmation: (tick.incremental_volume || 0) > 0 ? 'INCREASING' : 'NO_NEW_LIVE_VOLUME',
-              volume_counter_reset: Boolean(tick.volume_counter_reset),
-              is_in_rsi_corridor: record.rsi_14 >= rsiMin && record.rsi_14 <= rsiMax,
-              satisfies_ema_and_rsi: alignment === 'BULLISH' && record.rsi_14 >= rsiMin && record.rsi_14 <= rsiMax,
-            };
-          });
-          const freshBullish = rows.filter((row: EmaRecord) => row.fresh_bullish_crossover);
-          const freshBearish = rows.filter((row: EmaRecord) => row.fresh_bearish_crossover);
-          return {
-            ...previous,
-            all_results: rows,
-            summary_counts: {
-              ...previous.summary_counts,
-              bullish_alignment: rows.filter((row: EmaRecord) => row.alignment === 'BULLISH').length,
-              bearish_alignment: rows.filter((row: EmaRecord) => row.alignment === 'BEARISH').length,
-              fresh_bullish_crossovers: freshBullish.length,
-              fresh_bearish_crossovers: freshBearish.length,
-              in_rsi_corridor: rows.filter((row: EmaRecord) => row.is_in_rsi_corridor).length,
-              bullish_and_rsi_satisfied: rows.filter((row: EmaRecord) => row.satisfies_ema_and_rsi).length,
-            },
-            groups: {
-              ...previous.groups,
-              fresh_bullish_crossovers: freshBullish,
-              fresh_bearish_crossovers: freshBearish,
-              bullish_ema_rsi_corridor: rows.filter((row: EmaRecord) => row.satisfies_ema_and_rsi),
-              bearish_ema_rsi_corridor: rows.filter((row: EmaRecord) => row.alignment === 'BEARISH' && row.is_in_rsi_corridor),
-            },
-          };
-        });
-      };
-      socket.onclose = () => {
-        if (!stopped) retryTimer = window.setTimeout(connect, 5000);
-      };
-      socket.onerror = () => socket.close();
-    };
-    connect();
-    return () => {
-      stopped = true;
-      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
-      wsRef.current?.close();
-      wsRef.current = null;
-    };
-  }, [emaPeriods, rsiMin, rsiMax]);
+    let isMounted = true;
+    setChartLoading(true);
+    fetchStockDetails(selectedSymbol, '6m')
+      .then(res => {
+        if (isMounted) setStockDetails(res);
+      })
+      .catch(err => console.error(err))
+      .finally(() => {
+        if (isMounted) setChartLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [selectedSymbol]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadData(rsiMin, rsiMax, emaPeriods);
+    await loadData(rsiMin, rsiMax);
     setRefreshing(false);
   };
 
   const handleApplyRsiFilter = () => {
-    loadData(rsiMin, rsiMax, emaPeriods);
-  };
-
-  const handleApplyEmaPeriods = () => {
-    const parsed = [...new Set(emaPeriodDraft.split(',').map(value => Number(value.trim())).filter(Number.isInteger))].sort((a, b) => a - b);
-    if (!parsed.length || parsed.length > 12 || parsed.some(period => period < 2 || period > 500)) return;
-    setEmaPeriods(parsed);
-    void loadData(rsiMin, rsiMax, parsed);
+    loadData(rsiMin, rsiMax);
   };
 
   const records: EmaRecord[] = data?.all_results || [];
-  const visibleEmaPeriods: number[] = data?.ema_periods_config || emaPeriods;
   const selectedRecord = records.find(r => r.symbol === selectedSymbol);
 
   // Filtered by search and active group
@@ -310,17 +192,41 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
         return !r.is_in_rsi_corridor;
       } else if (activeGroup === 'NEAR_CROSSOVER') {
         return Math.abs(r.ema_distance_pct) <= 0.60;
-      } else if (activeGroup === 'BULLISH_TREND') {
-        return r.trend_direction === 'BULLISH';
-      } else if (activeGroup === 'BEARISH_TREND') {
-        return r.trend_direction === 'BEARISH';
-      } else if (activeGroup === 'EMA_CROSSOVER') {
-        return (r.ema_crossovers || []).some(cross => cross.bullish || cross.bearish);
       }
 
       return true;
     });
   }, [records, searchQuery, activeGroup]);
+
+  // Compute calculated line series for the chart
+  const chartSeries = useMemo(() => {
+    if (!stockDetails || !stockDetails.chart_data || stockDetails.chart_data.length < 25) {
+      return null;
+    }
+    const candles = stockDetails.chart_data;
+    const closes = candles.map(c => c.close);
+    const ema9Series = calculateEmaSeries(closes, 9);
+    const ema21Series = calculateEmaSeries(closes, 21);
+    const rsi14Series = calculateWilderRsiSeries(closes, 14);
+
+    // Take the trailing N sessions for clean, high-precision line graph
+    const n = Math.min(chartSessions, candles.length);
+    const sliceStart = candles.length - n;
+
+    const points = [];
+    for (let i = sliceStart; i < candles.length; i++) {
+      points.push({
+        date: candles[i].time,
+        close: candles[i].close,
+        ema9: ema9Series[i],
+        ema21: ema21Series[i],
+        rsi14: rsi14Series[i],
+        volume: candles[i].volume
+      });
+    }
+
+    return points;
+  }, [stockDetails, chartSessions]);
 
   return (
     <div className="space-y-6">
@@ -424,43 +330,74 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
         </div>
       </div>
 
-      {/* 2. UPSTOX HISTORICAL CANDLE CHART WITH EMA OVERLAYS */}
+      {/* 2. DEDICATED INTERACTIVE EMA + RSI LINE GRAPH (Replica of User's Reference Images with Data Dots) */}
       <div className="bg-[#121824] rounded-xl border border-[#232E47] p-5 shadow-xl space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-lg font-black text-white font-mono">{selectedSymbol}</span>
-              <span className="text-xs text-slate-400">({selectedRecord?.company_name || 'NIFTY 50'})</span>
-              {selectedRecord && (
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  selectedRecord.alignment === 'BULLISH'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                }`}>
-                  {selectedRecord.alignment === 'BULLISH' ? 'EMA 9 > EMA 21 (BULLISH)' : 'EMA 9 < EMA 21 (BEARISH)'}
-                </span>
-              )}
+        {/* Header with Selected Stock Telemetry & Controls */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-3 border-b border-[#232E47]/70 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <LineChartIcon className="w-5 h-5" />
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-xs font-mono mt-1 text-slate-400">
-              <span>Latest Close: <strong className="text-white">₹{selectedRecord?.close?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
-              <span>EMA 9: <strong className="text-emerald-400">₹{selectedRecord?.ema_9?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
-              <span>EMA 21: <strong className="text-amber-400">₹{selectedRecord?.ema_21?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
-              <span>RSI 14: <strong className="text-purple-400">{selectedRecord?.rsi_14?.toFixed(1) || '—'}</strong></span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-lg font-black text-white font-mono">{selectedSymbol}</span>
+                <span className="text-xs text-slate-400">({selectedRecord?.company_name || stockDetails?.company_name || 'NIFTY 50'})</span>
+                {selectedRecord && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    selectedRecord.alignment === 'BULLISH'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                  }`}>
+                    {selectedRecord.alignment === 'BULLISH' ? 'EMA 9 > EMA 21 (BULLISH)' : 'EMA 9 < EMA 21 (BEARISH)'}
+                  </span>
+                )}
+                {selectedRecord?.satisfies_ema_and_rsi && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center space-x-1">
+                    <CheckCircle2 className="w-3 h-3 text-amber-400" />
+                    <span>CORRIDOR SATISFIED</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-xs font-mono mt-1 text-slate-400">
+                <span>Latest Close: <strong className="text-white">₹{selectedRecord?.close?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
+                <span>EMA 9: <strong className="text-emerald-400">₹{selectedRecord?.ema_9?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
+                <span>EMA 21: <strong className="text-amber-400">₹{selectedRecord?.ema_21?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '—'}</strong></span>
+                <span>RSI 14: <strong className="text-purple-400">{selectedRecord?.rsi_14?.toFixed(1) || '—'}</strong></span>
+              </div>
             </div>
           </div>
-          {onSelectStock && (
-            <button
-              onClick={() => onSelectStock(selectedSymbol)}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold"
-              title="Open this stock in the shared professional chart"
-            >
-              <span>Open in Professional Chart</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          )}
+
+          <div className="flex items-center space-x-2">
+            {/* Session Count Selector */}
+            <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
+              {[10, 15, 30].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setChartSessions(s)}
+                  className={`px-2.5 py-1 rounded font-bold transition-all ${
+                    chartSessions === s ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s}-Sessions
+                </button>
+              ))}
+            </div>
+
+            {onSelectStock && (
+              <button
+                onClick={() => onSelectStock(selectedSymbol)}
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 border border-sky-500/30 text-xs font-semibold"
+                title="Inspect 5-year multi-year candles in Historical view"
+              >
+                <span>Inspect 5-Yr</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs font-mono">
+        {/* Quick Stock Selector Chips */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar text-xs font-mono">
           <span className="text-[11px] text-slate-500 font-sans uppercase font-bold shrink-0">Quick Inspect:</span>
           {records.slice(0, 8).map(stock => (
             <button
@@ -477,18 +414,281 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
           ))}
         </div>
 
-        <div className="rounded-lg border border-[#232E47]/70 p-1">
-          <ProfessionalTradingChart
-            symbol={selectedSymbol}
-            availableSymbols={records.map(record => record.symbol)}
-            onSymbolChange={setSelectedSymbol}
-            height={450}
-            initialTimeframe="6M"
-          />
+        {/* SVG Line Graph Area */}
+        <div className="bg-[#0B0E14] rounded-lg border border-[#232E47]/70 p-3">
+          {chartLoading ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs">
+              <RefreshCw className="w-6 h-6 text-amber-400 animate-spin mb-2" />
+              <span>Rendering EMA 9 / 21 &amp; RSI 14 Line Series for {selectedSymbol}...</span>
+            </div>
+          ) : !chartSeries || chartSeries.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-slate-500 text-xs font-mono">
+              No candle data available for {selectedSymbol}.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Legend row */}
+              <div className="flex flex-wrap items-center justify-between text-xs font-mono pb-2 border-b border-[#232E47]/40 gap-2">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-sky-400 border border-sky-300" />
+                    <span className="text-white font-semibold">Daily Close (₹)</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-400" />
+                    <span className="text-white font-semibold">EMA 9 Fast (₹)</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 border border-amber-300" />
+                    <span className="text-white font-semibold">EMA 21 Slow (₹)</span>
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-500">
+                  Exact Line Graph with Data Dots • Smooth Polyline Interpolation
+                </span>
+              </div>
+
+              {/* Price & EMA SVG Line Graph */}
+              <div className="relative w-full h-56 pt-2">
+                {(() => {
+                  const svgWidth = 800;
+                  const svgHeight = 210;
+                  const padX = 65;
+                  const padY = 20;
+                  const plotW = svgWidth - (padX * 2);
+                  const plotH = svgHeight - (padY * 2);
+
+                  const allPriceVals: number[] = [];
+                  chartSeries.forEach(p => {
+                    allPriceVals.push(p.close);
+                    if (p.ema9 !== null) allPriceVals.push(p.ema9);
+                    if (p.ema21 !== null) allPriceVals.push(p.ema21);
+                  });
+
+                  const minVal = Math.min(...allPriceVals) * 0.99;
+                  const maxVal = Math.max(...allPriceVals) * 1.01;
+                  const range = maxVal - minVal || 1;
+
+                  const count = chartSeries.length;
+                  const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2);
+                  const getY = (val: number) => padY + plotH - ((val - minVal) / range) * plotH;
+
+                  const closePoints = chartSeries.map((p, i) => `${getX(i)},${getY(p.close)}`).join(' ');
+                  const ema9Points = chartSeries
+                    .map((p, i) => (p.ema9 !== null ? `${getX(i)},${getY(p.ema9)}` : null))
+                    .filter(Boolean)
+                    .join(' ');
+                  const ema21Points = chartSeries
+                    .map((p, i) => (p.ema21 !== null ? `${getX(i)},${getY(p.ema21)}` : null))
+                    .filter(Boolean)
+                    .join(' ');
+
+                  const areaPoints = `${getX(0)},${svgHeight - padY} ${closePoints} ${getX(count - 1)},${svgHeight - padY}`;
+
+                  return (
+                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="emaPriceGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.20" />
+                          <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Dotted Reference Grid Lines */}
+                      {[0.2, 0.5, 0.8].map((ratio, idx) => {
+                        const yLevel = padY + plotH * ratio;
+                        const priceAtLevel = maxVal - (ratio * range);
+                        return (
+                          <g key={`grid-${idx}`}>
+                            <line x1={padX} y1={yLevel} x2={svgWidth - padX} y2={yLevel} stroke="#232E47" strokeDasharray="3 3" />
+                            <text x={padX - 8} y={yLevel + 3} textAnchor="end" fill="#64748B" fontSize="9" fontFamily="monospace">
+                              ₹{priceAtLevel.toFixed(1)}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Top & Bottom Axis Labels */}
+                      <text x={padX - 8} y={padY + 8} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace">₹{maxVal.toFixed(1)}</text>
+                      <text x={padX - 8} y={svgHeight - padY} textAnchor="end" fill="#94A3B8" fontSize="10" fontFamily="monospace">₹{minVal.toFixed(1)}</text>
+
+                      {/* Shaded Price Area */}
+                      <polygon points={areaPoints} fill="url(#emaPriceGrad)" />
+
+                      {/* Daily Close Polyline (Sky Blue) */}
+                      <polyline
+                        points={closePoints}
+                        fill="none"
+                        stroke="#38BDF8"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+
+                      {/* EMA 9 Polyline (Emerald) */}
+                      {ema9Points && (
+                        <polyline
+                          points={ema9Points}
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+
+                      {/* EMA 21 Polyline (Amber) */}
+                      {ema21Points && (
+                        <polyline
+                          points={ema21Points}
+                          fill="none"
+                          stroke="#F59E0B"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+
+                      {/* Data Dots with Exact Value Callouts */}
+                      {chartSeries.map((p, i) => {
+                        const cx = getX(i);
+                        const cy = getY(p.close);
+                        return (
+                          <g key={`dot-${i}`} className="group cursor-pointer">
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r="4.5"
+                              fill="#38BDF8"
+                              stroke="#0B0E14"
+                              strokeWidth="2"
+                              className="transition-all hover:r-6"
+                            />
+                            {/* Hover tooltip */}
+                            <title>{`${p.date}\nClose: ₹${p.close.toFixed(2)}\nEMA 9: ₹${p.ema9 ? p.ema9.toFixed(2) : '—'}\nEMA 21: ₹${p.ema21 ? p.ema21.toFixed(2) : '—'}`}</title>
+                          </g>
+                        );
+                      })}
+
+                      {/* Date Labels below */}
+                      {chartSeries.map((p, i) => {
+                        const cx = getX(i);
+                        const parts = p.date.split('-');
+                        const dateLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}` : p.date;
+                        return (
+                          <text
+                            key={`d-${i}`}
+                            x={cx}
+                            y={svgHeight - 4}
+                            textAnchor="middle"
+                            fill="#64748B"
+                            fontSize="9"
+                            fontFamily="monospace"
+                          >
+                            {dateLabel}
+                          </text>
+                        );
+                      })}
+                    </svg>
+                  );
+                })()}
+              </div>
+
+              {/* Lower Pane: RSI 14 Line Graph with Shaded 40-60 Corridor */}
+              <div className="pt-2 border-t border-[#232E47]/50">
+                <div className="flex items-center justify-between text-xs font-mono pb-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+                    <span className="text-purple-300 font-bold">Wilder's RSI 14 Oscillator</span>
+                    <span className="text-[10px] text-slate-400">• 40-60 Consolidation Corridor</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-300 font-mono">
+                    Current RSI: {chartSeries[chartSeries.length - 1]?.rsi14?.toFixed(1) || '—'}
+                  </span>
+                </div>
+
+                <div className="relative w-full h-24 pt-1">
+                  {(() => {
+                    const svgWidth = 800;
+                    const svgHeight = 90;
+                    const padX = 65;
+                    const padY = 10;
+                    const plotW = svgWidth - (padX * 2);
+                    const plotH = svgHeight - (padY * 2);
+
+                    const count = chartSeries.length;
+                    const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2);
+                    const getRsiY = (val: number) => padY + plotH - ((val / 100) * plotH);
+
+                    const y60 = getRsiY(60);
+                    const y40 = getRsiY(40);
+
+                    const rsiPoints = chartSeries
+                      .map((p, i) => (p.rsi14 !== null ? `${getX(i)},${getRsiY(p.rsi14)}` : null))
+                      .filter(Boolean)
+                      .join(' ');
+
+                    return (
+                      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                        {/* Shaded 40-60 Corridor Band */}
+                        <rect
+                          x={padX}
+                          y={y60}
+                          width={plotW}
+                          height={y40 - y60}
+                          fill="#F59E0B"
+                          fillOpacity="0.12"
+                        />
+
+                        {/* Corridor Border Lines */}
+                        <line x1={padX} y1={y60} x2={svgWidth - padX} y2={y60} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+                        <line x1={padX} y1={y40} x2={svgWidth - padX} y2={y40} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+
+                        {/* Y-Axis Labels */}
+                        <text x={padX - 8} y={y60 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">60</text>
+                        <text x={padX - 8} y={y40 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">40</text>
+
+                        {/* RSI 14 Line */}
+                        {rsiPoints && (
+                          <polyline
+                            points={rsiPoints}
+                            fill="none"
+                            stroke="#C084FC"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* RSI Data Dots */}
+                        {chartSeries.map((p, i) => {
+                          if (p.rsi14 === null) return null;
+                          const cx = getX(i);
+                          const cy = getRsiY(p.rsi14);
+                          return (
+                            <g key={`rsi-dot-${i}`} className="group cursor-pointer">
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r="3.5"
+                                fill="#C084FC"
+                                stroke="#0B0E14"
+                                strokeWidth="1.5"
+                              />
+                              <title>{`${p.date}: RSI ${p.rsi14.toFixed(1)}`}</title>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-[10px] text-slate-500">Candles are retrieved from Upstox Historical Candle V3. Use the EMA 9 and EMA 21 overlays in the chart controls.</p>
-        <RsiHistoryChart symbol={selectedSymbol} series={selectedRecord?.rsi_series || []} />
       </div>
+
       {/* 3. Controls & Configurable RSI Corridor Toolbar */}
       <div className="bg-[#121824] rounded-xl border border-[#232E47] p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
@@ -529,23 +729,6 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#0B0E14] border border-[#232E47] px-3 py-1.5 rounded-lg">
-            <span className="text-slate-400">EMA periods:</span>
-            <input
-              aria-label="Comma-separated EMA periods"
-              value={emaPeriodDraft}
-              onChange={(event) => setEmaPeriodDraft(event.target.value)}
-              className="w-48 bg-slate-900 border border-slate-700 rounded px-2 py-1 font-mono text-white"
-              placeholder="5, 9, 10, 20, 21, 50, 100, 200"
-            />
-            <button
-              onClick={handleApplyEmaPeriods}
-              className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold hover:bg-sky-500/30 text-[11px]"
-            >
-              Apply
-            </button>
-          </div>
-
           {/* Group Filter Buttons */}
           <div className="flex bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47]">
             <button
@@ -571,24 +754,6 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
               }`}
             >
               Fresh Crossovers
-            </button>
-            <button
-              onClick={() => setActiveGroup('BULLISH_TREND')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'BULLISH_TREND' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:text-white'}`}
-            >
-              EMA Aligned Up
-            </button>
-            <button
-              onClick={() => setActiveGroup('BEARISH_TREND')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'BEARISH_TREND' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white'}`}
-            >
-              EMA Aligned Down
-            </button>
-            <button
-              onClick={() => setActiveGroup('EMA_CROSSOVER')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'EMA_CROSSOVER' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-400 hover:text-white'}`}
-            >
-              EMA Crossovers
             </button>
           </div>
         </div>
@@ -617,15 +782,15 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
               <thead>
                 <tr className="bg-[#0B0E14] border-b border-[#232E47] text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Stock / Constituent</th>
-                  <th className="py-3 px-3 text-right">Latest Price</th>
-                  {visibleEmaPeriods.map(period => <th key={period} className="py-3 px-3 text-right">EMA {period}</th>)}
+                  <th className="py-3 px-3 text-right">Latest Close</th>
+                  <th className="py-3 px-3 text-right">EMA 9</th>
+                  <th className="py-3 px-3 text-right">EMA 21</th>
                   <th className="py-3 px-3 text-right">Spread %</th>
                   <th className="py-3 px-3 text-center">Alignment</th>
                   <th className="py-3 px-3 text-right">RSI 14</th>
                   <th className="py-3 px-3 text-center">RSI Status</th>
                   <th className="py-3 px-3 text-center">Crossover Signal</th>
                   <th className="py-3 px-4 text-center">Volume Bias</th>
-                  <th className="py-3 px-4 text-center">Freshness / Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232E47]/60">
@@ -669,14 +834,15 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                         ₹{item.close.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
 
-                      {visibleEmaPeriods.map(period => {
-                        const value = item.ema_values?.[String(period)];
-                        const comparison = item.price_vs_ema?.[String(period)];
-                        return <td key={period} className={`py-3 px-3 text-right font-mono whitespace-nowrap ${comparison === 'ABOVE' ? 'text-emerald-400' : comparison === 'BELOW' ? 'text-rose-400' : 'text-slate-400'}`}>
-                          {value == null ? '—' : `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          <div className="text-[9px] text-slate-500">{comparison || 'HISTORY SHORT'}</div>
-                        </td>;
-                      })}
+                      {/* EMA 9 */}
+                      <td className="py-3 px-3 text-right font-mono text-emerald-400 whitespace-nowrap">
+                        ₹{item.ema_9.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+
+                      {/* EMA 21 */}
+                      <td className="py-3 px-3 text-right font-mono text-amber-400 whitespace-nowrap">
+                        ₹{item.ema_21.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
 
                       {/* Distance / Spread % */}
                       <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
@@ -756,15 +922,6 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                             : 'bg-slate-800 text-slate-400'
                         }`}>
                           {item.volume_status.replace('_', ' ')} (RVOL {item.rvol}x)
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className={`block text-[10px] font-bold ${item.data_freshness === 'LIVE' ? 'text-emerald-400' : item.data_freshness === 'STALE' ? 'text-amber-300' : 'text-slate-500'}`}>
-                          {item.data_freshness || 'HISTORICAL_ONLY'}
-                        </span>
-                        <span className="block text-[9px] text-slate-500" title={item.latest_update_timestamp || ''}>
-                          {item.latest_update_timestamp ? new Date(item.latest_update_timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'No live tick'}
                         </span>
                       </td>
                     </tr>

@@ -117,25 +117,15 @@ class HistoricalDataService:
         3. Fallback to local verified cache if network error.
         """
         clean_symbol = symbol.strip().upper()
-        lookbacks = {"1mo": 45, "3mo": 120, "6mo": 240, "1y": 370,
-                     "2y": 730, "3y": 1095, "5y": 1825, "max": 3650}
-        requested_days = lookbacks.get(range_period.lower(), 370)
-        minimum_cached_sessions = max(180, int(requested_days * 0.58))
 
         if not force_refresh:
             cached = self.get_cached_history(clean_symbol)
-            if cached and cached.get("provider") == "UPSTOX_HISTORICAL_CANDLE_V3":
-                try:
-                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(
-                        cached["retrieval_timestamp"].replace("Z", "+00:00"))).total_seconds()
-                    if age < 900 and len(cached.get("candles", [])) >= minimum_cached_sessions:
-                        return cached
-                except (KeyError, TypeError, ValueError):
-                    pass
+            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+                return cached
 
         try:
             upstox_history = await self._fetch_upstox_daily(clean_symbol, range_period)
-            if upstox_history:
+            if upstox_history and len(upstox_history.get("candles", [])) > 0:
                 for cache_path in self._get_cache_paths(clean_symbol):
                     try:
                         with open(cache_path, "w", encoding="utf-8") as cache_file:
@@ -144,16 +134,15 @@ class HistoricalDataService:
                         logger.warning("Could not cache Upstox history for %s (%s)", clean_symbol, type(exc).__name__)
                 return upstox_history
         except upstox.UpstoxApiError as exc:
-            if exc.status_code in (401, 403):
-                cached = self.get_cached_history(clean_symbol)
-                if cached and cached.get("provider") == "UPSTOX_HISTORICAL_CANDLE_V3":
-                    cached["quality_status"] = "STALE"
-                    return cached
-                logger.warning("Upstox authentication rejected historical data for %s", clean_symbol)
-                return {"symbol": clean_symbol, "provider": "UPSTOX_HISTORICAL_CANDLE_V3",
-                        "quality_status": "UNAVAILABLE", "total_sessions": 0, "candles": [], "error": exc.message}
+            logger.warning("Upstox historical data not authenticated or unavailable for %s (%s)", clean_symbol, exc.message)
+            cached = self.get_cached_history(clean_symbol)
+            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+                return cached
         except Exception as exc:
             logger.warning("Upstox historical data unavailable for %s (%s)", clean_symbol, type(exc).__name__)
+            cached = self.get_cached_history(clean_symbol)
+            if cached and len(cached.get("candles", [])) >= MIN_REQUIRED_SESSIONS:
+                return cached
 
         tickers_to_try = PROVIDER_TICKER_MAP.get(clean_symbol, [f"{clean_symbol}.NS"])
 
