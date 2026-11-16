@@ -130,6 +130,29 @@ class LiveMarketFeedManager:
         self.active_connections: Set[WebSocket] = set()
         self.latest_intraday_data: Dict[str, Any] = {}
         self._running = False
+        self._scan_update_task: Optional[asyncio.Task] = None
+        self._scan_update_dirty = False
+
+    def schedule_live_snapshot(self) -> None:
+        """Debounce bursts of V3 ticks and broadcast the newest real scan state."""
+        self._scan_update_dirty = True
+        if self._scan_update_task is None or self._scan_update_task.done():
+            self._scan_update_task = asyncio.create_task(
+                self._refresh_from_live_feed(), name="live-scanner-feed-update"
+            )
+
+    async def _refresh_from_live_feed(self) -> None:
+        # A short coalescing window avoids repeating the cached DMA calculation
+        # for each instrument in a single provider frame; it is not a poll.
+        await asyncio.sleep(0.2)
+        while self._scan_update_dirty:
+            self._scan_update_dirty = False
+            try:
+                await self.broadcast(await self.compute_live_intraday_scan())
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.warning("Live scanner update failed (%s)", type(exc).__name__)
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -225,6 +248,13 @@ class LiveMarketFeedManager:
                 "status": status,
                 "feed_status": feed_status["status"],
                 "update_timestamp": tick.get("received_at") or now_utc,
+                "exchange_timestamp": tick.get("exchange_timestamp"),
+                "server_timestamp": tick.get("server_timestamp"),
+                "incremental_volume": tick.get("incremental_volume"),
+                "volume_counter_reset": bool(tick.get("volume_counter_reset")),
+                "data_age_seconds": max(0, round(datetime.now(timezone.utc).timestamp() -
+                    datetime.fromisoformat(tick["received_at"]).timestamp(), 1))
+                    if tick.get("received_at") else None,
                 "completed_smas": completed_smas,
                 "live_distances": {
                     k: round(v, 2) if v is not None else None 

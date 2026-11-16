@@ -50,9 +50,19 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [feedStatus, setFeedStatus] = useState<string>('WAITING');
+  const [subscriptionMonitor, setSubscriptionMonitor] = useState<any>(null);
   const [chainError, setChainError] = useState<string | null>(null);
+  const [technicalLevels, setTechnicalLevels] = useState<any>(null);
+  const [technicalLevelsError, setTechnicalLevelsError] = useState<string | null>(null);
+  const [technicalLevelsLoading, setTechnicalLevelsLoading] = useState<boolean>(false);
   const feedSocketRef = useRef<WebSocket | null>(null);
   const chainRequestRef = useRef(0);
+  const chainDataRef = useRef<any>(null);
+  const technicalLevelsRef = useRef<any>(null);
+  const lastOptionTickAtRef = useRef<number | null>(null);
+
+  useEffect(() => { chainDataRef.current = chainData; }, [chainData]);
+  useEffect(() => { technicalLevelsRef.current = technicalLevels; }, [technicalLevels]);
   
   // Strategy payoff state
   const [selectedStrategy, setSelectedStrategy] = useState<string>('BULL_CALL_SPREAD');
@@ -74,12 +84,47 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
     socket.onmessage = event => {
       let message: any;
       try { message = JSON.parse(event.data); } catch { return; }
-      if (message.type === 'status') setFeedStatus(message.status || 'WAITING');
+      if (message.type === 'status') {
+        if (['DISCONNECTED', 'FAILED'].includes(message.status)) setFeedStatus('DISCONNECTED');
+        else if (lastOptionTickAtRef.current == null) setFeedStatus('WAITING');
+      }
       if (message.type !== 'market_data') return;
-      if (message.is_live_update) setFeedStatus('LIVE');
+      const currentChain = chainDataRef.current;
+      const optionKeys = new Set((currentChain?.rows || []).flatMap((row: any) =>
+        [row.ce?.instrument_key, row.pe?.instrument_key].filter(Boolean)));
+      const relevantOptionTick = Object.keys(message.ticks || {}).some(key => optionKeys.has(key));
+      const relevantSpotTick = Boolean(currentChain?.instrument_key && message.ticks?.[currentChain.instrument_key]);
+      const levelKey = technicalLevelsRef.current?.instrument_key;
+      const levelTick = levelKey ? message.ticks?.[levelKey] : null;
+      if (levelTick && message.is_live_update) {
+        setTechnicalLevels((previous: any) => {
+          if (!previous) return previous;
+          const spot = Number(levelTick.ltp ?? previous.spot_price);
+          const allLevels = (previous.all_levels || []).map((level: any) => {
+            if (level.kind === 'INTRADAY_LOW') return { ...level, value: Math.min(Number(level.value), spot), timestamp: levelTick.exchange_timestamp || level.timestamp };
+            if (level.kind === 'INTRADAY_HIGH') return { ...level, value: Math.max(Number(level.value), spot), timestamp: levelTick.exchange_timestamp || level.timestamp };
+            return level;
+          });
+          return { ...previous, spot_price: spot, all_levels: allLevels,
+            supports: allLevels.filter((level: any) => Number(level.value) <= spot)
+              .sort((a: any, b: any) => Number(b.value) - Number(a.value)).slice(0, 3),
+            resistances: allLevels.filter((level: any) => Number(level.value) >= spot)
+              .sort((a: any, b: any) => Number(a.value) - Number(b.value)).slice(0, 3),
+            status: 'LIVE', exchange_timestamp: levelTick.exchange_timestamp || previous.exchange_timestamp,
+            server_received_timestamp: levelTick.received_at || previous.server_received_timestamp,
+            data_age_seconds: 0 };
+        });
+      }
+      if (!relevantOptionTick && !relevantSpotTick && !levelTick) return;
+      if (message.is_live_update && relevantOptionTick) {
+        lastOptionTickAtRef.current = Date.now();
+        setFeedStatus('LIVE');
+      }
       setChainData((previous: any) => {
         if (!previous?.rows) return previous;
         let callOiDelta = 0, putOiDelta = 0, callVolumeDelta = 0, putVolumeDelta = 0;
+        let callOiChangeDelta = 0, putOiChangeDelta = 0;
+        const spotTick = message.ticks?.[previous.instrument_key || ''];
         const rows = previous.rows.map((row: any) => {
           const next = { ...row };
           for (const side of ['ce', 'pe']) {
@@ -87,20 +132,43 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             if (!tick) continue;
             const oldOi = Number(next[side].oi || 0);
             const oldVolume = Number(next[side].volume || 0);
+            const oldOiChange = Number(next[side].oi_change || 0);
+            let nextOi = next[side].oi;
+            let nextOiChange = next[side].oi_change;
             if (tick.oi != null) {
-              const delta = Number(tick.oi) - oldOi;
-              if (side === 'ce') callOiDelta += delta; else putOiDelta += delta;
+              nextOi = Number(tick.oi);
+              const previousSessionOi = next[side].previous_oi;
+              if (previousSessionOi != null) nextOiChange = nextOi - Number(previousSessionOi);
+              const delta = nextOi - oldOi;
+              if (side === 'ce') {
+                callOiDelta += delta;
+                callOiChangeDelta += Number(nextOiChange || 0) - oldOiChange;
+              } else {
+                putOiDelta += delta;
+                putOiChangeDelta += Number(nextOiChange || 0) - oldOiChange;
+              }
             }
             if (tick.volume != null) {
               const delta = Number(tick.volume) - oldVolume;
               if (side === 'ce') callVolumeDelta += delta; else putVolumeDelta += delta;
             }
+            const depth = tick.market_depth?.[0];
+            const change = tick.ltp != null && tick.close_price != null ? Number(tick.ltp) - Number(tick.close_price) : next[side].change;
             next[side] = { ...next[side], ltp: tick.ltp ?? next[side].ltp,
-              change: tick.close_price != null && tick.ltp != null ? tick.ltp - tick.close_price : next[side].change,
-              change_pct: tick.close_price ? ((tick.ltp - tick.close_price) / tick.close_price) * 100 : next[side].change_pct,
-              volume: tick.volume ?? next[side].volume, oi: tick.oi ?? next[side].oi,
-              oi_change: tick.oi != null ? Number(next[side].oi_change || 0) + (Number(tick.oi) - oldOi) : next[side].oi_change,
-              iv: tick.iv ?? next[side].iv, ...tick.greeks };
+              change,
+              change_pct: tick.close_price && change != null ? (change / Number(tick.close_price)) * 100 : next[side].change_pct,
+              volume: tick.volume ?? next[side].volume, oi: nextOi, oi_change: nextOiChange,
+              iv: tick.iv ?? next[side].iv,
+              bid_price: depth?.bid_price ?? next[side].bid_price,
+              ask_price: depth?.ask_price ?? next[side].ask_price,
+              bid_qty: depth?.bid_quantity ?? next[side].bid_qty,
+              ask_qty: depth?.ask_quantity ?? next[side].ask_qty,
+              volume_increment: tick.incremental_volume ?? next[side].volume_increment,
+              oi_exchange_timestamp: tick.oi != null ? tick.exchange_timestamp : next[side].oi_exchange_timestamp,
+              oi_received_at: tick.oi != null ? tick.received_at : next[side].oi_received_at,
+              exchange_timestamp: tick.exchange_timestamp ?? next[side].exchange_timestamp,
+              received_at: tick.received_at ?? next[side].received_at,
+              ...tick.greeks };
           }
           return next;
         });
@@ -108,26 +176,84 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
         const puts = Number(previous.totals?.total_put_oi || 0) + putOiDelta;
         const callVol = Number(previous.totals?.total_call_volume || 0) + callVolumeDelta;
         const putVol = Number(previous.totals?.total_put_volume || 0) + putVolumeDelta;
-        const callOiChange = Number(previous.totals?.total_call_oi_change || 0) + callOiDelta;
-        const putOiChange = Number(previous.totals?.total_put_oi_change || 0) + putOiDelta;
-        return { ...previous, rows, totals: { ...previous.totals, total_call_oi: calls, total_put_oi: puts,
+        const callOiChange = Number(previous.totals?.total_call_oi_change || 0) + callOiChangeDelta;
+        const putOiChange = Number(previous.totals?.total_put_oi_change || 0) + putOiChangeDelta;
+        const spot = Number(spotTick?.ltp ?? previous.spot_price);
+        const atmStrike = rows.length ? rows.reduce((nearest: any, candidate: any) =>
+          Math.abs(candidate.strike_price - spot) < Math.abs(nearest.strike_price - spot) ? candidate : nearest, rows[0]).strike_price : null;
+        const rowsWithAtm = rows.map((row: any) => ({ ...row,
+          is_atm: row.strike_price === atmStrike,
+          ce: { ...row.ce, classification: row.strike_price < spot ? 'ITM' : row.strike_price > spot ? 'OTM' : 'ATM' },
+          pe: { ...row.pe, classification: row.strike_price > spot ? 'ITM' : row.strike_price < spot ? 'OTM' : 'ATM' },
+        }));
+        const putLevels = rowsWithAtm.filter((row: any) => row.strike_price <= spot && Number(row.pe?.oi) > 0)
+          .sort((a: any, b: any) => Number(b.pe.oi) - Number(a.pe.oi));
+        const callLevels = rowsWithAtm.filter((row: any) => row.strike_price >= spot && Number(row.ce?.oi) > 0)
+          .sort((a: any, b: any) => Number(b.ce.oi) - Number(a.ce.oi));
+        const relevantTicks = Object.entries(message.ticks).filter(([key]) => optionKeys.has(key) || key === previous.instrument_key)
+          .map(([, tick]: [string, any]) => tick);
+        const exchangeTimes = relevantTicks.map((tick: any) => tick.exchange_timestamp).filter(Boolean).sort();
+        const receiveTimes = relevantTicks.map((tick: any) => tick.received_at).filter(Boolean).sort();
+        return { ...previous, rows: rowsWithAtm, spot_price: spot, atm_strike: atmStrike,
+          feed_timestamps: { exchange: exchangeTimes[exchangeTimes.length - 1] || previous.feed_timestamps?.exchange,
+            received: receiveTimes[receiveTimes.length - 1] || previous.feed_timestamps?.received,
+            frontend: new Date().toISOString() },
+          analytics_freshness: 'PARTIAL_LIVE',
+          totals: { ...previous.totals, total_call_oi: calls, total_put_oi: puts,
           total_call_volume: callVol, total_put_volume: putVol,
           total_call_oi_change: callOiChange, total_put_oi_change: putOiChange,
           oi_pcr: calls ? puts / calls : null,
           vol_pcr: callVol ? putVol / callVol : null,
-          oi_change_pcr: callOiChange ? putOiChange / callOiChange : null } };
+          oi_change_pcr: callOiChange ? putOiChange / callOiChange : null },
+          support_resistance: {
+            ...previous.support_resistance,
+            strong_support: putLevels[0] ? { strike: putLevels[0].strike_price,
+              reason: 'Highest observed put OI among currently subscribed strikes' } : null,
+            strong_resistance: callLevels[0] ? { strike: callLevels[0].strike_price,
+              reason: 'Highest observed call OI among currently subscribed strikes' } : null,
+          } };
       });
     };
     const refreshStatus = () => fetch('/api/v1/options/feed-status').then(r => r.json())
-      .then(status => setFeedStatus(status.status || 'WAITING')).catch(() => setFeedStatus('DISCONNECTED'));
+      .then(status => {
+        setSubscriptionMonitor(status);
+        if (['DISCONNECTED', 'FAILED'].includes(status.status)) setFeedStatus('DISCONNECTED');
+        else if (lastOptionTickAtRef.current == null) setFeedStatus('WAITING');
+        else setFeedStatus(Date.now() - lastOptionTickAtRef.current > 20000 ? 'STALE' : 'LIVE');
+      }).catch(() => setFeedStatus('DISCONNECTED'));
     refreshStatus();
     const interval = window.setInterval(refreshStatus, 5000);
     return () => { window.clearInterval(interval); socket.close(); feedSocketRef.current = null; };
   }, []);
 
   useEffect(() => {
+    lastOptionTickAtRef.current = null;
+    setFeedStatus('WAITING');
+  }, [symbol, selectedExpiry]);
+
+  useEffect(() => {
+    if (activeTab !== 'SUPPORT_RESISTANCE') return;
+    let cancelled = false;
+    setTechnicalLevelsLoading(true);
+    setTechnicalLevelsError(null);
+    fetch(`/api/v1/options/technical-levels?symbol=${encodeURIComponent(symbol)}`)
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail?.message || data.detail || `HTTP ${response.status}`);
+        return data;
+      })
+      .then(data => { if (!cancelled) setTechnicalLevels(data); })
+      .catch(error => {
+        if (!cancelled) setTechnicalLevelsError(error instanceof Error ? error.message : 'Historical technical levels are unavailable.');
+      })
+      .finally(() => { if (!cancelled) setTechnicalLevelsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, symbol]);
+
+  useEffect(() => {
     fetchFoUniverse().then(res => {
       setUniverse(res.universe || []);
+      setSubscriptionMonitor(res.subscription_monitor || null);
     }).catch(err => console.error('Failed to load F&O Universe:', err));
 
     fetchOptionsAlerts().then(res => {
@@ -303,24 +429,32 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
         </div>
 
         {/* Live Feed Status & Quick Stats */}
-        <div className="flex items-center space-x-2 font-mono text-xs">
-          <div className="px-3 py-1 rounded-lg bg-[#121824] border border-[#232E47] flex items-center space-x-2">
-            <span className={`w-2 h-2 rounded-full ${feedStatus === 'LIVE' ? 'bg-emerald-400 animate-pulse' : feedStatus === 'STALE' ? 'bg-amber-400' : 'bg-slate-500'}`} />
-            <span className="text-slate-300">
-              {feedStatus}
-            </span>
-            <span className="text-slate-500">|</span>
-            <span className="text-sky-400 font-bold">Protobuf</span>
-          </div>
+        <div className="flex flex-col items-end gap-1 font-mono text-xs">
+          <div className="flex items-center space-x-2">
+            <div className="px-3 py-1 rounded-lg bg-[#121824] border border-[#232E47] flex items-center space-x-2">
+              <span className={`w-2 h-2 rounded-full ${feedStatus === 'LIVE' ? 'bg-emerald-400 animate-pulse' : feedStatus === 'STALE' ? 'bg-amber-400' : 'bg-slate-500'}`} />
+              <span className="text-slate-300">{feedStatus}</span>
+              <span className="text-slate-500">|</span>
+              <span className="text-sky-400 font-bold">Protobuf</span>
+            </div>
 
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-1.5 rounded-lg bg-[#121824] hover:bg-[#1a2334] text-slate-300 border border-[#232E47] transition-all"
-            title="Refresh Option Chain Snapshot"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-sky-400' : ''}`} />
-          </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-1.5 rounded-lg bg-[#121824] hover:bg-[#1a2334] text-slate-300 border border-[#232E47] transition-all"
+              title="Refresh Option Chain Snapshot"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-sky-400' : ''}`} />
+            </button>
+          </div>
+          <span className="text-[9px] text-slate-500">
+            Exchange: {chainData?.feed_timestamps?.exchange ? new Date(chainData.feed_timestamps.exchange).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'waiting for selected contract'}
+            {' · '}Server: {chainData?.feed_timestamps?.received ? new Date(chainData.feed_timestamps.received).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
+            {' · '}UI: {chainData?.feed_timestamps?.frontend ? new Date(chainData.feed_timestamps.frontend).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
+          </span>
+          <span className="text-[9px] text-slate-500">
+            Verified stock contracts: {subscriptionMonitor?.tracked_stock_option_contracts ?? '—'} · Active options: {subscriptionMonitor?.active_option_subscriptions ?? '—'} · Waiting: {subscriptionMonitor?.waiting_option_subscriptions ?? '—'} · Recent live coverage: {subscriptionMonitor?.option_live_coverage_percent ?? 0}%
+          </span>
         </div>
       </div>
 
@@ -332,6 +466,9 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
         </div>
       )}
       {chainError && <div role="status" className="p-4 rounded-xl bg-amber-950/30 border border-amber-700/40 text-amber-200 text-sm">{chainError}. {chainData ? 'The last verified option-chain snapshot remains visible; live quotes need successful Upstox authentication.' : 'Live quotes are not available until Upstox authentication succeeds.'}</div>}
+      {chainData && <div className="text-[10px] text-amber-200/80 px-1">
+        Live updates cover the selected underlying and subscribed strikes. Full-chain totals and Max Pain retain the REST snapshot outside those subscribed contracts.
+      </div>}
 
       {/* ========================================================================= */}
       {/* KEY OPTION CHAIN METRICS BAR (verified spot, ATM, PCR and Max Pain) */}
@@ -761,6 +898,50 @@ export const NiftyLiveOptionChainDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'SUPPORT_RESISTANCE' && technicalLevelsLoading && !technicalLevels && (
+        <div className="p-6 rounded-xl bg-[#0B0E14] border border-[#232E47] text-center text-xs text-slate-400">
+          Loading verified historical and intraday candle levels…
+        </div>
+      )}
+      {activeTab === 'SUPPORT_RESISTANCE' && technicalLevelsError && (
+        <div role="status" className="p-4 rounded-xl bg-amber-950/30 border border-amber-700/40 text-amber-200 text-sm">
+          Candle-based levels are unavailable: {technicalLevelsError}
+        </div>
+      )}
+      {activeTab === 'SUPPORT_RESISTANCE' && technicalLevels && (
+        <section className="rounded-xl bg-[#0B0E14] border border-[#232E47] p-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#232E47] pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-white">Historical and Intraday Price Levels · {technicalLevels.symbol}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Independent of option-chain availability. Levels are reference candidates, not guaranteed reversals.</p>
+            </div>
+            <div className="text-right">
+              <span className={`text-xs font-bold ${technicalLevels.status === 'LIVE' ? 'text-emerald-400' : technicalLevels.status === 'STALE' ? 'text-amber-300' : 'text-slate-400'}`}>
+                Underlying {technicalLevels.status}
+              </span>
+              <div className="text-[10px] text-slate-400 font-mono">Spot ₹{displayMetric(technicalLevels.spot_price)}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {([['Support candidates', technicalLevels.supports, 'text-emerald-400'],
+               ['Resistance candidates', technicalLevels.resistances, 'text-rose-400']] as const).map(([title, levels, color]) => (
+              <div key={title} className="rounded-lg bg-[#121824] border border-[#232E47] p-3">
+                <h4 className={`text-xs font-bold ${color} mb-2`}>{title}</h4>
+                {levels.length ? levels.map((level: any) => (
+                  <div key={level.kind} className="flex items-center justify-between gap-3 border-t border-[#232E47]/60 py-2 text-xs">
+                    <div><span className="font-mono text-white">₹{displayMetric(level.value)}</span><span className="block text-[10px] text-slate-500">{level.kind.replace(/_/g, ' ')} · {level.source}</span></div>
+                    <span className="text-[10px] text-slate-500">{level.timestamp ? new Date(level.timestamp).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}</span>
+                  </div>
+                )) : <p className="text-[11px] text-slate-500">No candle level on this side of spot yet.</p>}
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500">
+            {technicalLevels.note} {technicalLevels.exchange_timestamp ? `Exchange ${new Date(technicalLevels.exchange_timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}.` : 'Waiting for an underlying exchange tick.'}
+          </p>
+        </section>
       )}
 
       {/* ========================================================================= */}

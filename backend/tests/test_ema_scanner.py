@@ -26,6 +26,42 @@ def test_pure_ema_calculation():
     assert ema_series[5] == pytest.approx(expected_6th, 0.01)
 
 
+@pytest.mark.asyncio
+async def test_ema_scanner_uses_fresh_feed_price_and_configurable_periods(monkeypatch):
+    import app.services.technical_scanner_service as module
+    from datetime import datetime, timezone
+
+    closes = [100.0 + index for index in range(220)]
+    candles = [{"close": close, "volume": 1000 + index, "trading_date": f"2025-{(index // 28) + 1:02d}-{(index % 28) + 1:02d}"}
+               for index, close in enumerate(closes)]
+    tick = {"ltp": 500.0, "close_price": 319.0, "volume": 50_000,
+            "incremental_volume": 12, "received_at": datetime.now(timezone.utc).isoformat(),
+            "exchange_timestamp": datetime.now(timezone.utc).isoformat(), "feed_type": "live_feed"}
+    monkeypatch.setattr(module.constituents_service, "get_constituents", lambda: [{
+        "symbol": "TEST", "company_name": "Test Corp", "industry": "Test", "upstox_instrument_key": "NSE_EQ|TEST"
+    }])
+
+    async def history(_symbol):
+        return {"candles": candles, "provider": "UPSTOX_HISTORICAL_CANDLE_V3", "retrieval_timestamp": "2026-11-16T00:00:00+00:00"}
+
+    monkeypatch.setattr(module.historical_data_service, "fetch_symbol_history", history)
+    monkeypatch.setattr(module.subscription_manager, "latest_ticks", {"NSE_EQ|TEST": tick})
+    monkeypatch.setattr(module.volume_engine, "calculate_completed_session_rvol", lambda _volumes: 1.0)
+    monkeypatch.setattr(module.volume_engine, "calculate_six_session_average", lambda _volumes: 1000.0)
+    monkeypatch.setattr(module.volume_engine, "calculate_volume_change_percentage", lambda *_args: 0.0)
+    monkeypatch.setattr(module.volume_engine, "get_volume_classification", lambda *_args: "NORMAL_VOLUME")
+    monkeypatch.setattr(module.volume_engine, "evaluate_price_volume_confirmation", lambda *_args: {"signal": "NEUTRAL"})
+
+    result = await technical_scanner_service.scan_all_constituents(ema_periods=[5, 9, 10, 20, 21, 50, 100, 200])
+    record = result["all_results"][0]
+    assert result["ema_periods_config"] == [5, 9, 10, 20, 21, 50, 100, 200]
+    assert record["close"] == 500.0
+    assert record["data_freshness"] == "LIVE"
+    assert record["ema_values"]["200"] is not None
+    assert record["live_volume"] == 50_000
+    assert record["live_volume_increment"] == 12
+
+
 def test_wilder_rsi_calculation():
     """Verify Wilder's Smoothed RSI 14 calculation."""
     # Constant rising prices should give RSI = 100

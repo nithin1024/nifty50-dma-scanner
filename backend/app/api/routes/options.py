@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, Dict, Any
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+from app.config import get_settings
 
 from app.services.options_universe_service import options_universe_service
 from app.services.options_analytics_engine import options_analytics_engine
@@ -12,6 +14,7 @@ from app.services.constituents_service import constituents_service
 from app.services.upstox_market_client import UpstoxApiError
 
 router = APIRouter(prefix="/options", tags=["Options Analytics & Universe"])
+IST = ZoneInfo("Asia/Kolkata")
 
 
 @router.get("/auth-status")
@@ -42,32 +45,151 @@ async def upstox_feed_status() -> Dict[str, Any]:
 
 @router.get("/universe")
 async def get_fo_universe() -> Dict[str, Any]:
-    """Discover F&O eligibility from actual Upstox option contract responses."""
-    semaphore = asyncio.Semaphore(5)
+    """Verify NSE NIFTY constituents against real Upstox contracts and seed ATM±10 stock-option subscriptions."""
+    async with subscription_manager.universe_refresh_lock:
+        if (subscription_manager.universe_cache is not None
+                and subscription_manager.universe_cache_at is not None
+                and asyncio.get_running_loop().time() - subscription_manager.universe_cache_at < 900):
+            return {"universe": subscription_manager.universe_cache,
+                    "subscription_monitor": subscription_manager.get_status(),
+                    "constituents_source": constituents_service.last_fetch_source,
+                    "cached": True}
 
-    async def discover(stock: Dict[str, Any]) -> Dict[str, Any]:
-        key = stock["upstox_instrument_key"]
-        async with semaphore:
-            try:
-                contracts = await upstox.get_option_contracts(key)
-                return {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
-                        "instrument_key": key, "is_fo_eligible": bool(contracts),
-                        "verified_contract_count": len(contracts), "expiries": upstox.unique_expiries(contracts),
-                        "verification_source": "/v2/option/contract"}
-            except UpstoxApiError as exc:
-                return {"symbol": stock["symbol"], "instrument_key": key, "is_fo_eligible": None,
-                        "verification_error": f"Upstox HTTP {exc.status_code}"}
+        try:
+            profile = await upstox.get_user_profile()
+            if not profile.get("authenticated"):
+                raise UpstoxApiError(401, "Upstox profile authentication failed", "/v2/user/profile")
+            subscription_manager.authentication_status = "AUTHENTICATED"
+            # Reserve NIFTY plus all 50 cash equities before option subscriptions
+            # start filling the Full-mode queue.
+            await subscription_manager.configure_nifty()
+            subscription_manager.start()
+        except UpstoxApiError as exc:
+            subscription_manager.authentication_status = "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"
+            subscription_manager.status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
+            raise HTTPException(status_code=exc.status_code or 503,
+                                detail={"message": "Upstox authentication or NIFTY feed initialization failed",
+                                        "endpoint": exc.endpoint, "authentication": subscription_manager.authentication_status})
 
-    current_constituents = await constituents_service.fetch_from_nse()
-    results = await asyncio.gather(*(discover(stock) for stock in current_constituents))
-    return {
-        "universe": [{"symbol": "NIFTY", "instrument_key": upstox.NIFTY_INSTRUMENT_KEY,
-                      "is_index": True, "is_fo_eligible": True,
-                      "verified_contract_count": subscription_manager.contract_count,
-                      "verification_source": "/v2/option/contract"}, *results],
-        "subscription_monitor": subscription_manager.get_status(),
-        "constituents_source": constituents_service.last_fetch_source,
-    }
+        # Option Contracts returns each listed CE/PE contract, expiry and strike.
+        # One request per underlying is sufficient: the underlying quote comes
+        # from the already-running V3 feed. The chain endpoint remains reserved
+        # for the selected symbol's actual option-chain view.
+        semaphore = asyncio.Semaphore(5)
+        current_constituents = await constituents_service.fetch_from_nse()
+
+        async def discover(stock: Dict[str, Any]) -> Dict[str, Any]:
+            key = stock["upstox_instrument_key"]
+            async with semaphore:
+                try:
+                    contracts = await upstox.get_option_contracts(key)
+                except UpstoxApiError as exc:
+                    return {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
+                            "instrument_key": key, "is_fo_eligible": None,
+                            "verification_error": f"Upstox HTTP {exc.status_code}", "endpoint": exc.endpoint}
+                expiries = upstox.unique_expiries(contracts)
+                result = {"symbol": stock["symbol"], "company_name": stock.get("company_name"),
+                          "instrument_key": key, "is_fo_eligible": bool(contracts),
+                          "verified_contract_count": len(contracts), "expiries": expiries,
+                          "verification_source": "/v2/option/contract",
+                          "selected_contracts": 0, "subscribed_contracts": 0,
+                          "selection_status": "NO_VERIFIED_CONTRACTS" if not contracts else "WAITING_FOR_SPOT"}
+                if not contracts:
+                    return result
+                if not expiries:
+                    result["selection_status"] = "NO_VERIFIED_EXPIRY"
+                    return result
+                result["nearest_expiry"] = expiries[0]
+                result["option_chain_source"] = "/v2/option/chain (on-demand for selected symbol)"
+                subscription_manager.register_option_contracts(stock["symbol"], contracts)
+                quote = subscription_manager.latest_ticks.get(key) or {}
+                quote_age = None
+                if quote.get("received_at"):
+                    try:
+                        quote_age = (datetime.now(timezone.utc) - datetime.fromisoformat(
+                            quote["received_at"].replace("Z", "+00:00"))).total_seconds()
+                    except (TypeError, ValueError):
+                        quote_age = None
+                try:
+                    spot = float(quote.get("ltp"))
+                except (TypeError, ValueError):
+                    spot = 0.0
+                if (spot <= 0 or quote.get("feed_type") not in ("initial_feed", "live_feed")
+                        or quote_age is None or quote_age < 0 or quote_age > 120):
+                    return result
+
+                selected_expiry, selected_strikes, option_keys = subscription_manager.select_stock_option_contracts(
+                    stock["symbol"], spot, expiries[0])
+                result.update({"spot_reference": spot,
+                               "spot_reference_source": "Upstox Market Data Feed V3",
+                               "spot_reference_timestamp": quote.get("exchange_timestamp"),
+                               "spot_reference_age_seconds": round(max(0.0, quote_age), 1),
+                               "selected_strike_count": len(selected_strikes),
+                               "selected_contracts": len(option_keys),
+                               "subscribed_contracts": len(option_keys),
+                               "selection_status": "SELECTED" if option_keys else "NO_MATCHING_CONTRACTS"})
+                result["nearest_expiry"] = selected_expiry or expiries[0]
+                result["_subscription_keys"] = option_keys
+                return result
+
+        results = await asyncio.gather(*(discover(stock) for stock in current_constituents))
+        # When the socket has just connected, allow its actual initial_feed
+        # snapshots a short opportunity to arrive. Do not invent an ATM from
+        # historical or 15-minute snapshots if a fresh broker quote is absent.
+        for _ in range(10):
+            pending = [item for item in results if item.get("is_fo_eligible")
+                       and item.get("selection_status") == "WAITING_FOR_SPOT"]
+            if not pending:
+                break
+            await asyncio.sleep(0.5)
+            for item in pending:
+                quote = subscription_manager.latest_ticks.get(item["instrument_key"]) or {}
+                received_at = quote.get("received_at")
+                if quote.get("feed_type") not in ("initial_feed", "live_feed") or not received_at:
+                    continue
+                try:
+                    spot = float(quote.get("ltp"))
+                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(
+                        received_at.replace("Z", "+00:00"))).total_seconds()
+                except (TypeError, ValueError):
+                    continue
+                if spot <= 0 or age < 0 or age > 120:
+                    continue
+                selected_expiry, selected_strikes, option_keys = subscription_manager.select_stock_option_contracts(
+                    item["symbol"], spot, item.get("nearest_expiry"))
+                item.update({"spot_reference": spot, "spot_reference_source": "Upstox Market Data Feed V3",
+                             "spot_reference_timestamp": quote.get("exchange_timestamp"),
+                             "spot_reference_age_seconds": round(max(0.0, age), 1),
+                             "selected_strike_count": len(selected_strikes),
+                             "selected_contracts": len(option_keys), "subscribed_contracts": len(option_keys),
+                             "selection_status": "SELECTED" if option_keys else "NO_MATCHING_CONTRACTS"})
+                item["nearest_expiry"] = selected_expiry or item.get("nearest_expiry")
+                item["_subscription_keys"] = option_keys
+
+        new_selections = {item["symbol"]: item.pop("_subscription_keys", []) for item in results}
+        all_option_keys = [key for keys in new_selections.values() for key in keys]
+        previous_stock_option_keys = {key for keys in subscription_manager.stock_option_selections.values() for key in keys}
+        requested_stock_option_keys = set(all_option_keys)
+        retired_stock_options = [key for key in previous_stock_option_keys
+                                 if key not in requested_stock_option_keys and key not in subscription_manager.priority_keys]
+        if retired_stock_options:
+            await subscription_manager.unsubscribe(retired_stock_options)
+        subscription_manager.stock_option_selections = new_selections
+        subscription_manager.stock_option_feed_key_count = sum(len(keys) for keys in new_selections.values())
+        await subscription_manager.set_subscriptions(all_option_keys, mode="full")
+        subscription_manager.stock_option_contract_count = sum(item.get("verified_contract_count", 0) for item in results)
+        subscription_manager.failed_option_underlyings = sum(
+            1 for item in results if item.get("is_fo_eligible") is None
+        )
+        subscription_manager.last_universe_refresh = datetime.now(timezone.utc).isoformat()
+        universe = [{"symbol": "NIFTY", "instrument_key": upstox.NIFTY_INSTRUMENT_KEY,
+                     "is_index": True, "is_fo_eligible": True,
+                     "verified_contract_count": subscription_manager.contract_count,
+                     "verification_source": "/v2/option/contract"}, *results]
+        subscription_manager.universe_cache = universe
+        subscription_manager.universe_cache_at = asyncio.get_running_loop().time()
+        return {"universe": universe, "subscription_monitor": subscription_manager.get_status(),
+                "constituents_source": constituents_service.last_fetch_source, "cached": False}
 
 
 @router.get("/expiries")
@@ -86,6 +208,68 @@ async def get_expiries(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
             subscription_manager.authentication_status = "FAILED"
             subscription_manager.status = "DISCONNECTED"
         raise HTTPException(status_code=exc.status_code or 503, detail=exc.message)
+
+
+@router.get("/technical-levels")
+async def get_technical_support_resistance(symbol: str = Query("NIFTY")) -> Dict[str, Any]:
+    """Build historical price levels independently of option-chain availability."""
+    key = upstox.instrument_key_for_symbol(symbol.upper())
+    if not key:
+        raise HTTPException(status_code=404, detail="No verified Upstox instrument key for this symbol")
+    await subscription_manager.set_subscriptions([key], mode="full")
+    today = datetime.now(IST).date()
+    try:
+        intraday_rows = await upstox.get_intraday_candles_v3(key, "minutes", "1")
+        previous_rows = await upstox.get_historical_candles_v3(
+            key, "days", "1", (today - timedelta(days=1)).isoformat(),
+            (today - timedelta(days=10)).isoformat())
+    except UpstoxApiError as exc:
+        raise HTTPException(status_code=exc.status_code or 503,
+                            detail={"message": exc.message, "endpoint": exc.endpoint})
+
+    intraday = [candle for row in intraday_rows if (candle := upstox.parse_candle_row(row))]
+    previous = [candle for row in previous_rows if (candle := upstox.parse_candle_row(row))]
+    if not previous and not intraday:
+        raise HTTPException(status_code=503, detail="Upstox returned no candles for technical support/resistance")
+    prior = previous[-1] if previous else None
+    tick = subscription_manager.latest_ticks.get(key)
+    tick_age = None
+    if tick and tick.get("received_at"):
+        try:
+            tick_age = (datetime.now(timezone.utc) - datetime.fromisoformat(
+                tick["received_at"].replace("Z", "+00:00"))).total_seconds()
+        except (TypeError, ValueError):
+            tick_age = None
+    live = bool(tick and tick.get("feed_type") == "live_feed" and tick.get("ltp") is not None and tick_age is not None
+                and tick_age <= get_settings().UPSTOX_STALE_SECONDS)
+    spot = float(tick["ltp"]) if live else (intraday[-1]["close"] if intraday else previous[-1]["close"])
+    levels = []
+    if prior:
+        high, low, close = float(prior["high"]), float(prior["low"]), float(prior["close"])
+        pivot = (high + low + close) / 3.0
+        levels.extend([
+            {"kind": "PREVIOUS_DAY_LOW", "value": low, "source": "Upstox Historical Candle V3", "timestamp": prior["time_iso"]},
+            {"kind": "PREVIOUS_DAY_HIGH", "value": high, "source": "Upstox Historical Candle V3", "timestamp": prior["time_iso"]},
+            {"kind": "PIVOT_S1", "value": 2.0 * pivot - high, "source": "Classic pivot from previous daily OHLC", "timestamp": prior["time_iso"]},
+            {"kind": "PIVOT_R1", "value": 2.0 * pivot - low, "source": "Classic pivot from previous daily OHLC", "timestamp": prior["time_iso"]},
+        ])
+    if intraday:
+        intraday_low = min(candle["low"] for candle in intraday)
+        intraday_high = max(candle["high"] for candle in intraday)
+        levels.extend([
+            {"kind": "INTRADAY_LOW", "value": intraday_low, "source": "Upstox Intraday Candle V3", "timestamp": intraday[-1]["time_iso"]},
+            {"kind": "INTRADAY_HIGH", "value": intraday_high, "source": "Upstox Intraday Candle V3", "timestamp": intraday[-1]["time_iso"]},
+        ])
+    supports = sorted((item for item in levels if item["value"] <= spot), key=lambda item: item["value"], reverse=True)[:3]
+    resistances = sorted((item for item in levels if item["value"] >= spot), key=lambda item: item["value"])[:3]
+    return {"symbol": symbol.upper(), "instrument_key": key, "spot_price": spot,
+            "status": "LIVE" if live else "STALE" if tick else "WAITING",
+            "source": "Upstox Historical Candle V3 and live V3 when received",
+            "exchange_timestamp": tick.get("exchange_timestamp") if live else None,
+            "server_received_timestamp": tick.get("received_at") if live else None,
+            "data_age_seconds": max(0, round(tick_age, 1)) if live and tick_age is not None else None,
+            "all_levels": levels, "supports": supports, "resistances": resistances,
+            "note": "Price levels are historical/pivot references; live status describes the underlying quote, not a guaranteed support or resistance."}
 
 
 @router.get("/chain")
@@ -168,6 +352,7 @@ async def get_option_chain(
                     "buildup": buildup}
             rows.append(row)
         requested_keys = [leg.get("instrument_key") for row in rows for leg in (row.get("ce"), row.get("pe")) if leg and leg.get("instrument_key")]
+        subscription_manager.prioritize_instruments([key, *requested_keys])
         await subscription_manager.set_subscriptions([key, *requested_keys], mode="full")
         max_pain_rows = []
         observed_oi = 0.0

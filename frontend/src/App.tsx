@@ -7,6 +7,7 @@ import { DailyScanner } from './pages/DailyScanner';
 import { AllVolumeDashboard } from './pages/AllVolumeDashboard';
 import { Top7Heavyweights } from './pages/Top7Heavyweights';
 import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
+import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
@@ -62,19 +63,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Periodic background live volume poll every 15s
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const live = await fetchLiveScan();
-        setLiveScan(live);
-      } catch {
-        // Silently ignore background polling errors
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Initial load
   useEffect(() => {
     loadAllData();
@@ -84,8 +72,11 @@ export const App: React.FC = () => {
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/live-scanner`;
+    let stopped = false;
+    let reconnectTimer: number | undefined;
 
     const connectWs = () => {
+      if (stopped) return;
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
@@ -106,8 +97,10 @@ export const App: React.FC = () => {
         };
 
         ws.onclose = () => {
-          console.log('Live WebSocket feed disconnected. Reconnecting in 5s...');
-          setTimeout(connectWs, 5000);
+          if (!stopped) {
+            console.log('Live WebSocket feed disconnected. Reconnecting in 5s...');
+            reconnectTimer = window.setTimeout(connectWs, 5000);
+          }
         };
       } catch (e) {
         console.error('WebSocket connection error:', e);
@@ -117,6 +110,8 @@ export const App: React.FC = () => {
     connectWs();
 
     return () => {
+      stopped = true;
+      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
       if (wsRef.current) {
         wsRef.current.close();
       }
@@ -125,7 +120,7 @@ export const App: React.FC = () => {
 
   const handleSelectStock = (symbol: string) => {
     setSelectedStock(symbol);
-    setActiveTab('trading-chart');
+    setActiveTab('historical');
   };
 
   const availableSymbols = dailyScan 
@@ -206,6 +201,14 @@ export const App: React.FC = () => {
             liveScan={liveScan}
             loading={loading}
             onSelectStock={handleSelectStock}
+          />
+        )}
+
+        {activeTab === 'historical' && (
+          <StockDetails
+            selectedSymbol={selectedStock}
+            onSymbolChange={setSelectedStock}
+            availableSymbols={availableSymbols}
           />
         )}
 

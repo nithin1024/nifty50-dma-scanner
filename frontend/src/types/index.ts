@@ -7,6 +7,7 @@ export type NavTab =
   | 'all-volume' 
   | 'heavyweights' 
   | 'volume-analytics' 
+  | 'historical'
   | 'data-quality'
   | 'global-events';
 

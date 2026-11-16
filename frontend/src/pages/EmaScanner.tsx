@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Zap, 
   Search, 
@@ -19,6 +19,21 @@ interface EmaRecord {
   close: number;
   prev_close: number;
   trading_date: string;
+  instrument_key?: string;
+  data_freshness?: string;
+  latest_update_timestamp?: string | null;
+  data_age_seconds?: number | null;
+  ema_periods?: number[];
+  ema_values?: Record<string, number | null>;
+  previous_ema_values?: Record<string, number | null>;
+  price_vs_ema?: Record<string, string>;
+  ema_crossovers?: { fast_period: number; slow_period: number; signal: string; bullish: boolean; bearish: boolean }[];
+  trend_direction?: string;
+  multi_ema_aligned?: boolean;
+  volume_freshness?: string;
+  live_volume?: number | null;
+  live_volume_increment?: number | null;
+  volume_confirmation?: string;
   ema_9: number;
   ema_21: number;
   prev_ema_9: number | null;
@@ -100,14 +115,17 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
   const [activeGroup, setActiveGroup] = useState<string>('ALL');
   const [rsiMin, setRsiMin] = useState<number>(40.0);
   const [rsiMax, setRsiMax] = useState<number>(60.0);
+  const [emaPeriods, setEmaPeriods] = useState<number[]>([5, 9, 10, 20, 21, 50, 100, 200]);
+  const [emaPeriodDraft, setEmaPeriodDraft] = useState<string>('5, 9, 10, 20, 21, 50, 100, 200');
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Selected Stock for Interactive Line Chart
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE');
 
-  const loadData = async (min = rsiMin, max = rsiMax) => {
+  const loadData = async (min = rsiMin, max = rsiMax, periods = emaPeriods) => {
     try {
       setLoading(true);
-      const res = await fetchEmaScanner(min, max);
+      const res = await fetchEmaScanner(min, max, periods);
       setData(res);
       // If selectedSymbol is default and records exist, select the first bullish stock
       if (res?.all_results && res.all_results.length > 0) {
@@ -127,17 +145,146 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
     loadData();
   }, []);
 
+  // EMA rows subscribe to the shared normalized V3 feed. No scanner polling is used.
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let stopped = false;
+    let retryTimer: number | undefined;
+    const connect = () => {
+      if (stopped) return;
+      const socket = new WebSocket(`${protocol}//${window.location.host}/ws/chart-feed`);
+      wsRef.current = socket;
+      socket.onmessage = event => {
+        let message: any;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.type !== 'market_data' || !message.ticks) return;
+        setData((previous: any) => {
+          if (!previous?.all_results) return previous;
+          const rows = previous.all_results.map((record: EmaRecord) => {
+            const tick = message.ticks[record.instrument_key || ''];
+            const price = Number(tick?.ltp);
+            if (!tick || !Number.isFinite(price) || price <= 0) return record;
+            const baseValues = record.previous_ema_values || {};
+            const periods: number[] = previous.ema_periods_config || emaPeriods;
+            const values: Record<string, number | null> = {};
+            for (const period of periods) {
+              const rawBase = baseValues[String(period)];
+              const base = rawBase == null ? Number.NaN : Number(rawBase);
+              values[String(period)] = Number.isFinite(base)
+                ? price * (2 / (period + 1)) + base * (1 - (2 / (period + 1)))
+                : record.ema_values?.[String(period)] ?? null;
+            }
+            const prior9 = baseValues['9'] == null ? Number.NaN : Number(baseValues['9']);
+            const prior21 = baseValues['21'] == null ? Number.NaN : Number(baseValues['21']);
+            const ema9 = Number(values['9']);
+            const ema21 = Number(values['21']);
+            const alignment = ema9 > ema21 ? 'BULLISH' : ema9 < ema21 ? 'BEARISH' : 'NEUTRAL';
+            const freshBullish = Number.isFinite(prior9) && Number.isFinite(prior21) && prior9 <= prior21 && ema9 > ema21;
+            const freshBearish = Number.isFinite(prior9) && Number.isFinite(prior21) && prior9 >= prior21 && ema9 < ema21;
+            const comparisons: Record<string, string> = {};
+            for (const period of periods) {
+              const ema = Number(values[String(period)]);
+              if (Number.isFinite(ema)) comparisons[String(period)] = price > ema ? 'ABOVE' : price < ema ? 'BELOW' : 'AT';
+            }
+            const ordered = periods.map(period => values[String(period)]).filter((value): value is number => value != null);
+            const bullishAligned = ordered.length === periods.length && ordered.every((value, index) => index === 0 || ordered[index - 1] >= value);
+            const bearishAligned = ordered.length === periods.length && ordered.every((value, index) => index === 0 || ordered[index - 1] <= value);
+            const emaCrossovers = (record.ema_crossovers || []).map(cross => {
+              const priorFast = Number(baseValues[String(cross.fast_period)]);
+              const priorSlow = Number(baseValues[String(cross.slow_period)]);
+              const currentFast = Number(values[String(cross.fast_period)]);
+              const currentSlow = Number(values[String(cross.slow_period)]);
+              const bullish = priorFast <= priorSlow && currentFast > currentSlow;
+              const bearish = priorFast >= priorSlow && currentFast < currentSlow;
+              return { ...cross, signal: bullish ? 'BULLISH' : bearish ? 'BEARISH' : 'NONE', bullish, bearish };
+            });
+            const previousClose = Number(tick.close_price);
+            return {
+              ...record,
+              close: price,
+              prev_close: previousClose > 0 ? previousClose : record.prev_close,
+              ema_9: ema9,
+              ema_21: ema21,
+              ema_values: values,
+              price_vs_ema: comparisons,
+              ema_crossovers: emaCrossovers,
+              alignment,
+              trend_direction: bullishAligned ? 'BULLISH' : bearishAligned ? 'BEARISH' : alignment,
+              multi_ema_aligned: bullishAligned || bearishAligned,
+              fresh_bullish_crossover: freshBullish,
+              fresh_bearish_crossover: freshBearish,
+              ema_distance_pct: ema21 ? ((ema9 - ema21) / ema21) * 100 : 0,
+              data_freshness: 'LIVE',
+              latest_update_timestamp: tick.exchange_timestamp || tick.received_at,
+              data_age_seconds: 0,
+              price_source: 'Upstox Market Data Feed V3',
+              volume: tick.volume ?? record.volume,
+              live_volume: tick.volume ?? record.live_volume,
+              live_volume_increment: tick.incremental_volume ?? record.live_volume_increment,
+              volume_freshness: tick.volume == null ? record.volume_freshness : 'LIVE',
+              volume_confirmation: (tick.incremental_volume || 0) > 0 ? 'INCREASING' : 'NO_NEW_LIVE_VOLUME',
+              volume_counter_reset: Boolean(tick.volume_counter_reset),
+              is_in_rsi_corridor: record.rsi_14 >= rsiMin && record.rsi_14 <= rsiMax,
+              satisfies_ema_and_rsi: alignment === 'BULLISH' && record.rsi_14 >= rsiMin && record.rsi_14 <= rsiMax,
+            };
+          });
+          const freshBullish = rows.filter((row: EmaRecord) => row.fresh_bullish_crossover);
+          const freshBearish = rows.filter((row: EmaRecord) => row.fresh_bearish_crossover);
+          return {
+            ...previous,
+            all_results: rows,
+            summary_counts: {
+              ...previous.summary_counts,
+              bullish_alignment: rows.filter((row: EmaRecord) => row.alignment === 'BULLISH').length,
+              bearish_alignment: rows.filter((row: EmaRecord) => row.alignment === 'BEARISH').length,
+              fresh_bullish_crossovers: freshBullish.length,
+              fresh_bearish_crossovers: freshBearish.length,
+              in_rsi_corridor: rows.filter((row: EmaRecord) => row.is_in_rsi_corridor).length,
+              bullish_and_rsi_satisfied: rows.filter((row: EmaRecord) => row.satisfies_ema_and_rsi).length,
+            },
+            groups: {
+              ...previous.groups,
+              fresh_bullish_crossovers: freshBullish,
+              fresh_bearish_crossovers: freshBearish,
+              bullish_ema_rsi_corridor: rows.filter((row: EmaRecord) => row.satisfies_ema_and_rsi),
+              bearish_ema_rsi_corridor: rows.filter((row: EmaRecord) => row.alignment === 'BEARISH' && row.is_in_rsi_corridor),
+            },
+          };
+        });
+      };
+      socket.onclose = () => {
+        if (!stopped) retryTimer = window.setTimeout(connect, 5000);
+      };
+      socket.onerror = () => socket.close();
+    };
+    connect();
+    return () => {
+      stopped = true;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [emaPeriods, rsiMin, rsiMax]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadData(rsiMin, rsiMax);
+    await loadData(rsiMin, rsiMax, emaPeriods);
     setRefreshing(false);
   };
 
   const handleApplyRsiFilter = () => {
-    loadData(rsiMin, rsiMax);
+    loadData(rsiMin, rsiMax, emaPeriods);
+  };
+
+  const handleApplyEmaPeriods = () => {
+    const parsed = [...new Set(emaPeriodDraft.split(',').map(value => Number(value.trim())).filter(Number.isInteger))].sort((a, b) => a - b);
+    if (!parsed.length || parsed.length > 12 || parsed.some(period => period < 2 || period > 500)) return;
+    setEmaPeriods(parsed);
+    void loadData(rsiMin, rsiMax, parsed);
   };
 
   const records: EmaRecord[] = data?.all_results || [];
+  const visibleEmaPeriods: number[] = data?.ema_periods_config || emaPeriods;
   const selectedRecord = records.find(r => r.symbol === selectedSymbol);
 
   // Filtered by search and active group
@@ -163,6 +310,12 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
         return !r.is_in_rsi_corridor;
       } else if (activeGroup === 'NEAR_CROSSOVER') {
         return Math.abs(r.ema_distance_pct) <= 0.60;
+      } else if (activeGroup === 'BULLISH_TREND') {
+        return r.trend_direction === 'BULLISH';
+      } else if (activeGroup === 'BEARISH_TREND') {
+        return r.trend_direction === 'BEARISH';
+      } else if (activeGroup === 'EMA_CROSSOVER') {
+        return (r.ema_crossovers || []).some(cross => cross.bullish || cross.bearish);
       }
 
       return true;
@@ -376,6 +529,23 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
             </button>
           </div>
 
+          <div className="flex items-center gap-2 bg-[#0B0E14] border border-[#232E47] px-3 py-1.5 rounded-lg">
+            <span className="text-slate-400">EMA periods:</span>
+            <input
+              aria-label="Comma-separated EMA periods"
+              value={emaPeriodDraft}
+              onChange={(event) => setEmaPeriodDraft(event.target.value)}
+              className="w-48 bg-slate-900 border border-slate-700 rounded px-2 py-1 font-mono text-white"
+              placeholder="5, 9, 10, 20, 21, 50, 100, 200"
+            />
+            <button
+              onClick={handleApplyEmaPeriods}
+              className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold hover:bg-sky-500/30 text-[11px]"
+            >
+              Apply
+            </button>
+          </div>
+
           {/* Group Filter Buttons */}
           <div className="flex bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47]">
             <button
@@ -401,6 +571,24 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
               }`}
             >
               Fresh Crossovers
+            </button>
+            <button
+              onClick={() => setActiveGroup('BULLISH_TREND')}
+              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'BULLISH_TREND' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:text-white'}`}
+            >
+              EMA Aligned Up
+            </button>
+            <button
+              onClick={() => setActiveGroup('BEARISH_TREND')}
+              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'BEARISH_TREND' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white'}`}
+            >
+              EMA Aligned Down
+            </button>
+            <button
+              onClick={() => setActiveGroup('EMA_CROSSOVER')}
+              className={`px-2.5 py-1 rounded text-xs font-semibold ${activeGroup === 'EMA_CROSSOVER' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-400 hover:text-white'}`}
+            >
+              EMA Crossovers
             </button>
           </div>
         </div>
@@ -429,15 +617,15 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
               <thead>
                 <tr className="bg-[#0B0E14] border-b border-[#232E47] text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Stock / Constituent</th>
-                  <th className="py-3 px-3 text-right">Latest Close</th>
-                  <th className="py-3 px-3 text-right">EMA 9</th>
-                  <th className="py-3 px-3 text-right">EMA 21</th>
+                  <th className="py-3 px-3 text-right">Latest Price</th>
+                  {visibleEmaPeriods.map(period => <th key={period} className="py-3 px-3 text-right">EMA {period}</th>)}
                   <th className="py-3 px-3 text-right">Spread %</th>
                   <th className="py-3 px-3 text-center">Alignment</th>
                   <th className="py-3 px-3 text-right">RSI 14</th>
                   <th className="py-3 px-3 text-center">RSI Status</th>
                   <th className="py-3 px-3 text-center">Crossover Signal</th>
                   <th className="py-3 px-4 text-center">Volume Bias</th>
+                  <th className="py-3 px-4 text-center">Freshness / Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232E47]/60">
@@ -481,15 +669,14 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                         ₹{item.close.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
 
-                      {/* EMA 9 */}
-                      <td className="py-3 px-3 text-right font-mono text-emerald-400 whitespace-nowrap">
-                        ₹{item.ema_9.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-
-                      {/* EMA 21 */}
-                      <td className="py-3 px-3 text-right font-mono text-amber-400 whitespace-nowrap">
-                        ₹{item.ema_21.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
+                      {visibleEmaPeriods.map(period => {
+                        const value = item.ema_values?.[String(period)];
+                        const comparison = item.price_vs_ema?.[String(period)];
+                        return <td key={period} className={`py-3 px-3 text-right font-mono whitespace-nowrap ${comparison === 'ABOVE' ? 'text-emerald-400' : comparison === 'BELOW' ? 'text-rose-400' : 'text-slate-400'}`}>
+                          {value == null ? '—' : `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                          <div className="text-[9px] text-slate-500">{comparison || 'HISTORY SHORT'}</div>
+                        </td>;
+                      })}
 
                       {/* Distance / Spread % */}
                       <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
@@ -569,6 +756,15 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                             : 'bg-slate-800 text-slate-400'
                         }`}>
                           {item.volume_status.replace('_', ' ')} (RVOL {item.rvol}x)
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className={`block text-[10px] font-bold ${item.data_freshness === 'LIVE' ? 'text-emerald-400' : item.data_freshness === 'STALE' ? 'text-amber-300' : 'text-slate-500'}`}>
+                          {item.data_freshness || 'HISTORICAL_ONLY'}
+                        </span>
+                        <span className="block text-[9px] text-slate-500" title={item.latest_update_timestamp || ''}>
+                          {item.latest_update_timestamp ? new Date(item.latest_update_timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'No live tick'}
                         </span>
                       </td>
                     </tr>

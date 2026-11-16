@@ -22,6 +22,21 @@ import {
 } from 'lucide-react';
 import { fetchChartCandles, getChartCsvDownloadUrl } from '../services/api';
 
+const getChartBucketTime = (timestampMs: number, timeframe: string): number => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date(timestampMs));
+  const part = (type: string) => Number(parts.find(item => item.type === type)?.value || 0);
+  const sessionOpen = Date.UTC(part('year'), part('month') - 1, part('day'), 3, 45) / 1000;
+  const seconds = timeframe === '1m' ? 60 : timeframe === '5m' ? 300 : timeframe === '15m' ? 900 : timeframe === '1h' ? 3600 : null;
+  if (seconds == null) return sessionOpen;
+  return sessionOpen + Math.floor((timestampMs / 1000 - sessionOpen) / seconds) * seconds;
+};
+
+const getIstSessionDate = (timestampMs: number): string => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+}).format(new Date(timestampMs));
+
 interface ProfessionalTradingChartProps {
   symbol?: string;
   className?: string;
@@ -87,6 +102,8 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     ema21?: number;
   } | null>(null);
   const [feedStatus, setFeedStatus] = useState('WAITING');
+  const [feedTimestamps, setFeedTimestamps] = useState<{ exchange: string | null; received: string | null; frontend: string | null }>({ exchange: null, received: null, frontend: null });
+  const [liveFollow, setLiveFollow] = useState(true);
   const [olderLoading, setOlderLoading] = useState(false);
   const [hasOlder, setHasOlder] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
@@ -95,10 +112,22 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   const hasInitialRangeRef = useRef(false);
   const feedSocketRef = useRef<WebSocket | null>(null);
   const instrumentKeyRef = useRef<string | null>(null);
+  const timeframeRef = useRef(timeframe);
+  const lastInstrumentTickAtRef = useRef<number | null>(null);
   const selectedTimeRef = useRef<any>(null);
   const selectedPriceRef = useRef<number | null>(null);
+  const candlesDataRef = useRef<any[]>(candlesData);
+  const indicatorsDataRef = useRef<any>(indicatorsData);
+  const chartDataRef = useRef<any[]>([]);
+  const overlaySettingsRef = useRef<string>('');
+  const loadOlderRef = useRef<() => Promise<void>>(async () => undefined);
+  const liveFollowRef = useRef(liveFollow);
   const chartSymbols = Array.from(new Set(['NIFTY', 'BANKNIFTY', ...availableSymbols, symbol]));
   const chartSymbol = selectedSymbol || symbol;
+  timeframeRef.current = timeframe;
+  candlesDataRef.current = candlesData;
+  indicatorsDataRef.current = indicatorsData;
+  liveFollowRef.current = liveFollow;
 
   useEffect(() => setSelectedSymbol(symbol), [symbol]);
 
@@ -125,7 +154,11 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         setCandlesData(res.candles || []);
         setIndicatorsData(res.indicators || {});
         setHasOlder((res.candles || []).length > 0);
-        setFeedStatus(res.feed_status || 'WAITING');
+        // Aggregate feed status alone is not enough: this chart stays WAITING
+        // until this instrument itself produces an actual V3 message.
+        setFeedStatus('WAITING');
+        lastInstrumentTickAtRef.current = null;
+        setFeedTimestamps({ exchange: null, received: null, frontend: null });
         instrumentKeyRef.current = res.instrument_key || null;
         if (feedSocketRef.current?.readyState === WebSocket.OPEN && res.instrument_key) {
           feedSocketRef.current.send(JSON.stringify({ mode: 'full', instrumentKeys: [res.instrument_key] }));
@@ -150,27 +183,55 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     socket.onmessage = event => {
       let message: any;
       try { message = JSON.parse(event.data); } catch { return; }
-      if (message.type === 'status') setFeedStatus(message.status || 'WAITING');
+      if (message.type === 'status' && ['DISCONNECTED', 'FAILED'].includes(message.status)) {
+        setFeedStatus('DISCONNECTED');
+      }
       const tick = message.ticks?.[instrumentKeyRef.current || ''];
       if (!tick) return;
-      if (message.is_live_update) setFeedStatus('LIVE');
+      if (message.is_live_update) {
+        setFeedStatus('LIVE');
+        lastInstrumentTickAtRef.current = Date.now();
+        setFeedTimestamps({ exchange: tick.exchange_timestamp || null, received: tick.received_at || null,
+          frontend: new Date().toISOString() });
+      }
+      const exchangeMs = Number(tick.last_trade_time);
+      if (!Number.isFinite(exchangeMs) || exchangeMs <= 0) return;
       setCandlesData(current => {
         if (!current.length) return current;
         const next = [...current];
         const last = { ...next[next.length - 1] };
-        last.close = tick.ltp;
-        last.high = Math.max(Number(last.high), Number(tick.ltp));
-        last.low = Math.min(Number(last.low), Number(tick.ltp));
-        last.volume = tick.volume ?? last.volume;
-        last.oi = tick.oi ?? last.oi;
-        last.iv = tick.iv ?? last.iv;
-        if (tick.greeks) Object.assign(last, tick.greeks);
-        next[next.length - 1] = last;
+        const intraday = ['1m', '5m', '15m', '1h'].includes(timeframeRef.current);
+        const sameSessionDay = !intraday && getIstSessionDate(exchangeMs) === getIstSessionDate(Number(last.time) * 1000);
+        const bucketTime = sameSessionDay ? Number(last.time) : getChartBucketTime(exchangeMs, timeframeRef.current);
+        if (bucketTime < Number(last.time) || exchangeMs / 1000 < Number(last.time)) return current;
+        const increment = Number(tick.incremental_volume || 0);
+        if (bucketTime === Number(last.time)) {
+          last.close = Number(tick.ltp);
+          last.high = Math.max(Number(last.high), Number(tick.ltp));
+          last.low = Math.min(Number(last.low), Number(tick.ltp));
+          if (tick.incremental_volume != null) last.volume = Number(last.volume || 0) + increment;
+          last.oi = tick.oi ?? last.oi;
+          last.iv = tick.iv ?? last.iv;
+          last.exchange_timestamp = tick.exchange_timestamp;
+          last.received_at = tick.received_at;
+          if (tick.greeks) Object.assign(last, tick.greeks);
+          next[next.length - 1] = last;
+        } else {
+          next.push({ time: bucketTime, time_iso: new Date(bucketTime * 1000).toISOString(),
+            open: Number(tick.ltp), high: Number(tick.ltp), low: Number(tick.ltp),
+            close: Number(tick.ltp), volume: tick.incremental_volume == null ? null : increment,
+            oi: tick.oi, iv: tick.iv, exchange_timestamp: tick.exchange_timestamp,
+            received_at: tick.received_at, ...(tick.greeks || {}) });
+        }
         return next;
       });
     };
     const poll = window.setInterval(() => fetch('/api/v1/options/feed-status').then(r => r.json())
-      .then(status => setFeedStatus(status.status || 'WAITING')).catch(() => setFeedStatus('DISCONNECTED')), 5000);
+      .then(status => {
+        if (['DISCONNECTED', 'FAILED'].includes(status.status)) setFeedStatus('DISCONNECTED');
+        else if (lastInstrumentTickAtRef.current == null) setFeedStatus('WAITING');
+        else setFeedStatus(Date.now() - lastInstrumentTickAtRef.current > 20000 ? 'STALE' : 'LIVE');
+      }).catch(() => setFeedStatus('DISCONNECTED')), 5000);
     return () => { window.clearInterval(poll); socket.close(); feedSocketRef.current = null; };
   }, []);
 
@@ -213,10 +274,12 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
       setOlderLoading(false);
     }
   };
+  loadOlderRef.current = loadOlder;
 
   // Initialize and update Lightweight Charts instance
   useEffect(() => {
     if (!chartContainerRef.current) return;
+    chartDataRef.current = [];
 
     // Preserve the user's exact visible timestamp range while older pages are added.
     if (chartApiRef.current) {
@@ -466,14 +529,16 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
       const barData: any = param.seriesData.get(mainSeries);
       if (barData) {
         selectedTimeRef.current = param.time;
-        const match = candlesData.find(c => c.time === param.time);
+        const currentCandles = candlesDataRef.current;
+        const currentIndicators = indicatorsDataRef.current;
+        const match = currentCandles.find(c => c.time === param.time);
         const openVal = barData.open !== undefined ? barData.open : barData.value;
         const closeVal = barData.close !== undefined ? barData.close : barData.value;
         selectedPriceRef.current = closeVal;
         const highVal = barData.high !== undefined ? barData.high : barData.value;
         const lowVal = barData.low !== undefined ? barData.low : barData.value;
-        const matchedIndex = match ? candlesData.indexOf(match) : -1;
-        const prevClose = matchedIndex > 0 ? candlesData[matchedIndex - 1].close : openVal;
+        const matchedIndex = match ? currentCandles.indexOf(match) : -1;
+        const prevClose = matchedIndex > 0 ? currentCandles[matchedIndex - 1].close : openVal;
         const chg = match ? closeVal - prevClose : 0;
 
         setActiveLegend({
@@ -492,18 +557,22 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           vega: match?.vega,
           change: chg,
           changePct: prevClose > 0 ? (chg / prevClose) * 100 : 0,
-          sma20: matchedIndex >= 0 ? indicatorsData.sma_20?.[matchedIndex] : undefined,
-          sma50: matchedIndex >= 0 ? indicatorsData.sma_50?.[matchedIndex] : undefined,
-          sma100: matchedIndex >= 0 ? indicatorsData.sma_100?.[matchedIndex] : undefined,
-          sma200: matchedIndex >= 0 ? indicatorsData.sma_200?.[matchedIndex] : undefined,
-          ema9: matchedIndex >= 0 ? indicatorsData.ema_9?.[matchedIndex] : undefined,
-          ema21: matchedIndex >= 0 ? indicatorsData.ema_21?.[matchedIndex] : undefined
+          sma20: matchedIndex >= 0 ? currentIndicators.sma_20?.[matchedIndex] : undefined,
+          sma50: matchedIndex >= 0 ? currentIndicators.sma_50?.[matchedIndex] : undefined,
+          sma100: matchedIndex >= 0 ? currentIndicators.sma_100?.[matchedIndex] : undefined,
+          sma200: matchedIndex >= 0 ? currentIndicators.sma_200?.[matchedIndex] : undefined,
+          ema9: matchedIndex >= 0 ? currentIndicators.ema_9?.[matchedIndex] : undefined,
+          ema21: matchedIndex >= 0 ? currentIndicators.ema_21?.[matchedIndex] : undefined
         });
       }
     });
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
-      if (range && hasInitialRangeRef.current && range.from <= 2 && !loadingOlderRef.current) void loadOlder();
+      if (!range) return;
+      const currentCandles = candlesDataRef.current;
+      const latestIndex = currentCandles.length - 1;
+      if (liveFollowRef.current && latestIndex > 0 && range.to < latestIndex - 2) setLiveFollow(false);
+      if (hasInitialRangeRef.current && range.from <= 2 && !loadingOlderRef.current) void loadOlderRef.current();
     });
 
     // Handle container resize
@@ -524,7 +593,126 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         chartApiRef.current = null;
       }
     };
-  }, [candlesData, chartType, height, isFullscreen, showIndicators, showSeries]);
+  }, [chartSymbol, chartType, height, instrumentKey, isFullscreen, timeframe]);
+
+  // Update the existing chart series in place. Live price and volume ticks
+  // touch only the active candle; older history is merged with the visible
+  // time range preserved, so scrolling never tears down or resets the chart.
+  useEffect(() => {
+    const chart = chartApiRef.current;
+    const mainSeries = mainSeriesRef.current;
+    const volumeSeries = volumeSeriesRef.current;
+    if (!chart || !mainSeries || !volumeSeries || !candlesData.length) return;
+
+    const previous = chartDataRef.current;
+    const timestampsMatch = previous.length > 0
+      && previous.length <= candlesData.length
+      && previous.every((candle, index) => candle.time === candlesData[index]?.time);
+    const incremental = timestampsMatch
+      && (candlesData.length === previous.length || candlesData.length === previous.length + 1);
+    const overlaySettings = JSON.stringify({ showIndicators, showSeries });
+    const overlaySettingsChanged = overlaySettingsRef.current !== overlaySettings;
+    const logicalRangeBeforeUpdate = incremental && candlesData.length === previous.length + 1 && !liveFollow
+      ? chart.timeScale().getVisibleLogicalRange() : null;
+
+    const toPriceItem = (candle: any) => chartType === 'LINE' || chartType === 'AREA'
+      ? { time: candle.time, value: candle.close }
+      : { time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close };
+    const toVolumeItem = (candle: any) => ({ time: candle.time, value: candle.volume ?? 0,
+      color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)' });
+
+    if (incremental) {
+      const latest = candlesData[candlesData.length - 1];
+      try {
+        mainSeries.update(toPriceItem(latest));
+        volumeSeries.update(toVolumeItem(latest));
+      } catch {
+        mainSeries.setData(candlesData.map(toPriceItem));
+        volumeSeries.setData(candlesData.map(toVolumeItem));
+      }
+    } else {
+      let preservedRange: any = null;
+      const prepended = previous.length > 0 && candlesData.length > previous.length
+        && candlesData[candlesData.length - 1]?.time === previous[previous.length - 1]?.time
+        && previous.every((candle, index) => candle.time === candlesData[candlesData.length - previous.length + index]?.time);
+      if (prepended) {
+        try { preservedRange = chart.timeScale().getVisibleRange(); } catch { /* no range yet */ }
+      }
+      mainSeries.setData(candlesData.map(toPriceItem));
+      volumeSeries.setData(candlesData.map(toVolumeItem));
+      if (preservedRange) {
+        try { chart.timeScale().setVisibleRange(preservedRange); } catch { /* range can be outside returned page */ }
+      } else if (!previous.length) {
+        const end = candlesData.length - 1;
+        chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, end - 149), to: end + 5 });
+        hasInitialRangeRef.current = true;
+      }
+    }
+
+    const setOverlay = (ref: React.MutableRefObject<ISeriesApi<any> | null>, values: number[] | undefined,
+      visible: boolean, period: number, kind: 'SMA' | 'EMA') => {
+      const series = ref.current;
+      if (!series) return;
+      series.applyOptions({ visible: showIndicators && visible });
+      if (!showIndicators || !visible || !values) {
+        series.setData([]);
+        return;
+      }
+      if (incremental && !overlaySettingsChanged) {
+        const index = candlesData.length - 1;
+        let value = values[index];
+        if (kind === 'SMA' && candlesData.length >= period) {
+          const closes = candlesData.slice(-period).map(candle => Number(candle.close));
+          value = closes.reduce((sum, close) => sum + close, 0) / period;
+        } else if (kind === 'EMA' && candlesData.length >= period) {
+          const alpha = 2 / (period + 1);
+          const prior = values[index - 1];
+          if (prior != null && Number.isFinite(Number(prior))) {
+            value = Number(prior) + alpha * (Number(candlesData[index].close) - Number(prior));
+          }
+        }
+        if (value != null && Number.isFinite(Number(value))) {
+          try { series.update({ time: candlesData[index].time, value: Number(value) }); }
+          catch { series.setData(candlesData.map((candle, index) => ({ time: candle.time, value: values[index] }))
+            .filter(item => item.value != null)); }
+        }
+      } else {
+        series.setData(candlesData.map((candle, index) => ({ time: candle.time, value: values[index] }))
+          .filter(item => item.value != null));
+      }
+    };
+    setOverlay(smaSeriesRef, indicatorsData.sma_20, showSeries.sma20, 20, 'SMA');
+    setOverlay(sma50SeriesRef, indicatorsData.sma_50, showSeries.sma50, 50, 'SMA');
+    setOverlay(sma100SeriesRef, indicatorsData.sma_100, showSeries.sma100, 100, 'SMA');
+    setOverlay(sma200SeriesRef, indicatorsData.sma_200, showSeries.sma200, 200, 'SMA');
+    setOverlay(emaSeriesRef, indicatorsData.ema_9, showSeries.ema9, 9, 'EMA');
+    setOverlay(ema21SeriesRef, indicatorsData.ema_21, showSeries.ema21, 21, 'EMA');
+
+    chartDataRef.current = candlesData;
+    overlaySettingsRef.current = overlaySettings;
+    const latestIndex = candlesData.length - 1;
+    const selectedIndex = selectedTimeRef.current == null
+      ? latestIndex : candlesData.findIndex(candle => candle.time === selectedTimeRef.current);
+    const resolvedIndex = selectedIndex >= 0 ? selectedIndex : latestIndex;
+    const selected = candlesData[resolvedIndex];
+    const previousClose = resolvedIndex > 0 ? candlesData[resolvedIndex - 1].close : selected.open;
+    const change = selected.close - previousClose;
+    setActiveLegend({
+      time: typeof selected.time === 'number' ? new Date(selected.time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : String(selected.time),
+      open: selected.open, high: selected.high, low: selected.low, close: selected.close,
+      volume: selected.volume, vwap: selected.vwap, oi: selected.oi, iv: selected.iv,
+      delta: selected.delta, gamma: selected.gamma, theta: selected.theta, vega: selected.vega,
+      change, changePct: previousClose ? (change / previousClose) * 100 : 0,
+      sma20: indicatorsData.sma_20?.[resolvedIndex], sma50: indicatorsData.sma_50?.[resolvedIndex],
+      sma100: indicatorsData.sma_100?.[resolvedIndex], sma200: indicatorsData.sma_200?.[resolvedIndex],
+      ema9: indicatorsData.ema_9?.[resolvedIndex], ema21: indicatorsData.ema_21?.[resolvedIndex],
+    });
+    if (incremental && candlesData.length === previous.length + 1 && liveFollow) {
+      chart.timeScale().scrollToRealTime();
+    } else if (logicalRangeBeforeUpdate) {
+      try { chart.timeScale().setVisibleLogicalRange(logicalRangeBeforeUpdate); } catch { /* keep current range */ }
+    }
+  }, [candlesData, chartType, indicatorsData, liveFollow, showIndicators, showSeries]);
 
   // Zoom and pan handlers
   const handleZoomIn = () => {
@@ -558,6 +746,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   };
 
   const handleGoToLive = () => {
+    setLiveFollow(true);
     if (chartApiRef.current) {
       chartApiRef.current.timeScale().scrollToRealTime();
     }
@@ -575,6 +764,9 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
             </h3>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
               {feedStatus}
+            </span>
+            <span className="inline text-[8px] sm:text-[9px] text-slate-500" title={`Exchange timestamp: ${feedTimestamps.exchange || 'waiting'}; server received: ${feedTimestamps.received || 'waiting'}; frontend received: ${feedTimestamps.frontend || 'waiting'}`}>
+              Exch {feedTimestamps.exchange ? new Date(feedTimestamps.exchange).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'} · Srv {feedTimestamps.received ? new Date(feedTimestamps.received).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'} · UI {feedTimestamps.frontend ? new Date(feedTimestamps.frontend).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
             </span>
           </div>
 
@@ -647,10 +839,10 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
 
           {/* Go to Live Follow Button */}
           <button
-            onClick={handleGoToLive}
+            onClick={() => liveFollow ? setLiveFollow(false) : handleGoToLive()}
             className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${feedStatus === 'LIVE' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25' : 'bg-[#121824] text-slate-300 border border-[#232E47]'}`}
           >
-            {feedStatus === 'LIVE' ? 'Follow Live' : 'Go to Latest'}
+            {liveFollow ? 'Pause Live Follow' : 'Go to Live'}
           </button>
 
           {/* CSV Export */}

@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
+from sqlalchemy import inspect, text
 
 from app.database.session import engine, SessionLocal
 from app.models.stock import (
@@ -24,12 +25,35 @@ class DatabaseService:
         self.init_db()
 
     def init_db(self):
-        """Create all tables if they don't exist."""
+        """Create tables and apply additive migrations needed by existing databases."""
         try:
             Base.metadata.create_all(bind=engine)
+            self._migrate_existing_schema(engine)
             logger.info("Database schema initialized successfully.")
         except Exception as e:
             logger.error(f"Error initializing database schema: {e}")
+
+    @staticmethod
+    def _migrate_existing_schema(target_engine):
+        """Add newly introduced nullable/defaulted columns without dropping stored data."""
+        inspector = inspect(target_engine)
+        if not inspector.has_table("constituents"):
+            return
+        existing = {column["name"] for column in inspector.get_columns("constituents")}
+        if "weightage" in existing:
+            return
+
+        # Older local/production DBs predate this field. The model has a
+        # numeric zero default; backfill it additively so existing rows and
+        # foreign-key relationships remain intact.
+        if target_engine.dialect.name == "postgresql":
+            statement = "ALTER TABLE constituents ADD COLUMN IF NOT EXISTS weightage FLOAT DEFAULT 0.0"
+        elif target_engine.dialect.name == "sqlite":
+            statement = "ALTER TABLE constituents ADD COLUMN weightage FLOAT DEFAULT 0.0"
+        else:
+            raise RuntimeError("Unsupported database dialect for constituents.weightage migration")
+        with target_engine.begin() as connection:
+            connection.execute(text(statement))
 
     def sync_constituents_to_db(self):
         """Seed or update constituents in relational database."""

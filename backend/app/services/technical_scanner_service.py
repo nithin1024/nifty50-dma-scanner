@@ -8,11 +8,16 @@ and fresh crossover detection.
 from typing import List, Dict, Any, Optional
 import math
 import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from app.services.constituents_service import constituents_service
 from app.services.historical_data_service import historical_data_service
 from app.services.volume_service import volume_engine
+from app.services.upstox_feed_service import subscription_manager
 
 logger = logging.getLogger("technical_scanner_service")
+IST = ZoneInfo("Asia/Kolkata")
+DEFAULT_EMA_PERIODS = (5, 9, 10, 20, 21, 50, 100, 200)
 
 
 class TechnicalScannerService:
@@ -99,9 +104,18 @@ class TechnicalScannerService:
     async def scan_all_constituents(
         self,
         rsi_min: float = 40.0,
-        rsi_max: float = 60.0
+        rsi_max: float = 60.0,
+        ema_periods: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
-        """Scans all 50 constituents for EMA 9, EMA 21, and RSI 14 conditions."""
+        """Scan verified historical closes and overlay only actual received V3 ticks."""
+        periods = sorted(set(ema_periods or DEFAULT_EMA_PERIODS))
+        if not periods or any(period < 2 or period > 500 for period in periods):
+            raise ValueError("EMA periods must be unique integers between 2 and 500")
+        if 9 not in periods:
+            periods.append(9)
+        if 21 not in periods:
+            periods.append(21)
+        periods = sorted(set(periods))
         stocks = constituents_service.get_constituents()
 
         all_results = []
@@ -127,18 +141,47 @@ class TechnicalScannerService:
             volumes = [int(c["volume"]) for c in candles if c.get("volume") is not None]
             dates = [c["trading_date"] for c in candles]
 
-            ema9_series = self.calculate_ema_series(closes, 9)
-            ema21_series = self.calculate_ema_series(closes, 21)
+            ema_series = {period: self.calculate_ema_series(closes, period) for period in periods}
             rsi14_series = self.calculate_rsi_series(closes, 14)
+            instrument_key = stock.get("upstox_instrument_key")
+            live_tick = subscription_manager.latest_ticks.get(instrument_key or "")
+            tick_fresh = False
+            if live_tick and live_tick.get("received_at"):
+                try:
+                    tick_age = (datetime.now(timezone.utc) - datetime.fromisoformat(
+                        live_tick["received_at"].replace("Z", "+00:00"))).total_seconds()
+                    tick_fresh = tick_age <= 20 and live_tick.get("ltp") is not None \
+                        and live_tick.get("feed_type") == "live_feed"
+                except (TypeError, ValueError):
+                    tick_fresh = False
 
-            latest_close = closes[-1]
+            historical_close = closes[-1]
+            latest_close = float(live_tick["ltp"]) if tick_fresh else historical_close
             prev_close = closes[-2]
+            latest_trading_day = str(dates[-1])
+            today_ist = datetime.now(IST).date().isoformat()
+            history_has_today = latest_trading_day[:10] == today_ist
 
-            latest_ema9 = ema9_series[-1]
-            prev_ema9 = ema9_series[-2]
+            # During an open session, calculate a provisional current-bar EMA
+            # from the prior completed EMA and the latest verified feed price.
+            latest_ema_values: Dict[int, Optional[float]] = {}
+            previous_ema_values: Dict[int, Optional[float]] = {}
+            for period in periods:
+                values = ema_series[period]
+                latest_history_ema = values[-1]
+                prior_bar_ema = values[-2] if len(values) > 1 else None
+                base = prior_bar_ema if history_has_today and prior_bar_ema is not None else latest_history_ema
+                previous_ema_values[period] = base
+                if tick_fresh and base is not None:
+                    alpha = 2.0 / (period + 1.0)
+                    latest_ema_values[period] = latest_close * alpha + base * (1.0 - alpha)
+                else:
+                    latest_ema_values[period] = latest_history_ema
 
-            latest_ema21 = ema21_series[-1]
-            prev_ema21 = ema21_series[-2]
+            latest_ema9 = latest_ema_values.get(9)
+            prev_ema9 = previous_ema_values.get(9)
+            latest_ema21 = latest_ema_values.get(21)
+            prev_ema21 = previous_ema_values.get(21)
 
             latest_rsi = rsi14_series[-1]
             prev_rsi = rsi14_series[-2]
@@ -181,6 +224,37 @@ class TechnicalScannerService:
 
             is_in_corridor = (rsi_min <= latest_rsi <= rsi_max)
 
+            valid_period_values = [(period, latest_ema_values[period]) for period in periods
+                                   if latest_ema_values.get(period) is not None]
+            price_vs_ema = {
+                str(period): ("ABOVE" if latest_close > float(value) else "BELOW" if latest_close < float(value) else "AT")
+                for period, value in valid_period_values
+            }
+            ema_values = {str(period): round(float(value), 4) if value is not None else None
+                          for period, value in latest_ema_values.items()}
+            prior_ema_values = {str(period): round(float(value), 4) if value is not None else None
+                                for period, value in previous_ema_values.items()}
+            alignment_periods = [value for _, value in valid_period_values]
+            fully_aligned_bullish = len(alignment_periods) == len(periods) and all(
+                alignment_periods[i] >= alignment_periods[i + 1] for i in range(len(alignment_periods) - 1))
+            fully_aligned_bearish = len(alignment_periods) == len(periods) and all(
+                alignment_periods[i] <= alignment_periods[i + 1] for i in range(len(alignment_periods) - 1))
+            trend_direction = "BULLISH" if fully_aligned_bullish else "BEARISH" if fully_aligned_bearish else alignment
+            ema_crossovers = []
+            for fast, slow in zip(periods, periods[1:]):
+                fast_now, slow_now = latest_ema_values.get(fast), latest_ema_values.get(slow)
+                fast_before, slow_before = previous_ema_values.get(fast), previous_ema_values.get(slow)
+                if None in (fast_now, slow_now, fast_before, slow_before):
+                    continue
+                bullish_cross = float(fast_before) <= float(slow_before) and float(fast_now) > float(slow_now)
+                bearish_cross = float(fast_before) >= float(slow_before) and float(fast_now) < float(slow_now)
+                ema_crossovers.append({"fast_period": fast, "slow_period": slow,
+                                       "signal": "BULLISH" if bullish_cross else "BEARISH" if bearish_cross else "NONE",
+                                       "bullish": bullish_cross, "bearish": bearish_cross})
+
+            live_volume = live_tick.get("volume") if tick_fresh else None
+            live_volume_increment = live_tick.get("incremental_volume") if tick_fresh else None
+
             # Volume Confirmation
             rvol = volume_engine.calculate_completed_session_rvol(volumes)
             six_avg = volume_engine.calculate_six_session_average(volumes)
@@ -198,8 +272,26 @@ class TechnicalScannerService:
                 "close": round(latest_close, 2),
                 "prev_close": round(prev_close, 2),
                 "trading_date": dates[-1],
+                "instrument_key": instrument_key,
+                "historical_close": round(historical_close, 2),
+                "price_source": "Upstox Market Data Feed V3" if tick_fresh else hist.get("provider", "historical candles"),
+                "data_freshness": "LIVE" if tick_fresh else ("STALE" if live_tick else "HISTORICAL_ONLY"),
+                "latest_update_timestamp": (live_tick.get("exchange_timestamp") or live_tick.get("received_at")) if tick_fresh else hist.get("retrieval_timestamp"),
+                "data_age_seconds": max(0, round(tick_age, 1)) if tick_fresh else None,
+                "volume_freshness": "LIVE" if live_volume is not None else "HISTORICAL_ONLY",
+                "live_volume": live_volume,
+                "live_volume_increment": live_volume_increment,
+                "volume_counter_reset": bool(live_tick.get("volume_counter_reset")) if tick_fresh else False,
                 "ema_9": round(latest_ema9, 2),
                 "ema_21": round(latest_ema21, 2),
+                "ema_periods": periods,
+                "ema_values": ema_values,
+                "previous_ema_values": prior_ema_values,
+                "price_vs_ema": price_vs_ema,
+                "ema_crossovers": ema_crossovers,
+                "trend_direction": trend_direction,
+                "multi_ema_aligned": fully_aligned_bullish or fully_aligned_bearish,
+                "volume_confirmation": "INCREASING" if (live_volume_increment or 0) > 0 else "NO_NEW_LIVE_VOLUME" if tick_fresh else "UNAVAILABLE",
                 "prev_ema_9": round(prev_ema9, 2) if prev_ema9 else None,
                 "prev_ema_21": round(prev_ema21, 2) if prev_ema21 else None,
                 "ema_distance_pct": round(ema_distance_pct, 2),
@@ -217,7 +309,8 @@ class TechnicalScannerService:
                 "rsi_status": rsi_status,
                 "is_in_rsi_corridor": is_in_corridor,
                 "satisfies_ema_and_rsi": (alignment == "BULLISH" and is_in_corridor),
-                "volume": volumes[-1],
+                "volume": live_volume if live_volume is not None else (volumes[-1] if volumes else 0),
+                "historical_volume": volumes[-1] if volumes else None,
                 "rvol": round(rvol, 2),
                 "volume_status": vol_status,
                 "institutional_bias": price_vol_conf["signal"]
@@ -247,6 +340,7 @@ class TechnicalScannerService:
 
         return {
             "total_constituents": len(all_results),
+            "ema_periods_config": periods,
             "rsi_filter_config": {"min": rsi_min, "max": rsi_max},
             "summary_counts": {
                 "bullish_alignment": len([r for r in all_results if r["alignment"] == "BULLISH"]),

@@ -239,8 +239,14 @@ export async function fetchGlobalNews(category?: string): Promise<any[]> {
   return response.json();
 }
 
-export async function fetchEmaScanner(rsiMin = 40.0, rsiMax = 60.0): Promise<any> {
-  const response = await fetch(`${API_BASE}/scanner/ema?rsi_min=${rsiMin}&rsi_max=${rsiMax}`);
+export async function fetchEmaScanner(
+  rsiMin = 40.0,
+  rsiMax = 60.0,
+  emaPeriods: number[] = [5, 9, 10, 20, 21, 50, 100, 200]
+): Promise<any> {
+  const query = new URLSearchParams({ rsi_min: String(rsiMin), rsi_max: String(rsiMax),
+    ema_periods: emaPeriods.join(',') });
+  const response = await fetch(`${API_BASE}/scanner/ema?${query.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
   }
