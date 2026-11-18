@@ -210,10 +210,10 @@ class LiveMarketFeedManager:
             if not tick or tick.get("ltp") is None:
                 continue
 
-            # Fetch historical candles for 6-session volume analytics
+            # Fetch historical candles for 6-session volume analytics with live tick incorporation
             hist = historical_data_service.get_cached_history(symbol)
             candles = hist.get("candles", []) if hist else []
-            vol_metrics = volume_engine.analyze_stock_volume(symbol, candles)
+            vol_metrics = volume_engine.analyze_stock_volume(symbol, candles, live_data=tick)
 
             # In intraday mode, live price is compared against completed daily SMAs
             live_price = float(tick["ltp"])

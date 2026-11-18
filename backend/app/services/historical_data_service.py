@@ -133,7 +133,18 @@ class HistoricalDataService:
         if not force_refresh:
             cached = self.get_cached_history(clean_symbol, range_period=clean_range)
             if cached and len(cached.get("candles", [])) >= min_sessions:
-                return cached
+                latest_date = cached.get("latest_trading_date")
+                try:
+                    from zoneinfo import ZoneInfo
+                    today_ist = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+                    if latest_date:
+                        latest_dt = datetime.strptime(latest_date, "%Y-%m-%d").date()
+                        days_diff = (today_ist - latest_dt).days
+                        # Fresh if from today, yesterday, or over the weekend
+                        if days_diff <= 1 or (today_ist.weekday() >= 5 and days_diff <= 3):
+                            return cached
+                except Exception:
+                    return cached
 
         try:
             upstox_history = await self._fetch_upstox_daily(clean_symbol, clean_range)

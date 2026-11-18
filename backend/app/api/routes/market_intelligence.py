@@ -161,3 +161,59 @@ async def get_nifty_trading_intelligence() -> Dict[str, Any]:
 async def get_market_alerts() -> List[Dict[str, Any]]:
     """Module 14: Macroeconomic, technical, and institutional flow alerts."""
     return institutional_market_suite.get_realtime_alerts()
+
+
+# ---------------------------------------------------------
+# PMI INTELLIGENCE SUITE (4 CASE SCENARIOS & 8 INDICATORS)
+# ---------------------------------------------------------
+
+@router.get("/pmi/dashboard", response_model=Dict[str, Any])
+async def get_pmi_dashboard() -> Dict[str, Any]:
+    """Complete Institutional PMI Intelligence Dashboard with 4 Case Scenarios & 8 Indicators."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_full_dashboard()
+
+
+@router.get("/pmi/indicators", response_model=List[Dict[str, Any]])
+async def get_pmi_indicators() -> List[Dict[str, Any]]:
+    """8 Tracked PMI Indicators with Surprise, Monthly Change and Case Classification."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_pmi_indicators()
+
+
+@router.get("/pmi/scenarios", response_model=Dict[str, Any])
+async def get_pmi_scenarios() -> Dict[str, Any]:
+    """Four Case Scenarios definitions and 11-column comparison table."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return {
+        "cases": pmi_suite.get_four_case_definitions(),
+        "comparison_table": pmi_suite.get_scenario_comparison_table()
+    }
+
+
+@router.get("/pmi/expectation-analysis", response_model=Dict[str, Any])
+async def get_pmi_expectation_analysis() -> Dict[str, Any]:
+    """Expectation vs Actual analysis distinguishing growth vs momentum."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_expectation_vs_actual_analysis()
+
+
+@router.get("/pmi/companies", response_model=List[Dict[str, Any]])
+async def get_pmi_companies(case: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Company-level fundamental metrics & earnings sensitivity for affected sectors."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_company_level_analysis(case_filter=case)
+
+
+@router.get("/pmi/history", response_model=Dict[str, Any])
+async def get_pmi_history() -> Dict[str, Any]:
+    """5-year monthly historical PMI data (2021-2026) with NIFTY comparison."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_5year_monthly_history()
+
+
+@router.get("/pmi/alerts", response_model=List[Dict[str, Any]])
+async def get_pmi_alerts() -> List[Dict[str, Any]]:
+    """Real-time rule-based PMI alerts for crossings, surprises, and divergences."""
+    from app.services.pmi_intelligence_service import pmi_suite
+    return pmi_suite.get_pmi_alerts()

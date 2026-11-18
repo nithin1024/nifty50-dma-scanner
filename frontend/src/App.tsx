@@ -16,6 +16,7 @@ import { PremarketDashboard } from './components/PremarketDashboard';
 import { SectorFundamentalsDashboard } from './components/SectorFundamentalsDashboard';
 import { MultiTimeframeMonitoringDashboard } from './components/MultiTimeframeMonitoringDashboard';
 import { NiftyTradingIntelligenceDashboard } from './components/NiftyTradingIntelligenceDashboard';
+import { PmiIntelligenceDashboard } from './components/PmiIntelligenceDashboard';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -177,26 +178,20 @@ export const App: React.FC = () => {
           <NiftyLiveOptionChainDashboard initialTab="SUPPORT_RESISTANCE" />
         )}
 
-        {(activeTab === 'sector-analysis' || activeTab === 'company-fundamentals') && (
+        {(activeTab === 'sector-analysis' || activeTab === 'company-fundamentals' || activeTab === 'sector-fundamentals') && (
           <SectorFundamentalsDashboard />
+        )}
+
+        {(activeTab === 'economic-calendar' || activeTab === 'global-markets' || activeTab === 'global-events') && (
+          <GlobalEventsPage />
+        )}
+
+        {activeTab === 'pmi-intelligence' && (
+          <PmiIntelligenceDashboard />
         )}
 
         {(activeTab === 'daily-report' || activeTab === 'weekly-report' || activeTab === 'monthly-report') && (
           <MultiTimeframeMonitoringDashboard />
-        )}
-
-        {(activeTab === 'fii-dii' || activeTab === 'indian-economy' || activeTab === 'global-economy' || activeTab === 'news-intelligence') && (
-          <MarketOverview 
-            health={health}
-            dataStatus={dataStatus}
-            dailyScan={dailyScan}
-            heavyweights={heavyweights}
-            intelligence={intelligence}
-            loading={loading}
-            onRefresh={loadAllData}
-            onNavigate={setActiveTab}
-            onSelectStock={handleSelectStock}
-          />
         )}
 
         {(activeTab === 'historical' || activeTab === 'trading-chart') && (

@@ -142,16 +142,42 @@ class VolumeAnalyticsEngine:
             }
 
     @classmethod
-    def analyze_stock_volume(cls, symbol: str, candles: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_stock_volume(cls, symbol: str, candles: List[Dict[str, Any]], live_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Perform complete 6-session volume analytics for a single stock.
+        Optionally accepts live_data to include or update the current active intraday session.
         """
         constituent = constituents_service.get_by_symbol(symbol) or {}
         comp_name = constituent.get("company_name", symbol)
         weightage = constituent.get("weightage", 0.0)
-        candles = [c for c in candles if c.get("volume") is not None]
+        
+        working_candles = [dict(c) for c in (candles or []) if c.get("volume") is not None]
+        
+        # Incorporate live_data if provided
+        from zoneinfo import ZoneInfo
+        today_ist = datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat()
+        if live_data and (live_data.get("volume") or live_data.get("cumulative_volume")):
+            live_vol = live_data.get("volume") or live_data.get("cumulative_volume") or 0
+            live_price = live_data.get("ltp") or live_data.get("close") or live_data.get("price")
+            if live_price is None and working_candles:
+                live_price = working_candles[-1].get("close", 0.0)
+            
+            if working_candles and working_candles[-1].get("trading_date") == today_ist:
+                working_candles[-1]["close"] = float(live_price or 0.0)
+                working_candles[-1]["volume"] = int(live_vol or 0)
+                working_candles[-1]["is_live"] = True
+            elif working_candles and working_candles[-1].get("trading_date", "") < today_ist:
+                working_candles.append({
+                    "trading_date": today_ist,
+                    "open": float(working_candles[-1]["close"]),
+                    "high": max(float(working_candles[-1]["close"]), float(live_price or 0.0)),
+                    "low": min(float(working_candles[-1]["close"]), float(live_price or 0.0)),
+                    "close": float(live_price or 0.0),
+                    "volume": int(live_vol or 0),
+                    "is_live": True
+                })
 
-        if not candles or len(candles) < 6:
+        if not working_candles or len(working_candles) < 6:
             return {
                 "symbol": symbol,
                 "company_name": comp_name,
@@ -167,7 +193,7 @@ class VolumeAnalyticsEngine:
                 "six_session_history": []
             }
 
-        recent_6 = candles[-6:]
+        recent_6 = working_candles[-6:]
         volumes = [c.get("volume", 0) for c in recent_6]
         latest_vol = volumes[-1]
         prev_vol = volumes[-2] if len(volumes) >= 2 else latest_vol
@@ -190,14 +216,15 @@ class VolumeAnalyticsEngine:
         history_table = []
         for i, c in enumerate(recent_6):
             c_close = c["close"]
-            p_close = recent_6[i - 1]["close"] if i > 0 else (candles[-7]["close"] if len(candles) >= 7 else c_close)
+            p_close = recent_6[i - 1]["close"] if i > 0 else (working_candles[-7]["close"] if len(working_candles) >= 7 else c_close)
             chg_pct = ((c_close - p_close) / p_close) * 100.0 if p_close > 0 else 0.0
             history_table.append({
                 "session_index": i + 1,
                 "trading_date": c["trading_date"],
                 "traded_volume": int(c.get("volume", 0)),
                 "close_price": round(c_close, 2),
-                "price_change_pct": round(chg_pct, 2)
+                "price_change_pct": round(chg_pct, 2),
+                "is_live": bool(c.get("is_live", False) or c["trading_date"] == today_ist)
             })
 
         return {

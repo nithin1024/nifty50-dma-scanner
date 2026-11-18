@@ -451,3 +451,53 @@ export async function fetchMarketAlerts(): Promise<any> {
   return response.json();
 }
 
+// -------------------------------------------------------------
+// PMI INTELLIGENCE SUITE (4 CASE SCENARIOS & 8 INDICATORS)
+// -------------------------------------------------------------
+
+export async function fetchPmiDashboard(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/dashboard`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiIndicators(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/indicators`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiScenarios(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/scenarios`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiExpectationAnalysis(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/expectation-analysis`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiCompanies(caseFilter?: string): Promise<any> {
+  const url = caseFilter 
+    ? `${API_BASE}/market-intelligence/pmi/companies?case=${encodeURIComponent(caseFilter)}`
+    : `${API_BASE}/market-intelligence/pmi/companies`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiHistory(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/history`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPmiAlerts(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/pmi/alerts`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+

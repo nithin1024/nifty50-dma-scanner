@@ -45,26 +45,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
 
   const macroNewsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'global-markets', label: '10. Global Markets', icon: <Globe className="w-4 h-4" /> },
-    { id: 'indian-economy', label: '11. Indian Economy', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'global-economy', label: '12. Global Economy', icon: <Globe className="w-4 h-4" /> },
-    { id: 'economic-calendar', label: '13. Economic Calendar', icon: <Activity className="w-4 h-4" /> },
-    { id: 'news-intelligence', label: '14. News Intelligence', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'economic-calendar', label: '11. Economic Calendar', icon: <Activity className="w-4 h-4" /> },
+    { id: 'pmi-intelligence', label: '12. PMI Intelligence', icon: <BarChart3 className="w-4 h-4" /> },
   ];
 
   const institutionalItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'fii-dii', label: '15. FII / DII Analysis', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'sector-analysis', label: '16. Sector Analysis', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'company-fundamentals', label: '17. Company Fundamentals', icon: <Crown className="w-4 h-4" /> },
+    { id: 'sector-fundamentals', label: '13. Sector & Fundamentals', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'heavyweights', label: 'Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
     { id: 'all-volume', label: 'All 50 Volume', icon: <Activity className="w-4 h-4" /> },
   ];
 
   const reportsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'daily-report', label: '18. Daily Report', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'weekly-report', label: '19. Weekly Report', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'monthly-report', label: '20. Monthly Report', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'historical', label: '21. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'data-quality', label: '22. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'daily-report', label: '14. Daily Report', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'weekly-report', label: '15. Weekly Report', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'monthly-report', label: '16. Monthly Report', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'historical', label: '17. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'data-quality', label: '18. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   return (
