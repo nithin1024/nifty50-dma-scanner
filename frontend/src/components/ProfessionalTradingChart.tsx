@@ -261,6 +261,22 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           last.received_at = tick.received_at;
           if (tick.greeks) Object.assign(last, tick.greeks);
           next[next.length - 1] = last;
+
+          if (selectedTimeRef.current == null || selectedTimeRef.current === last.time) {
+            const prevClose = next.length > 1 ? next[next.length - 2].close : last.open;
+            const liveChg = last.close - prevClose;
+            setActiveLegend(prev => ({
+              ...prev,
+              time: formatCandleLegendTime(last.time, timeframeRef.current, true, true),
+              open: last.open,
+              high: last.high,
+              low: last.low,
+              close: last.close,
+              volume: last.volume,
+              change: liveChg,
+              changePct: prevClose > 0 ? (liveChg / prevClose) * 100 : 0
+            }));
+          }
         } else {
           next.push({ time: bucketTime, time_iso: new Date(bucketTime * 1000).toISOString(),
             open: Number(tick.ltp), high: Number(tick.ltp), low: Number(tick.ltp),

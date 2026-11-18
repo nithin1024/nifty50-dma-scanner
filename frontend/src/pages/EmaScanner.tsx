@@ -371,7 +371,7 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* View Switcher: Upstox Pro Candlestick vs Corridor */}
+            {/* View Switcher: Upstox Pro Candlestick vs EMA Line */}
             <div className="flex items-center bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
               <button
                 type="button"
@@ -393,26 +393,25 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>RSI Corridor</span>
+                <span>EMA Line View</span>
               </button>
             </div>
 
-            {chartView === 'corridor' && (
-              <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono">
-                {[10, 15, 30].map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setChartSessions(s)}
-                    className={`px-2.5 py-1 rounded font-bold transition-all ${
-                      chartSessions === s ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {s}-Sessions
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Session Count Selector for RSI Corridor */}
+            <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-lg border border-[#232E47] text-xs font-mono" title="Select RSI Corridor Observation Sessions">
+              {[10, 15, 30].map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setChartSessions(s)}
+                  className={`px-2.5 py-1 rounded font-bold transition-all ${
+                    chartSessions === s ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s}-Sessions
+                </button>
+              ))}
+            </div>
 
             {onSelectStock && (
               <button
@@ -637,101 +636,119 @@ export const EmaScanner: React.FC<{ onSelectStock?: (symbol: string) => void }> 
                   );
                 })()}
               </div>
-
-              {/* Lower Pane: RSI 14 Line Graph with Shaded 40-60 Corridor */}
-              <div className="pt-2 border-t border-[#232E47]/50">
-                <div className="flex items-center justify-between text-xs font-mono pb-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-                    <span className="text-purple-300 font-bold">Wilder's RSI 14 Oscillator</span>
-                    <span className="text-[10px] text-slate-400">• 40-60 Consolidation Corridor</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-amber-300 font-mono">
-                    Current RSI: {chartSeries[chartSeries.length - 1]?.rsi14?.toFixed(1) || '—'}
-                  </span>
-                </div>
-
-                <div className="relative w-full h-24 pt-1">
-                  {(() => {
-                    const svgWidth = 800;
-                    const svgHeight = 90;
-                    const padX = 65;
-                    const padY = 10;
-                    const plotW = svgWidth - (padX * 2);
-                    const plotH = svgHeight - (padY * 2);
-
-                    const count = chartSeries.length;
-                    const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2);
-                    const getRsiY = (val: number) => padY + plotH - ((val / 100) * plotH);
-
-                    const y60 = getRsiY(60);
-                    const y40 = getRsiY(40);
-
-                    const rsiPoints = chartSeries
-                      .map((p, i) => (p.rsi14 !== null ? `${getX(i)},${getRsiY(p.rsi14)}` : null))
-                      .filter(Boolean)
-                      .join(' ');
-
-                    return (
-                      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
-                        {/* Shaded 40-60 Corridor Band */}
-                        <rect
-                          x={padX}
-                          y={y60}
-                          width={plotW}
-                          height={y40 - y60}
-                          fill="#F59E0B"
-                          fillOpacity="0.12"
-                        />
-
-                        {/* Corridor Border Lines */}
-                        <line x1={padX} y1={y60} x2={svgWidth - padX} y2={y60} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
-                        <line x1={padX} y1={y40} x2={svgWidth - padX} y2={y40} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
-
-                        {/* Y-Axis Labels */}
-                        <text x={padX - 8} y={y60 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">60</text>
-                        <text x={padX - 8} y={y40 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">40</text>
-
-                        {/* RSI 14 Line */}
-                        {rsiPoints && (
-                          <polyline
-                            points={rsiPoints}
-                            fill="none"
-                            stroke="#C084FC"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        )}
-
-                        {/* RSI Data Dots */}
-                        {chartSeries.map((p, i) => {
-                          if (p.rsi14 === null) return null;
-                          const cx = getX(i);
-                          const cy = getRsiY(p.rsi14);
-                          return (
-                            <g key={`rsi-dot-${i}`} className="group cursor-pointer">
-                              <circle
-                                cx={cx}
-                                cy={cy}
-                                r="3.5"
-                                fill="#C084FC"
-                                stroke="#0B0E14"
-                                strokeWidth="1.5"
-                              />
-                              <title>{`${p.date}: RSI ${p.rsi14.toFixed(1)}`}</title>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    );
-                  })()}
-                </div>
-              </div>
             </div>
           )}
         </div>
         )}
+
+        {/* Dedicated Wilder's RSI 14 Oscillator with Shaded 40-60 Consolidation Corridor (Permanently Visible) */}
+        <div className="bg-[#0B0E14] rounded-xl border border-[#232E47]/70 p-4 space-y-2">
+          <div className="flex flex-wrap items-center justify-between text-xs font-mono pb-2 border-b border-[#232E47]/40 gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+              <span className="text-purple-300 font-bold">Wilder's RSI 14 Oscillator</span>
+              <span className="text-[10px] text-slate-400">&bull; 40-60 Institutional Consolidation Corridor ({chartSessions} Sessions)</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                (selectedRecord?.rsi_14 || 0) >= 40 && (selectedRecord?.rsi_14 || 0) <= 60
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'bg-slate-700/40 text-slate-400 border border-slate-600'
+              }`}>
+                {(selectedRecord?.rsi_14 || 0) >= 40 && (selectedRecord?.rsi_14 || 0) <= 60 ? 'IN CORRIDOR (40-60)' : 'OUTSIDE CORRIDOR'}
+              </span>
+              <span className="text-xs font-bold text-amber-300 font-mono">
+                Current RSI: <strong className="text-white">{selectedRecord?.rsi_14?.toFixed(1) || chartSeries?.[chartSeries.length - 1]?.rsi14?.toFixed(1) || '—'}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="relative w-full h-24 pt-1">
+            {chartLoading ? (
+              <div className="h-24 flex items-center justify-center text-slate-400 text-xs font-mono">
+                <RefreshCw className="w-4 h-4 text-purple-400 animate-spin mr-2" />
+                Calculating Wilder's RSI 14 for {selectedSymbol}...
+              </div>
+            ) : !chartSeries || chartSeries.length === 0 ? (
+              <div className="h-24 flex items-center justify-center text-slate-500 text-xs font-mono">
+                Awaiting candle data for {selectedSymbol}...
+              </div>
+            ) : (() => {
+              const svgWidth = 800;
+              const svgHeight = 90;
+              const padX = 65;
+              const padY = 10;
+              const plotW = svgWidth - (padX * 2);
+              const plotH = svgHeight - (padY * 2);
+
+              const count = chartSeries.length;
+              const getX = (i: number) => padX + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2);
+              const getRsiY = (val: number) => padY + plotH - ((val / 100) * plotH);
+
+              const y60 = getRsiY(60);
+              const y40 = getRsiY(40);
+
+              const rsiPoints = chartSeries
+                .map((p, i) => (p.rsi14 !== null ? `${getX(i)},${getRsiY(p.rsi14)}` : null))
+                .filter(Boolean)
+                .join(' ');
+
+              return (
+                <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
+                  {/* Shaded 40-60 Corridor Band */}
+                  <rect
+                    x={padX}
+                    y={y60}
+                    width={plotW}
+                    height={y40 - y60}
+                    fill="#F59E0B"
+                    fillOpacity="0.12"
+                  />
+
+                  {/* Corridor Border Lines */}
+                  <line x1={padX} y1={y60} x2={svgWidth - padX} y2={y60} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1={padX} y1={y40} x2={svgWidth - padX} y2={y40} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 3" />
+
+                  {/* Y-Axis Labels */}
+                  <text x={padX - 8} y={y60 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">60</text>
+                  <text x={padX - 8} y={y40 + 3} textAnchor="end" fill="#F59E0B" fontSize="9" fontFamily="monospace">40</text>
+
+                  {/* RSI 14 Line */}
+                  {rsiPoints && (
+                    <polyline
+                      points={rsiPoints}
+                      fill="none"
+                      stroke="#C084FC"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* RSI Data Dots */}
+                  {chartSeries.map((p, i) => {
+                    if (p.rsi14 === null) return null;
+                    const cx = getX(i);
+                    const cy = getRsiY(p.rsi14);
+                    return (
+                      <g key={`rsi-dot-${i}`} className="group cursor-pointer">
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r="3.5"
+                          fill="#C084FC"
+                          stroke="#0B0E14"
+                          strokeWidth="1.5"
+                        />
+                        <title>{`${p.date}: RSI ${p.rsi14.toFixed(1)}`}</title>
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })()}
+          </div>
+        </div>
       </div>
 
       {/* 3. Controls & Configurable RSI Corridor Toolbar */}

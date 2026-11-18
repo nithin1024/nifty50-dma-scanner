@@ -44,18 +44,48 @@ async def get_chart_candles(
         if not before and end == today:
             if unit == "days":
                 raw = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
+                today_str = today.isoformat()
+                has_today = any(
+                    (r[0].startswith(today_str) if isinstance(r, (list, tuple)) else str(r.get("time_iso", "")).startswith(today_str))
+                    for r in raw
+                )
                 try:
                     intraday = await upstox.get_intraday_candles_v3(key, "minutes", "1")
                     if intraday:
+                        open_p = float(intraday[-1][1])
+                        high_p = max(float(c[2]) for c in intraday)
+                        low_p = min(float(c[3]) for c in intraday)
+                        close_p = float(intraday[0][4])
                         today_vol = sum(int(c[5]) for c in intraday if len(c) > 5 and c[5] is not None)
-                        if today_vol > 0 and raw:
-                            # Update today's candle with live aggregate volume if greater
-                            raw_last = raw[-1]
-                            raw_last_vol = raw_last[5] if isinstance(raw_last, (list, tuple)) and len(raw_last) > 5 else 0
-                            if isinstance(raw_last, list) and today_vol > (raw_last_vol or 0):
-                                raw_last[5] = today_vol
-                except Exception:
-                    pass
+                        oi_p = intraday[0][6] if len(intraday[0]) > 6 else 0
+                        today_dt = datetime.combine(today, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                        today_ts = int(today_dt.timestamp())
+                        today_candle = {
+                            "time": today_ts,
+                            "time_iso": today_dt.isoformat(),
+                            "open": open_p,
+                            "high": high_p,
+                            "low": low_p,
+                            "close": close_p,
+                            "volume": today_vol,
+                            "oi": oi_p
+                        }
+                        tick = subscription_manager.latest_ticks.get(key)
+                        if tick:
+                            if tick.get("volume") and int(tick["volume"]) > today_candle["volume"]:
+                                today_candle["volume"] = int(tick["volume"])
+                            if tick.get("ltp"):
+                                today_candle["close"] = float(tick["ltp"])
+                                today_candle["high"] = max(today_candle["high"], float(tick["ltp"]))
+                                today_candle["low"] = min(today_candle["low"], float(tick["ltp"]))
+
+                        if not has_today:
+                            raw.insert(0, today_candle)
+                        elif raw and isinstance(raw[0], list):
+                            if today_vol > (raw[0][5] or 0):
+                                raw[0][5] = today_vol
+                except Exception as intra_err:
+                    logger.warning("Could not merge intraday daily bar for %s: %s", key, intra_err)
             else:
                 historical_end = today - timedelta(days=1)
                 previous = await upstox.get_historical_candles_v3(
