@@ -58,15 +58,41 @@ def auth_headers() -> Dict[str, str]:
     }
 
 
+_NSE_INSTRUMENT_CACHE: Dict[str, str] = {}
+
+def _get_nse_instrument_cache() -> Dict[str, str]:
+    global _NSE_INSTRUMENT_CACHE
+    if _NSE_INSTRUMENT_CACHE:
+        return _NSE_INSTRUMENT_CACHE
+    import os, json
+    cache_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "nse_instruments_master.json")
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                for sym, info in data.items():
+                    if isinstance(info, dict) and info.get("instrument_key"):
+                        _NSE_INSTRUMENT_CACHE[sym.upper()] = info["instrument_key"]
+                # Aliases
+                _NSE_INSTRUMENT_CACHE["ZOMATO"] = "NSE_EQ|INE758T01015"
+                _NSE_INSTRUMENT_CACHE["ETERNAL"] = "NSE_EQ|INE758T01015"
+        except Exception as e:
+            logger.warning("Could not read nse_instruments_master.json: %s", e)
+    return _NSE_INSTRUMENT_CACHE
+
 def instrument_key_for_symbol(symbol: str) -> Optional[str]:
-    key = INDEX_KEYS.get(symbol.upper())
+    symbol_upper = symbol.upper()
+    key = INDEX_KEYS.get(symbol_upper)
     if key:
         return key
     from app.services.constituents_service import constituents_service
-    symbol_upper = symbol.upper()
     for stock in constituents_service.get_constituents():
         if stock.get("symbol") == symbol_upper:
             return stock.get("upstox_instrument_key")
+    # Search complete NSE instruments master cache
+    nse_cache = _get_nse_instrument_cache()
+    if symbol_upper in nse_cache:
+        return nse_cache[symbol_upper]
     return None
 
 

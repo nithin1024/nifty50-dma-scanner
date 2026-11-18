@@ -42,3 +42,9 @@ async def check_health() -> HealthResponse:
         live_instrument_count=feed["live_instrument_count"],
         last_feed_received_at=feed["last_feed_received_at"],
     )
+
+
+@router.get("/telemetry")
+async def get_health_telemetry():
+    """Return the centralized 8-state health telemetry across all 9 subsystems and 16 dashboard modules."""
+    return subscription_manager.get_central_health_telemetry()

@@ -522,6 +522,62 @@ async def get_option_chain(
         call_candidates = [r for r in rows if r["strike_price"] >= spot and (r["ce"].get("oi") or 0) > 0]
         support = max(put_candidates, key=lambda r: r["pe"]["oi"]) if put_candidates else None
         resistance = max(call_candidates, key=lambda r: r["ce"]["oi"]) if call_candidates else None
+
+        # S2: Next eligible put OI concentration below S1 (or next highest put candidate)
+        s2_candidates = [r for r in put_candidates if support and r["strike_price"] < support["strike_price"]]
+        if not s2_candidates and put_candidates:
+            s2_candidates = [r for r in put_candidates if r["strike_price"] != support["strike_price"]]
+        secondary_support = max(s2_candidates, key=lambda r: r["pe"]["oi"]) if s2_candidates else None
+
+        # R2: Next eligible call OI concentration above R1 (or next highest call candidate)
+        r2_candidates = [r for r in call_candidates if resistance and r["strike_price"] > resistance["strike_price"]]
+        if not r2_candidates and call_candidates:
+            r2_candidates = [r for r in call_candidates if r["strike_price"] != resistance["strike_price"]]
+        secondary_resistance = max(r2_candidates, key=lambda r: r["ce"]["oi"]) if r2_candidates else None
+
+        # Build formal S1/S2/R1/R2 levels table
+        levels_table = []
+        if support:
+            levels_table.append({
+                "level": "S1",
+                "strike": support["strike_price"],
+                "total_oi": support["pe"].get("oi", 0),
+                "oi_change": support["pe"].get("oi_change", 0),
+                "volume": support["pe"].get("volume", 0),
+                "strength": "Strong Institutional Floor",
+                "reason": "Highest observed put OI concentration at or below spot"
+            })
+        if secondary_support:
+            levels_table.append({
+                "level": "S2",
+                "strike": secondary_support["strike_price"],
+                "total_oi": secondary_support["pe"].get("oi", 0),
+                "oi_change": secondary_support["pe"].get("oi_change", 0),
+                "volume": secondary_support["pe"].get("volume", 0),
+                "strength": "Secondary Support Cushion",
+                "reason": "Next eligible put OI concentration below S1"
+            })
+        if resistance:
+            levels_table.append({
+                "level": "R1",
+                "strike": resistance["strike_price"],
+                "total_oi": resistance["ce"].get("oi", 0),
+                "oi_change": resistance["ce"].get("oi_change", 0),
+                "volume": resistance["ce"].get("volume", 0),
+                "strength": "Primary Overhead Supply Barrier",
+                "reason": "Highest observed call OI concentration at or above spot"
+            })
+        if secondary_resistance:
+            levels_table.append({
+                "level": "R2",
+                "strike": secondary_resistance["strike_price"],
+                "total_oi": secondary_resistance["ce"].get("oi", 0),
+                "oi_change": secondary_resistance["ce"].get("oi_change", 0),
+                "volume": secondary_resistance["ce"].get("volume", 0),
+                "strength": "Secondary Resistance Ceiling",
+                "reason": "Next eligible call OI concentration above R1"
+            })
+
         atm_row = next((item for item in raw if float(item["strike_price"]) == strikes[atm_index]), {})
         atm_ivs = [float((atm_row.get(side) or {}).get("option_greeks", {}).get("iv"))
                    for side in ("call_options", "put_options")
@@ -541,7 +597,13 @@ async def get_option_chain(
                          "observed_oi": observed_oi},
             "support_resistance": {
                 "strong_support": {"strike": support["strike_price"], "reason": "Highest observed put OI at or below spot"} if support else None,
-                "strong_resistance": {"strike": resistance["strike_price"], "reason": "Highest observed call OI at or above spot"} if resistance else None},
+                "strong_resistance": {"strike": resistance["strike_price"], "reason": "Highest observed call OI at or above spot"} if resistance else None,
+                "s1": {"strike": support["strike_price"], "total_oi": support["pe"].get("oi", 0), "oi_change": support["pe"].get("oi_change", 0), "volume": support["pe"].get("volume", 0), "strength": "Strong Institutional Floor", "reason": "Highest observed put OI at or below spot"} if support else None,
+                "s2": {"strike": secondary_support["strike_price"], "total_oi": secondary_support["pe"].get("oi", 0), "oi_change": secondary_support["pe"].get("oi_change", 0), "volume": secondary_support["pe"].get("volume", 0), "strength": "Secondary Support Cushion", "reason": "Next eligible put OI below S1"} if secondary_support else None,
+                "r1": {"strike": resistance["strike_price"], "total_oi": resistance["ce"].get("oi", 0), "oi_change": resistance["ce"].get("oi_change", 0), "volume": resistance["ce"].get("volume", 0), "strength": "Primary Overhead Supply Barrier", "reason": "Highest observed call OI at or above spot"} if resistance else None,
+                "r2": {"strike": secondary_resistance["strike_price"], "total_oi": secondary_resistance["ce"].get("oi", 0), "oi_change": secondary_resistance["ce"].get("oi_change", 0), "volume": secondary_resistance["ce"].get("volume", 0), "strength": "Secondary Resistance Ceiling", "reason": "Next eligible call OI above R1"} if secondary_resistance else None,
+                "levels_table": levels_table
+            },
             "data_status": subscription_manager.get_status()["status"]}
     except UpstoxApiError as exc:
         if exc.status_code in (401, 403):

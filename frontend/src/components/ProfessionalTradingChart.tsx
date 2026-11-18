@@ -47,7 +47,7 @@ const formatCandleLegendTime = (
   const timestampMs = typeof timeVal === 'number' ? timeVal * 1000 : new Date(timeVal).getTime();
   if (isNaN(timestampMs)) return String(timeVal);
 
-  const intraday = ['1m', '5m', '15m', '1h'].includes(tf);
+  const intraday = ['1m', '5m', '15m', '30m', '1h'].includes(tf);
   if (intraday) {
     const formatted = new Date(timestampMs).toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -85,12 +85,13 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   symbol = 'NIFTY',
   className = '',
   height = 500,
-  initialTimeframe = '15m',
+  initialTimeframe = '5m',
   instrumentKey,
   displayName,
   availableSymbols = [],
   onSymbolChange
 }) => {
+  const rootContainerRef = useRef<HTMLDivElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const mainSeriesRef = useRef<ISeriesApi<any> | null>(null);
@@ -108,6 +109,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   const [loading, setLoading] = useState<boolean>(true);
   const [candlesData, setCandlesData] = useState<any[]>([]);
   const [indicatorsData, setIndicatorsData] = useState<any>({});
+  const [volumeAnalytics, setVolumeAnalytics] = useState<any>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showIndicators, setShowIndicators] = useState<boolean>(true);
   const [showSeries, setShowSeries] = useState({ sma20: true, sma50: false, sma100: false, sma200: true, ema9: true, ema21: true });
@@ -177,8 +179,8 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     onSymbolChange?.(nextSymbol);
   };
 
-  // Timeframes supported
-  const timeframes = ['1m', '5m', '15m', '1h', '1D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  // Timeframes supported: Intraday 1m to 1h, and Historical 1D to 5Y
+  const timeframes = ['1m', '5m', '15m', '30m', '1h', '1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   // Load candle data
   useEffect(() => {
@@ -194,6 +196,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         if (!isMounted) return;
         setCandlesData(res.candles || []);
         setIndicatorsData(res.indicators || {});
+        setVolumeAnalytics(res.volume_analytics || null);
         setHasOlder((res.candles || []).length > 0);
         // Aggregate feed status alone is not enough: this chart stays WAITING
         // until this instrument itself produces an actual V3 message.
@@ -241,7 +244,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         if (!current.length) return current;
         const next = [...current];
         const last = { ...next[next.length - 1] };
-        const intraday = ['1m', '5m', '15m', '1h'].includes(timeframeRef.current);
+        const intraday = ['1m', '5m', '15m', '30m', '1h'].includes(timeframeRef.current);
         const sameSessionDay = !intraday && getIstSessionDate(exchangeMs) === getIstSessionDate(Number(last.time) * 1000);
         const bucketTime = sameSessionDay ? Number(last.time) : getChartBucketTime(exchangeMs, timeframeRef.current);
         if (bucketTime < Number(last.time) || exchangeMs / 1000 < Number(last.time)) return current;
@@ -250,11 +253,23 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           last.close = Number(tick.ltp);
           last.high = Math.max(Number(last.high), Number(tick.ltp));
           last.low = Math.min(Number(last.low), Number(tick.ltp));
-          if (tick.volume != null && Number(tick.volume) > Number(last.volume || 0)) {
-            last.volume = Number(tick.volume);
-          } else if (tick.incremental_volume != null) {
-            last.volume = Number(last.volume || 0) + increment;
+          
+          if (!intraday) {
+            // Daily chart: volume represents total session cumulative volume
+            if (tick.volume != null && Number(tick.volume) > Number(last.volume || 0)) {
+              last.volume = Number(tick.volume);
+            } else if (tick.incremental_volume != null && increment > 0) {
+              last.volume = Number(last.volume || 0) + increment;
+            }
+          } else {
+            // Intraday (1m, 5m, 15m, 30m, 1h):
+            // Candle volume only accumulates incremental trades during this specific candle interval.
+            // Never overwrite with the session's cumulative full-day volume!
+            if (tick.incremental_volume != null && increment > 0) {
+              last.volume = Number(last.volume || 0) + increment;
+            }
           }
+
           last.oi = tick.oi ?? last.oi;
           last.iv = tick.iv ?? last.iv;
           last.exchange_timestamp = tick.exchange_timestamp;
@@ -278,11 +293,21 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
             }));
           }
         } else {
-          next.push({ time: bucketTime, time_iso: new Date(bucketTime * 1000).toISOString(),
-            open: Number(tick.ltp), high: Number(tick.ltp), low: Number(tick.ltp),
-            close: Number(tick.ltp), volume: tick.incremental_volume == null ? null : increment,
-            oi: tick.oi, iv: tick.iv, exchange_timestamp: tick.exchange_timestamp,
-            received_at: tick.received_at, ...(tick.greeks || {}) });
+          // Finalize previous candle and start the next candle bucket
+          next.push({ 
+            time: bucketTime, 
+            time_iso: new Date(bucketTime * 1000).toISOString(),
+            open: Number(tick.ltp), 
+            high: Number(tick.ltp), 
+            low: Number(tick.ltp),
+            close: Number(tick.ltp), 
+            volume: increment,
+            oi: tick.oi, 
+            iv: tick.iv, 
+            exchange_timestamp: tick.exchange_timestamp,
+            received_at: tick.received_at, 
+            ...(tick.greeks || {}) 
+          });
         }
         return next;
       });
@@ -353,6 +378,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     }
 
     const container = chartContainerRef.current;
+    container.innerHTML = '';
     const chart = createChart(container, {
       width: container.clientWidth || 800,
       height: isFullscreen ? window.innerHeight - 180 : height,
@@ -641,7 +667,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
       if (chartContainerRef.current && chartApiRef.current) {
         chartApiRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
-          height: isFullscreen ? window.innerHeight - 180 : height,
+          height: isFullscreen ? window.innerHeight - 140 : height,
         });
       }
     };
@@ -654,7 +680,36 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         chartApiRef.current = null;
       }
     };
-  }, [chartSymbol, chartType, height, instrumentKey, isFullscreen, timeframe]);
+  }, [chartSymbol, chartType, height, instrumentKey, timeframe]);
+
+  // Synchronize fullscreen state with HTML5 Fullscreen API and resize chart in place without teardown
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      if (chartContainerRef.current && chartApiRef.current) {
+        setTimeout(() => {
+          chartApiRef.current?.applyOptions({
+            width: chartContainerRef.current?.clientWidth || window.innerWidth,
+            height: isFull ? window.innerHeight - 150 : height,
+          });
+          chartApiRef.current?.timeScale().fitContent();
+        }, 60);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [height]);
+
+  useEffect(() => {
+    if (chartContainerRef.current && chartApiRef.current) {
+      chartApiRef.current.applyOptions({
+        width: chartContainerRef.current.clientWidth,
+        height: isFullscreen ? window.innerHeight - 150 : height,
+      });
+      chartApiRef.current.timeScale().fitContent();
+    }
+  }, [isFullscreen, height]);
 
   // Update the existing chart series in place. Live price and volume ticks
   // touch only the active candle; older history is merged with the visible
@@ -813,8 +868,32 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     }
   };
 
+  const handleToggleFullscreen = () => {
+    if (!rootContainerRef.current) {
+      setIsFullscreen(!isFullscreen);
+      return;
+    }
+    if (!document.fullscreenElement) {
+      rootContainerRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(() => {
+        setIsFullscreen(!isFullscreen);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => {
+          setIsFullscreen(false);
+        }).catch(() => {
+          setIsFullscreen(false);
+        });
+      } else {
+        setIsFullscreen(false);
+      }
+    }
+  };
+
   return (
-    <div className={`rounded-xl bg-[#0B0E14] border border-[#232E47] p-4 flex flex-col space-y-3 font-sans ${className} ${isFullscreen ? 'fixed inset-0 z-50 p-6 bg-[#0B0E14]' : ''}`}>
+    <div ref={rootContainerRef} className={`rounded-xl bg-[#0B0E14] border border-[#232E47] p-4 flex flex-col space-y-3 font-sans ${className} ${isFullscreen ? 'fixed inset-0 z-50 p-6 bg-[#0B0E14] overflow-y-auto' : ''}`}>
       {/* Top Header: Controls & Chart Tools */}
       <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#232E47] gap-2">
         <div className="flex items-center space-x-3">
@@ -923,7 +1002,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
 
           {/* Fullscreen Toggle */}
           <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={handleToggleFullscreen}
             className="p-1.5 rounded-lg bg-[#121824] hover:bg-[#1a2334] text-slate-300 border border-[#232E47]"
             title="Toggle Fullscreen"
           >
@@ -982,6 +1061,73 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
         </div>
       )}
 
+      {/* Volume Analytics Telemetry Bar (Part 2 & Part 2.D) */}
+      {volumeAnalytics && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2 p-2.5 rounded-lg bg-[#121824] border border-[#232E47] text-xs font-mono">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Current 5M Vol</span>
+            <span className="font-bold text-sky-300">
+              {volumeAnalytics.current_five_minute_volume ? volumeAnalytics.current_five_minute_volume.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Prev 5M Vol</span>
+            <span className="font-semibold text-slate-200">
+              {volumeAnalytics.previous_five_minute_volume ? volumeAnalytics.previous_five_minute_volume.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Session Vol</span>
+            <span className="font-bold text-slate-100">
+              {volumeAnalytics.current_session_volume ? volumeAnalytics.current_session_volume.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">5-Sess Avg Vol</span>
+            <span className="font-semibold text-slate-300">
+              {volumeAnalytics.five_session_avg_volume ? volumeAnalytics.five_session_avg_volume.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Intraday RVOL</span>
+            <span className={`font-bold ${
+              (volumeAnalytics.rvol || 0) >= 2.0 ? 'text-emerald-400 animate-pulse' :
+              (volumeAnalytics.rvol || 0) >= 1.2 ? 'text-emerald-400' :
+              (volumeAnalytics.rvol || 0) <= 0.8 ? 'text-amber-400' : 'text-slate-300'
+            }`}>
+              {volumeAnalytics.rvol ? `${volumeAnalytics.rvol.toFixed(2)}x` : '—'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Volume Dynamics</span>
+            <div className="flex items-center gap-1 mt-0.5">
+              {volumeAnalytics.volume_breakout && (
+                <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded text-[9px] font-bold">
+                  BREAKOUT
+                </span>
+              )}
+              {volumeAnalytics.volume_contraction && (
+                <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-[9px] font-bold">
+                  CONTRACTION
+                </span>
+              )}
+              {!volumeAnalytics.volume_breakout && !volumeAnalytics.volume_contraction && (
+                <span className="text-[10px] text-slate-400">NORMAL</span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400">Price/Vol Bias</span>
+            <span className={`text-[10px] font-bold ${
+              volumeAnalytics.bullish_volume_price ? 'text-emerald-400' :
+              volumeAnalytics.bearish_volume_price ? 'text-rose-400' : 'text-slate-400'
+            }`}>
+              {volumeAnalytics.price_volume_movement || (volumeAnalytics.bullish_volume_price ? 'ACCUMULATION' : volumeAnalytics.bearish_volume_price ? 'DISTRIBUTION' : 'NEUTRAL')}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Chart Canvas Area */}
       <div className="relative w-full overflow-hidden rounded-lg bg-[#0B0E14] border border-[#232E47]/60">
         {loading && (
@@ -1025,7 +1171,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
             </thead>
             <tbody className="divide-y divide-[#232E47]/40 text-slate-300">
               {candlesData.slice().reverse().map((c, idx) => {
-                const isIntraday = ['1m', '5m', '15m', '1h'].includes(timeframe);
+                const isIntraday = ['1m', '5m', '15m', '30m', '1h'].includes(timeframe);
                 const timeLabel = typeof c.time === 'number' 
                   ? (isIntraday 
                       ? new Date(c.time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })

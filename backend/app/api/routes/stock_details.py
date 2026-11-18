@@ -16,7 +16,33 @@ async def get_stock_details(
     """Retrieve detailed DMA metrics, latest prices, and chart data for a stock with 5-year multi-timeframe inspect."""
     constituent = constituents_service.get_by_symbol(symbol)
     if not constituent:
-        raise HTTPException(status_code=404, detail=f"Stock symbol '{symbol}' not found in NIFTY 50.")
+        from app.services.all_stocks_service import all_stocks_service
+        stock_rec = all_stocks_service.get_stock(symbol)
+        if stock_rec:
+            constituent = {
+                "symbol": stock_rec.get("symbol", symbol),
+                "company_name": stock_rec.get("name", symbol),
+                "industry": stock_rec.get("sector", "NSE Equities"),
+                "isin": stock_rec.get("isin", "")
+            }
+        else:
+            from app.services.upstox_market_client import _get_nse_instrument_cache
+            master = _get_nse_instrument_cache()
+            inst = master.get(symbol.upper())
+            if inst:
+                constituent = {
+                    "symbol": inst.get("trading_symbol", symbol),
+                    "company_name": inst.get("name", symbol),
+                    "industry": inst.get("instrument_type", "NSE Equity / ETF"),
+                    "isin": inst.get("isin", "")
+                }
+            else:
+                constituent = {
+                    "symbol": symbol.upper(),
+                    "company_name": symbol.upper(),
+                    "industry": "NSE Equity",
+                    "isin": ""
+                }
 
     clean_tf = timeframe.lower().strip()
     history_range = "5y" if clean_tf in ("5y", "5-year", "5years") else clean_tf

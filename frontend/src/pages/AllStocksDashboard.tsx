@@ -109,6 +109,8 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
   const [sortField, setSortField] = useState<string>('change_pct');
   const [sortAsc, setSortAsc] = useState(false);
   const [previewStock, setPreviewStock] = useState<StockRecord | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const fetchStocks = useCallback(async () => {
     setLoading(true);
@@ -126,6 +128,10 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
   }, [selectedSector, searchQuery, selectedMcap, selectedScreener]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSector, searchQuery, selectedMcap, selectedScreener, sortField, sortAsc]);
+
+  useEffect(() => {
     fetchStocks();
     fetch(`${API_BASE}/stocks-universe/sectors`).then(r => r.json()).then(setSectors).catch(() => {});
     fetch(`${API_BASE}/stocks-universe/sectors/performance`).then(r => r.json()).then(setSectorPerf).catch(() => {});
@@ -140,6 +146,13 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
     });
     return copy;
   }, [stocks, sortField, sortAsc]);
+
+  const totalPages = Math.ceil(sortedStocks.length / pageSize) || 1;
+  const paginatedStocks = useMemo(() => {
+    if (pageSize <= 0) return sortedStocks;
+    const start = (currentPage - 1) * pageSize;
+    return sortedStocks.slice(start, start + pageSize);
+  }, [sortedStocks, currentPage, pageSize]);
 
   const toggleSort = (field: string) => {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -256,7 +269,7 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedStocks.map((stock) => {
+                  {paginatedStocks.map((stock) => {
                     const isUp = stock.change >= 0;
                     return (
                       <tr 
@@ -323,6 +336,71 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
               {sortedStocks.length === 0 && (
                 <div className="text-center py-12 text-slate-500 text-sm">No stocks match the current filters.</div>
               )}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {sortedStocks.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#0B0E14] border-t border-[#232E47] text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <span>
+                  Showing <strong className="text-white">{((currentPage - 1) * pageSize) + 1}</strong> to{' '}
+                  <strong className="text-white">{Math.min(currentPage * pageSize, sortedStocks.length)}</strong> of{' '}
+                  <strong className="text-sky-400">{sortedStocks.length.toLocaleString('en-IN')}</strong> stocks
+                </span>
+                <span className="text-slate-600">|</span>
+                <label className="flex items-center gap-1.5">
+                  <span>Show</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 rounded bg-[#121824] border border-[#232E47] text-white text-xs focus:outline-none"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={250}>250</option>
+                  </select>
+                  <span>per page</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(1)}
+                  className="px-2.5 py-1 rounded bg-[#121824] border border-[#232E47] text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
+                >
+                  « First
+                </button>
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded bg-[#121824] border border-[#232E47] text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
+                >
+                  ‹ Prev
+                </button>
+                <span className="px-3 py-1 font-semibold text-white">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded bg-[#121824] border border-[#232E47] text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
+                >
+                  Next ›
+                </button>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="px-2.5 py-1 rounded bg-[#121824] border border-[#232E47] text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
+                >
+                  Last »
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -417,7 +495,7 @@ export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelect
               <ProfessionalTradingChart 
                 symbol={previewStock.symbol}
                 displayName={`${previewStock.symbol} • ${previewStock.name}`}
-                initialTimeframe="15m"
+                initialTimeframe="5m"
                 height={420}
               />
             </div>

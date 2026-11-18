@@ -17,18 +17,22 @@ router = APIRouter(prefix="/stocks-universe", tags=["All Stocks Screener"])
 async def get_all_stocks(
     sector: Optional[str] = Query(None, description="Filter by sector name"),
     search: Optional[str] = Query(None, description="Search ticker symbol or company name"),
-    mcap_category: Optional[str] = Query(None, description="Filter: Large Cap, Mid Cap, Small Cap"),
+    mcap_category: Optional[str] = Query(None, description="Filter: Large Cap, Mid Cap, Small Cap, SME, ETF"),
     screener_filter: Optional[str] = Query(
         None,
         description="Filter type: HIGH_VOLUME, LOW_VOLUME, RVOL_BREAKOUT, ABOVE_VWAP, BELOW_VWAP, ABOVE_SMA20, ABOVE_SMA50, ABOVE_SMA100, ABOVE_SMA200, ABOVE_ALL_4_SMAS, BULLISH_EMA_CROSSOVER, BEARISH_EMA_CROSSOVER, RSI_ABOVE_70, RSI_BELOW_30, 52W_HIGH_BREAKOUT"
-    )
+    ),
+    page: Optional[int] = Query(None, description="Page number (1-based)"),
+    page_size: Optional[int] = Query(None, description="Page size (e.g. 50, 100)")
 ):
-    """Retrieve filtered stocks universe with technical indicators and real volume metrics."""
+    """Retrieve filtered stocks universe with technical indicators and real volume metrics across 5,270+ instruments."""
     return all_stocks_service.get_stocks_universe(
         sector=sector,
         search_query=search,
         mcap_category=mcap_category,
-        screener_filter=screener_filter
+        screener_filter=screener_filter,
+        page=page,
+        page_size=page_size
     )
 
 

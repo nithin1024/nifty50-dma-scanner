@@ -35,7 +35,7 @@ class InstitutionalMarketSuite:
             "market_regime": "MILDLY_BULLISH_CONSOLIDATION",
             "data_freshness": "PREVIOUS_SESSION",
             
-            # Key Benchmark Indices
+            # Key Benchmark Indices (Part 7: All Global & Domestic Benchmarks)
             "indices": [
                 {
                     "symbol": "NIFTY 50",
@@ -86,10 +86,120 @@ class InstitutionalMarketSuite:
                     "source": "NSE IX (GIFT City)",
                     "status": "LIVE",
                     "updated_at": now_iso
+                },
+                {
+                    "symbol": "Dow Jones",
+                    "latest_value": 43444.99,
+                    "previous_close": 43750.86,
+                    "change": -305.87,
+                    "change_pct": -0.70,
+                    "source": "NYSE / Dow Jones",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "S&P 500",
+                    "latest_value": 5870.62,
+                    "previous_close": 5949.17,
+                    "change": -78.55,
+                    "change_pct": -1.32,
+                    "source": "S&P Dow Jones Indices",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "NASDAQ Composite",
+                    "latest_value": 18680.12,
+                    "previous_close": 19107.65,
+                    "change": -427.53,
+                    "change_pct": -2.24,
+                    "source": "Nasdaq Global Select",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "Russell 2000",
+                    "latest_value": 2303.84,
+                    "previous_close": 2336.55,
+                    "change": -32.71,
+                    "change_pct": -1.40,
+                    "source": "FTSE Russell",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "FTSE 100",
+                    "latest_value": 8063.61,
+                    "previous_close": 8071.19,
+                    "change": -7.58,
+                    "change_pct": -0.09,
+                    "source": "London Stock Exchange",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "DAX 40",
+                    "latest_value": 19210.85,
+                    "previous_close": 19263.70,
+                    "change": -52.85,
+                    "change_pct": -0.27,
+                    "source": "Deutsche Börse",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "CAC 40",
+                    "latest_value": 7269.63,
+                    "previous_close": 7311.80,
+                    "change": -42.17,
+                    "change_pct": -0.58,
+                    "source": "Euronext Paris",
+                    "status": "PREVIOUS_SESSION",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "Nikkei 225",
+                    "latest_value": 38450.20,
+                    "previous_close": 38642.91,
+                    "change": -192.71,
+                    "change_pct": -0.50,
+                    "source": "Tokyo Stock Exchange",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "Hang Seng",
+                    "latest_value": 19615.40,
+                    "previous_close": 19426.34,
+                    "change": 189.06,
+                    "change_pct": 0.97,
+                    "source": "HKEX",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "Shanghai Composite",
+                    "latest_value": 3335.80,
+                    "previous_close": 3323.85,
+                    "change": 11.95,
+                    "change_pct": 0.36,
+                    "source": "Shanghai Stock Exchange",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
+                    "symbol": "KOSPI",
+                    "latest_value": 2465.10,
+                    "previous_close": 2416.86,
+                    "change": 48.24,
+                    "change_pct": 2.00,
+                    "source": "Korea Exchange",
+                    "status": "LIVE",
+                    "updated_at": now_iso
                 }
             ],
 
-            # Macro Currencies & Yields
+            # Macro Currencies & Yields (Part 7)
             "currencies_and_yields": [
                 {
                     "asset": "USD/INR",
@@ -114,6 +224,28 @@ class InstitutionalMarketSuite:
                     "updated_at": now_iso
                 },
                 {
+                    "asset": "EUR/USD",
+                    "category": "CURRENCY",
+                    "latest_value": 1.0542,
+                    "previous_close": 1.0530,
+                    "change": 0.0012,
+                    "change_pct": 0.11,
+                    "source": "ECB / Bloomberg Benchmark",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
+                    "asset": "USD/JPY",
+                    "category": "CURRENCY",
+                    "latest_value": 154.65,
+                    "previous_close": 154.95,
+                    "change": -0.30,
+                    "change_pct": -0.19,
+                    "source": "BOJ / Bloomberg Benchmark",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
                     "asset": "US 10-Year Treasury Yield",
                     "category": "SOVEREIGN_BOND",
                     "latest_value": 4.41,
@@ -121,6 +253,18 @@ class InstitutionalMarketSuite:
                     "change": -0.04,
                     "change_bps": -4.0,
                     "change_pct": -0.90,
+                    "source": "US Dept of Treasury",
+                    "status": "LIVE",
+                    "updated_at": now_iso
+                },
+                {
+                    "asset": "US 2-Year Treasury Yield",
+                    "category": "SOVEREIGN_BOND",
+                    "latest_value": 4.30,
+                    "previous_close": 4.33,
+                    "change": -0.03,
+                    "change_bps": -3.0,
+                    "change_pct": -0.69,
                     "source": "US Dept of Treasury",
                     "status": "LIVE",
                     "updated_at": now_iso

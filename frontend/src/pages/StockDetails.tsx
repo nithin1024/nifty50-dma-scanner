@@ -105,7 +105,7 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
                 {t('Latest Close')}: <span className="font-bold text-emerald-400">₹{data.latest_close.toFixed(2)}</span> ({data.latest_trading_date})
               </span>
             </div>
-            <ProfessionalTradingChart symbol={selectedSymbol} height={420} initialTimeframe="5Y" />
+            <ProfessionalTradingChart symbol={selectedSymbol} height={420} initialTimeframe="5m" />
           </div>
 
           {/* 6 DMA Cards Grid */}

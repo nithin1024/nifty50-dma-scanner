@@ -1038,49 +1038,164 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
       {activeTab === 'SUPPORT_RESISTANCE' && chainData && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Support Card */}
+          {/* Support Card: S1 and S2 */}
           <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] space-y-3 font-mono">
             <div className="flex items-center justify-between pb-2 border-b border-[#232E47]">
               <span className="font-bold text-emerald-400 text-sm flex items-center space-x-1.5">
                 <ShieldCheck className="w-4 h-4" />
                 <span>INSTITUTIONAL SUPPORT ZONES</span>
               </span>
-              <span className="text-[10px] text-slate-500 font-mono">Put OI Walls</span>
+              <span className="text-[10px] text-slate-500 font-mono">Put OI Walls (S1 &amp; S2)</span>
             </div>
-            <div className="p-3 rounded-lg bg-[#121824] border border-emerald-500/30 space-y-1">
-              <span className="text-xs text-slate-400">Primary Support Strike:</span>
-              <div className="text-2xl font-black text-emerald-400">
-                {chainData.support_resistance?.strong_support?.strike?.toLocaleString()}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-lg bg-[#121824] border border-emerald-500/30 space-y-1">
+                <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">S1</span>
+                  Primary Support Strike:
+                </span>
+                <div className="text-2xl font-black text-emerald-400">
+                  {chainData.support_resistance?.s1?.strike?.toLocaleString() ?? chainData.support_resistance?.strong_support?.strike?.toLocaleString() ?? 'Not Available'}
+                </div>
+                <div className="text-[11px] text-slate-300 font-sans">
+                  Total OI: <span className="font-mono text-white font-bold">{(chainData.support_resistance?.s1?.total_oi ?? 0).toLocaleString()}</span>
+                  <span className="text-slate-500 ml-1">({(chainData.support_resistance?.s1?.oi_change ?? 0) >= 0 ? '+' : ''}{(chainData.support_resistance?.s1?.oi_change ?? 0).toLocaleString()} chg)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  {chainData.support_resistance?.s1?.reason ?? chainData.support_resistance?.strong_support?.reason}
+                </p>
               </div>
-              <p className="text-xs text-slate-300 font-sans mt-1">
-                {chainData.support_resistance?.strong_support?.reason}
-              </p>
-              <div className="text-[10px] text-slate-400 pt-1 border-t border-[#232E47]">
-                Invalidation Level: <strong className="text-rose-400">{displayMetric(chainData.support_resistance?.strong_support?.invalidation_level)}</strong>
+
+              <div className="p-3 rounded-lg bg-[#121824] border border-emerald-500/20 space-y-1">
+                <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 font-bold">S2</span>
+                  Secondary Support Strike:
+                </span>
+                <div className="text-2xl font-black text-emerald-300">
+                  {chainData.support_resistance?.s2?.strike?.toLocaleString() ?? 'Not Available'}
+                </div>
+                <div className="text-[11px] text-slate-300 font-sans">
+                  Total OI: <span className="font-mono text-white font-bold">{(chainData.support_resistance?.s2?.total_oi ?? 0).toLocaleString()}</span>
+                  <span className="text-slate-500 ml-1">({(chainData.support_resistance?.s2?.oi_change ?? 0) >= 0 ? '+' : ''}{(chainData.support_resistance?.s2?.oi_change ?? 0).toLocaleString()} chg)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  {chainData.support_resistance?.s2?.reason ?? 'Substantial secondary Put OI concentration cushion below S1'}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Resistance Card */}
+          {/* Resistance Card: R1 and R2 */}
           <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] space-y-3 font-mono">
             <div className="flex items-center justify-between pb-2 border-b border-[#232E47]">
               <span className="font-bold text-rose-400 text-sm flex items-center space-x-1.5">
                 <ShieldAlert className="w-4 h-4" />
                 <span>INSTITUTIONAL RESISTANCE ZONES</span>
               </span>
-              <span className="text-[10px] text-slate-500 font-mono">Call OI Walls</span>
+              <span className="text-[10px] text-slate-500 font-mono">Call OI Walls (R1 &amp; R2)</span>
             </div>
-            <div className="p-3 rounded-lg bg-[#121824] border border-rose-500/30 space-y-1">
-              <span className="text-xs text-slate-400">Primary Resistance Strike:</span>
-              <div className="text-2xl font-black text-rose-400">
-                {chainData.support_resistance?.strong_resistance?.strike?.toLocaleString()}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-lg bg-[#121824] border border-rose-500/30 space-y-1">
+                <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                  <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-400 font-bold">R1</span>
+                  Primary Resistance Strike:
+                </span>
+                <div className="text-2xl font-black text-rose-400">
+                  {chainData.support_resistance?.r1?.strike?.toLocaleString() ?? chainData.support_resistance?.strong_resistance?.strike?.toLocaleString() ?? 'Not Available'}
+                </div>
+                <div className="text-[11px] text-slate-300 font-sans">
+                  Total OI: <span className="font-mono text-white font-bold">{(chainData.support_resistance?.r1?.total_oi ?? 0).toLocaleString()}</span>
+                  <span className="text-slate-500 ml-1">({(chainData.support_resistance?.r1?.oi_change ?? 0) >= 0 ? '+' : ''}{(chainData.support_resistance?.r1?.oi_change ?? 0).toLocaleString()} chg)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  {chainData.support_resistance?.r1?.reason ?? chainData.support_resistance?.strong_resistance?.reason}
+                </p>
               </div>
-              <p className="text-xs text-slate-300 font-sans mt-1">
-                {chainData.support_resistance?.strong_resistance?.reason}
-              </p>
-              <div className="text-[10px] text-slate-400 pt-1 border-t border-[#232E47]">
-                Invalidation Level: <strong className="text-emerald-400">{displayMetric(chainData.support_resistance?.strong_resistance?.invalidation_level)}</strong>
+
+              <div className="p-3 rounded-lg bg-[#121824] border border-rose-500/20 space-y-1">
+                <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+                  <span className="px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-300 font-bold">R2</span>
+                  Secondary Resistance Strike:
+                </span>
+                <div className="text-2xl font-black text-rose-300">
+                  {chainData.support_resistance?.r2?.strike?.toLocaleString() ?? 'Not Available'}
+                </div>
+                <div className="text-[11px] text-slate-300 font-sans">
+                  Total OI: <span className="font-mono text-white font-bold">{(chainData.support_resistance?.r2?.total_oi ?? 0).toLocaleString()}</span>
+                  <span className="text-slate-500 ml-1">({(chainData.support_resistance?.r2?.oi_change ?? 0) >= 0 ? '+' : ''}{(chainData.support_resistance?.r2?.oi_change ?? 0).toLocaleString()} chg)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  {chainData.support_resistance?.r2?.reason ?? 'Secondary Call OI supply ceiling above R1'}
+                </p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* S1 / S2 / R1 / R2 Master Comparison Table */}
+      {activeTab === 'SUPPORT_RESISTANCE' && chainData?.support_resistance && (
+        <div className="rounded-xl bg-[#0B0E14] border border-[#232E47] p-4 font-mono space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#232E47]">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-sky-400" />
+              <span>S1 / S2 / R1 / R2 Institutional Quantitative Support &amp; Resistance Matrix</span>
+            </h4>
+            <span className="text-[10px] text-slate-400">Spot: ₹{chainData.spot_price?.toLocaleString()}</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[#232E47] text-slate-400 text-left bg-[#121824]">
+                  <th className="p-2.5">Level</th>
+                  <th className="p-2.5">Strike</th>
+                  <th className="p-2.5">Total OI</th>
+                  <th className="p-2.5">OI Change</th>
+                  <th className="p-2.5">Traded Volume</th>
+                  <th className="p-2.5">Strength / Interpretation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#232E47]">
+                {[
+                  { id: 'S1', data: chainData.support_resistance?.s1, isSupport: true },
+                  { id: 'S2', data: chainData.support_resistance?.s2, isSupport: true },
+                  { id: 'R1', data: chainData.support_resistance?.r1, isSupport: false },
+                  { id: 'R2', data: chainData.support_resistance?.r2, isSupport: false },
+                ].map(({ id, data, isSupport }) => (
+                  <tr key={id} className="hover:bg-[#121824]/60 transition-colors">
+                    <td className="p-2.5 font-bold">
+                      <span className={`px-2 py-0.5 rounded text-[11px] ${
+                        isSupport ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        {id}
+                      </span>
+                    </td>
+                    <td className="p-2.5 font-bold text-white text-sm">
+                      {data?.strike ? `₹${data.strike.toLocaleString()}` : 'Not Available'}
+                    </td>
+                    <td className="p-2.5 font-bold text-slate-200">
+                      {data?.total_oi ? data.total_oi.toLocaleString() : '—'}
+                    </td>
+                    <td className={`p-2.5 font-bold ${
+                      (data?.oi_change || 0) > 0 ? (isSupport ? 'text-emerald-400' : 'text-rose-400') : (data?.oi_change || 0) < 0 ? 'text-amber-400' : 'text-slate-400'
+                    }`}>
+                      {data?.oi_change !== undefined ? `${data.oi_change >= 0 ? '+' : ''}${data.oi_change.toLocaleString()}` : '—'}
+                    </td>
+                    <td className="p-2.5 text-slate-300">
+                      {data?.volume ? data.volume.toLocaleString() : '—'}
+                    </td>
+                    <td className="p-2.5 text-[11px]">
+                      <span className={`font-semibold ${isSupport ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {data?.strength || 'Calculated'}
+                      </span>
+                      <span className="text-slate-400 block font-sans text-[10px] mt-0.5">
+                        {data?.reason || (isSupport ? 'Eligible put OI support level' : 'Eligible call OI resistance level')}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

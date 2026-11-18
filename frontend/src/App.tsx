@@ -253,14 +253,6 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'historical' && (
-          <StockDetails
-            selectedSymbol={selectedStock}
-            onSymbolChange={setSelectedStock}
-            availableSymbols={availableSymbols}
-          />
-        )}
-
         {activeTab === 'data-quality' && (
           <DataStatus dataStatus={dataStatus} />
         )}

@@ -385,7 +385,7 @@ export async function fetchDataQualityReport(): Promise<any> {
 
 export async function fetchChartCandles(
   symbol: string = 'NIFTY',
-  timeframe: string = '15m',
+  timeframe: string = '5m',
   chartType: string = 'CANDLESTICK',
   before?: string,
   instrumentKey?: string
@@ -399,14 +399,15 @@ export async function fetchChartCandles(
   if (instrumentKey) params.set('instrument_key', instrumentKey);
   const response = await fetch(`${API_BASE}/chart/candles?${params.toString()}`);
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    const errorMsg = await readApiError(response);
+    throw new Error(errorMsg);
   }
   return response.json();
 }
 
 export function getChartCsvDownloadUrl(
   symbol: string = 'NIFTY',
-  timeframe: string = '15m',
+  timeframe: string = '5m',
   chartType: string = 'CANDLESTICK',
   instrumentKey?: string
 ): string {

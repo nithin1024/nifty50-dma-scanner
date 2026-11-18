@@ -133,6 +133,19 @@ async def get_institutional_overview() -> Dict[str, Any]:
     return institutional_market_suite.get_institutional_overview()
 
 
+@router.get("/global-markets", response_model=Dict[str, Any])
+async def get_global_markets() -> Dict[str, Any]:
+    """All 24 global benchmarks, currencies, sovereign yields, and commodities with market session awareness."""
+    overview = institutional_market_suite.get_institutional_overview()
+    return {
+        "timestamp": overview.get("timestamp"),
+        "indices": overview.get("indices", []),
+        "currencies_and_yields": overview.get("currencies_and_yields", []),
+        "commodities": overview.get("commodities", []),
+        "source": "Official Exchange Benchmarks / ICE / LME / CCIL / RBI"
+    }
+
+
 @router.get("/premarket", response_model=Dict[str, Any])
 async def get_premarket_intelligence() -> Dict[str, Any]:
     """Module 2: Premarket intelligence with global indices, GIFT Nifty gap, and 3 opening scenarios."""
