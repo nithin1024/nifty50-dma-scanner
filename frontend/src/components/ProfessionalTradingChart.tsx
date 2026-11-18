@@ -220,6 +220,25 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     };
   }, [chartSymbol, timeframe, chartType, instrumentKey]);
 
+  // Periodic live 5-minute candle and volume auto-refresh while market is active
+  useEffect(() => {
+    const intervalTimer = setInterval(() => {
+      if (liveFollowRef.current && !loadingOlderRef.current) {
+        fetchChartCandles(chartSymbol, timeframe, chartType, undefined, instrumentKey)
+          .then(res => {
+            if (res.candles && res.candles.length > 0) {
+              setCandlesData(res.candles);
+              if (res.volume_analytics) {
+                setVolumeAnalytics(res.volume_analytics);
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    }, 15000);
+    return () => clearInterval(intervalTimer);
+  }, [chartSymbol, timeframe, chartType, instrumentKey]);
+
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${window.location.host}/ws/chart-feed`);

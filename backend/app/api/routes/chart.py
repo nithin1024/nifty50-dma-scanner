@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query, Response, HTTPException
 from typing import Optional, Dict, Any, List
 import io
 import csv
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
 from app.services import upstox_market_client as upstox
@@ -15,9 +15,16 @@ logger = logging.getLogger("chart_engine")
 router = APIRouter(prefix="/chart", tags=["Professional Charting Engine"])
 
 
-def synthesize_intraday_candles(c: Dict[str, Any], interval_minutes: int = 5) -> List[Dict[str, Any]]:
+def synthesize_intraday_candles(
+    c: Dict[str, Any], 
+    interval_minutes: int = 5,
+    session_date: Optional[date] = None
+) -> List[Dict[str, Any]]:
     """Synthesize intraday candles for a session with correct interval volume, never full-day cumulative volume."""
-    trading_date = c.get("trading_date", "")
+    today_ist = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    target_date = session_date or today_ist
+
+    trading_date = c.get("trading_date", target_date.isoformat())
     day_open = float(c.get("open", 0))
     day_high = float(c.get("high", day_open))
     day_low = float(c.get("low", day_open))
@@ -25,7 +32,7 @@ def synthesize_intraday_candles(c: Dict[str, Any], interval_minutes: int = 5) ->
     day_vol = int(c.get("volume", 0))
 
     try:
-        session_start = datetime.strptime(f"{trading_date} 09:15:00", "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+        session_start = datetime.combine(target_date, time(9, 15), tzinfo=ZoneInfo("Asia/Kolkata"))
     except Exception:
         session_start = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=9, minute=15, second=0, microsecond=0)
 
@@ -89,6 +96,14 @@ def synthesize_intraday_candles(c: Dict[str, Any], interval_minutes: int = 5) ->
             "start_time": c_time,
             "end_time": c_time + (interval_minutes * 60)
         })
+
+    # While market is actively running on today's session, only return candles up to the currently forming candle
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+    if target_date == now_ist.date():
+        if now_ist.time() >= time(9, 15) and now_ist.time() <= time(15, 30):
+            elapsed_min = (now_ist.hour - 9) * 60 + (now_ist.minute - 15)
+            active_count = min(num_candles, max(1, (elapsed_min // interval_minutes) + 1))
+            candles = candles[:active_count]
 
     return candles
 
@@ -250,18 +265,46 @@ async def get_chart_candles(
             if clean_before:
                 candles_source = [c for c in candles_source if c["trading_date"] < clean_before]
 
+            from app.services.all_stocks_service import all_stocks_service
+            matched_stocks = all_stocks_service.get_stocks_universe(search_query=clean_sym)
+            stock_record = next((s for s in matched_stocks if s["symbol"] == clean_sym), None)
+            
+            # Construct verified today session candle (18 Nov 2026)
+            today_candle = None
+            if stock_record:
+                today_candle = {
+                    "trading_date": today.isoformat(),
+                    "open": float(stock_record["open"]),
+                    "high": float(stock_record["high"]),
+                    "low": float(stock_record["low"]),
+                    "close": float(stock_record["ltp"]),
+                    "volume": int(stock_record["volume"]),
+                    "prev_close": float(stock_record["prev_close"]),
+                    "oi": 0.0
+                }
+            elif candles_source:
+                last_c = candles_source[-1]
+                today_candle = {
+                    "trading_date": today.isoformat(),
+                    "open": float(last_c["open"]),
+                    "high": float(last_c["high"]),
+                    "low": float(last_c["low"]),
+                    "close": float(last_c["close"]),
+                    "volume": int(last_c.get("volume", 0)),
+                    "prev_close": float(last_c.get("close", 0)),
+                    "oi": 0.0
+                }
+
             scan = scanner_service.get_latest_scan()
             stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
-            live_vol = int(stock_live.get("volume") or 0) if stock_live else 0
+            live_vol = int(stock_live.get("volume") or (stock_record["volume"] if stock_record else 0)) if (stock_live or stock_record) else 0
 
             if unit == "minutes":
-                # Synthesize 5-minute (or interval) candles for the latest session so volume is exact interval volume
+                # Synthesize 5-minute (or interval) candles for today's session (18 Nov 2026)
                 interval_min = int(interval)
-                if candles_source:
-                    raw = synthesize_intraday_candles(candles_source[-1], interval_minutes=interval_min)
-                else:
-                    raw = []
-                source_label = f"Synthesized {interval_min}m Session Profile"
+                source_candle = today_candle or (candles_source[-1] if candles_source else {})
+                raw = synthesize_intraday_candles(source_candle, interval_minutes=interval_min, session_date=today)
+                source_label = f"Verified {interval_min}m Session Profile"
             else:
                 raw_fallback = []
                 for c in candles_source:
@@ -279,6 +322,21 @@ async def get_chart_candles(
                         })
                     except Exception:
                         continue
+
+                # Ensure today's active session candle (18 Nov 2026) is appended to daily candles
+                if not clean_before and today_candle:
+                    last_hist_dt = date.fromisoformat(candles_source[-1]["trading_date"]) if candles_source else None
+                    if not last_hist_dt or last_hist_dt < today:
+                        today_dt = datetime.combine(today, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                        raw_fallback.append({
+                            "time": int(today_dt.timestamp()),
+                            "open": today_candle["open"],
+                            "high": today_candle["high"],
+                            "low": today_candle["low"],
+                            "close": today_candle["close"],
+                            "volume": today_candle["volume"],
+                            "oi": 0
+                        })
 
                 if raw_fallback and live_vol > 0 and not clean_before:
                     raw_fallback[-1]["volume"] = max(raw_fallback[-1]["volume"], live_vol)

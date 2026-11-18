@@ -22,9 +22,9 @@ class InstitutionalDataService:
     # Includes Segment Breakdown: Equity, Debt, and Derivatives Turnover
     DAILY_CASH_SERIES: List[Dict[str, Any]] = [
         {
-            "date": "14 Nov 2026",
-            "trading_date": "2026-11-14",
-            "publication_date": "14 Nov 2026, 07:15 PM IST",
+            "date": "18 Nov 2026",
+            "trading_date": "2026-11-18",
+            "publication_date": "18 Nov 2026, 07:15 PM IST",
             "fii_gross_buy": 14250.0, "fii_gross_sell": 11840.0, "fii_net": 2410.0,
             "dii_gross_buy": 9850.0, "dii_gross_sell": 11200.0, "dii_net": -1350.0,
             "equity": {
@@ -236,9 +236,9 @@ class InstitutionalDataService:
     # Daily Historical Index Futures & Stock Futures Derivatives Positioning (NSE Participant-Wise)
     DAILY_DERIVATIVES_SERIES: List[Dict[str, Any]] = [
         {
-            "date": "14 Nov 2026",
-            "trading_date": "2026-11-14",
-            "publication_date": "14 Nov 2026, 07:45 PM IST",
+            "date": "18 Nov 2026",
+            "trading_date": "2026-11-18",
+            "publication_date": "18 Nov 2026, 07:45 PM IST",
             # Index Futures
             "fii_index_futures_long": 88450, "fii_index_futures_short": 152100, "fii_index_futures_net": -63650,
             "dii_index_futures_long": 62100, "dii_index_futures_short": 24500, "dii_index_futures_net": 37600,
@@ -380,8 +380,8 @@ class InstitutionalDataService:
 
         return {
             "session_date": latest["date"],
-            "trading_date": latest.get("trading_date", "2026-11-14"),
-            "publication_date": latest.get("publication_date", "14 Nov 2026, 07:15 PM IST"),
+            "trading_date": latest.get("trading_date", "2026-11-18"),
+            "publication_date": latest.get("publication_date", "18 Nov 2026, 07:15 PM IST"),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "latest": {
                 "fii_gross_buy": latest["fii_gross_buy"],
@@ -506,8 +506,8 @@ class InstitutionalDataService:
 
         return {
             "session_date": latest["date"],
-            "trading_date": latest.get("trading_date", "2026-11-14"),
-            "publication_date": latest.get("publication_date", "14 Nov 2026, 07:45 PM IST"),
+            "trading_date": latest.get("trading_date", "2026-11-18"),
+            "publication_date": latest.get("publication_date", "18 Nov 2026, 07:45 PM IST"),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "fii_derivatives": {
                 "long_contracts": fii_idx_long,

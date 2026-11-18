@@ -376,7 +376,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   </thead>
                   <tbody className="divide-y divide-[#232E47]/60 bg-[#121824]">
                     <tr>
-                      <td className="py-2.5 px-3 text-white font-medium">Latest Session (14 Nov 2026)</td>
+                      <td className="py-2.5 px-3 text-white font-medium">Latest Session ({fii_dii_cash_activity.session_date || '18 Nov 2026'})</td>
                       <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">+₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr</td>
                       <td className="py-2.5 px-3 text-right text-rose-400 font-bold">₹{fii_dii_cash_activity.dii_net_crores.toLocaleString()} Cr</td>
                       <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">+₹{fii_dii_cash_activity.net_institutional_crores.toLocaleString()} Cr</td>
@@ -551,7 +551,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               <div className="p-5 rounded-xl bg-[#121824] border border-rose-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <span className="text-[11px] text-slate-400 font-medium uppercase block">
-                    FII Net Index-Futures Position &bull; 14 November Close
+                    FII Net Index-Futures Position &bull; {(fii_derivatives_positioning as any)?.session_date || '18 November Close'}
                   </span>
                   <div className="text-3xl font-black text-rose-400 font-mono mt-0.5">
                     {fii_derivatives_positioning.net_index_futures_contracts.toLocaleString()} contracts
@@ -565,7 +565,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
 
                 <div className="text-left md:text-right">
                   <span className="px-3 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 inline-block">
-                    Net Bearish Exposure Reduced &bull; 6,763 fewer net shorts vs 12 Nov
+                    Net Bearish Exposure Reduced &bull; 6,763 fewer net shorts vs 17 Nov
                   </span>
                   <div className="text-[11px] text-slate-400 font-mono mt-1.5">
                     NSE Participant-Wise Derivatives Report Across All Index Contracts
@@ -599,7 +599,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                       { date: '06 Nov', contracts: 126900, label: '126,900' },
                       { date: '09 Nov', contracts: 90741, label: '90,741' },
                       { date: '11 Nov', contracts: 70413, label: '70,413' },
-                      { date: '14 Nov', contracts: 63650, label: '63,650 (Current)' }
+                      { date: '18 Nov', contracts: 63650, label: '63,650 (Current)' }
                     ];
 
                     const svgWidth = 800;
@@ -686,7 +686,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     </h3>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Official Release Period: October 2026 &bull; Publication Date: 12-14 Nov 2026 &bull; Status: FINAL
+                    Official Release Period: October 2026 &bull; Publication Date: 12-18 Nov 2026 &bull; Status: FINAL
                   </p>
                 </div>
 

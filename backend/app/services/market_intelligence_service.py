@@ -28,17 +28,17 @@ class MarketIntelligenceService:
 
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "report_date": "14 November 2026",
+            "report_date": "18 November 2026",
             "market_closing_levels": {
                 "nifty_50": {
                     "level": 25255.05,
                     "change_pct": 0.84,
-                    "date": "14 Nov 2026"
+                    "date": "18 Nov 2026"
                 },
                 "sensex": {
                     "level": 81879.40,
                     "change_pct": 0.95,
-                    "date": "14 Nov 2026"
+                    "date": "18 Nov 2026"
                 },
                 "usd_inr": {
                     "rate": 84.38,

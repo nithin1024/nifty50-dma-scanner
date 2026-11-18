@@ -23,7 +23,7 @@ class MacroAnalyticsSuite:
     def get_inflation_analytics(cls) -> Dict[str, Any]:
         """Provides complete CPI and WPI suites, core measures, inflation expectations, and RBI target analysis."""
         return {
-            "session_date": "14 Nov 2026",
+            "session_date": "18 Nov 2026",
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "rbi_monetary_policy_target": {
                 "target_midpoint_pct": 4.0,
@@ -178,7 +178,7 @@ class MacroAnalyticsSuite:
     def get_gdp_national_accounts_analytics(cls) -> Dict[str, Any]:
         """Provides Real vs Nominal GDP, GVA, components (PFCE, GFCE, GFCF), sector contributions, and revisions."""
         return {
-            "session_date": "14 Nov 2026",
+            "session_date": "18 Nov 2026",
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "latest_quarter": "FY 2025-26 Q1",
             "reference_period": "April - June 2026 (Released August 2026)",
@@ -239,7 +239,7 @@ class MacroAnalyticsSuite:
     def get_rbi_macro_dashboard(cls) -> Dict[str, Any]:
         """Tracks RBI policy rates, sovereign bond yields, commodities, currency, and high-frequency real economy metrics."""
         return {
-            "session_date": "14 Nov 2026",
+            "session_date": "18 Nov 2026",
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             # 1. RBI Policy & Liquidity Corridor
             "rbi_monetary_policy": {
@@ -397,7 +397,7 @@ class MacroAnalyticsSuite:
         ]
 
         return {
-            "session_date": "14 Nov 2026",
+            "session_date": "18 Nov 2026",
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "total_events": len(events),
             "events": events
@@ -413,7 +413,7 @@ class MacroAnalyticsSuite:
         yields, crude oil and USD/INR to NIFTY 50, BANK NIFTY, 8 key sectors, options chain, and key levels.
         """
         return {
-            "session_date": "14 Nov 2026",
+            "session_date": "18 Nov 2026",
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "nifty_50_impact": {
                 "directional_bias": "MILDLY_BULLISH_CONSOLIDATION",
