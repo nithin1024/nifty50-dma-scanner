@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Query, Response, HTTPException
 from typing import Optional, Dict, Any
 import io
@@ -8,6 +9,8 @@ from zoneinfo import ZoneInfo
 from app.services import upstox_market_client as upstox
 from app.services.upstox_market_client import UpstoxApiError
 from app.services.upstox_feed_service import subscription_manager
+
+logger = logging.getLogger("chart_engine")
 
 router = APIRouter(prefix="/chart", tags=["Professional Charting Engine"])
 
@@ -34,7 +37,8 @@ async def get_chart_candles(
     }
     unit, interval = units.get(timeframe, ("minutes", "15"))
     today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
-    end = date.fromisoformat(before) - timedelta(days=1) if before else today
+    clean_before = before if (isinstance(before, str) and before.strip()) else None
+    end = date.fromisoformat(clean_before) - timedelta(days=1) if clean_before else today
     if unit == "minutes":
         lookback = 30 if int(interval) <= 15 else 90
     elif unit == "hours":
@@ -45,88 +49,31 @@ async def get_chart_candles(
         lookback = {"1M": 31, "3M": 93, "6M": 186, "1Y": 370,
                     "3Y": 365 * 3 + 5, "5Y": 365 * 5 + 10}.get(timeframe, 370)
     start = end - timedelta(days=lookback)
-    
-    # If timeframe is a multi-year range (>365 days), Upstox V3 historical-candle rejects requests with HTTP 400.
-    # Seamlessly route to verified historical archive with full multi-year data.
-    use_historical_archive = (lookback > 365 and unit == "days")
 
-    try:
-        if use_historical_archive:
-            raise UpstoxApiError(400, "Multi-year range routed to verified historical archive")
+    # Only truly multi-year ranges (3Y / 5Y, i.e. >370 days) are routed to the verified archive
+    # because Upstox V3 rejects date ranges that span more than ~1 year with HTTP 400.
+    # 1Y (370 days) and shorter go through Upstox first, with archive as fallback.
+    use_historical_archive = (lookback > 370 and unit == "days")
 
-        if not before and end == today:
-            if unit == "days":
-                raw = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
-                today_str = today.isoformat()
-                has_today = any(
-                    (r[0].startswith(today_str) if isinstance(r, (list, tuple)) else str(r.get("time_iso", "")).startswith(today_str))
-                    for r in raw
-                )
-                try:
-                    intraday = await upstox.get_intraday_candles_v3(key, "minutes", "1")
-                    if intraday:
-                        open_p = float(intraday[-1][1])
-                        high_p = max(float(c[2]) for c in intraday)
-                        low_p = min(float(c[3]) for c in intraday)
-                        close_p = float(intraday[0][4])
-                        today_vol = sum(int(c[5]) for c in intraday if len(c) > 5 and c[5] is not None)
-                        oi_p = intraday[0][6] if len(intraday[0]) > 6 else 0
-                        today_dt = datetime.combine(today, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-                        today_ts = int(today_dt.timestamp())
-                        today_candle = {
-                            "time": today_ts,
-                            "time_iso": today_dt.isoformat(),
-                            "open": open_p,
-                            "high": high_p,
-                            "low": low_p,
-                            "close": close_p,
-                            "volume": today_vol,
-                            "oi": oi_p
-                        }
-                        tick = subscription_manager.latest_ticks.get(key)
-                        if tick:
-                            if tick.get("volume") and int(tick["volume"]) > today_candle["volume"]:
-                                today_candle["volume"] = int(tick["volume"])
-                            if tick.get("ltp"):
-                                today_candle["close"] = float(tick["ltp"])
-                                today_candle["high"] = max(today_candle["high"], float(tick["ltp"]))
-                                today_candle["low"] = min(today_candle["low"], float(tick["ltp"]))
+    raw = []
+    source_label = "Upstox Historical Candle V3"
 
-                        if not has_today:
-                            raw.insert(0, today_candle)
-                        elif raw and isinstance(raw[0], list):
-                            if today_vol > (raw[0][5] or 0):
-                                raw[0][5] = today_vol
-                except Exception as intra_err:
-                    logger.warning("Could not merge intraday daily bar for %s: %s", key, intra_err)
-            else:
-                historical_end = today - timedelta(days=1)
-                previous = await upstox.get_historical_candles_v3(
-                    key, unit, interval, historical_end.isoformat(), start.isoformat())
-                try:
-                    intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
-                except Exception:
-                    intraday = []
-                raw = [*previous, *intraday]
-        else:
-            raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())
-    except (UpstoxApiError, Exception) as exc:
-        # Fall back to verified historical daily candles if Upstox API is unavailable/unauthenticated/out-of-range
+    if use_historical_archive:
+        # Load from verified multi-year historical archive
         from app.services.historical_data_service import historical_data_service
         from app.services.scanner_service import scanner_service
         clean_sym = symbol.upper()
         if clean_sym in ("NIFTY", "NIFTY 50", "NIFTY50"):
-            clean_sym = "RELIANCE"  # Proxy benchmark if index candles not separately cached
+            clean_sym = "RELIANCE"
         cached = historical_data_service.get_cached_history(clean_sym)
         candles_source = cached.get("candles", []) if cached else []
         if not candles_source:
             hist_res = await historical_data_service.fetch_symbol_history(clean_sym, range_period=timeframe)
             candles_source = hist_res.get("candles", [])
 
-        if before:
-            candles_source = [c for c in candles_source if c["trading_date"] < before]
+        if clean_before:
+            candles_source = [c for c in candles_source if c["trading_date"] < clean_before]
 
-        # Check live scan for today's live volume
         scan = scanner_service.get_latest_scan()
         stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
         live_vol = int(stock_live.get("volume") or 0) if stock_live else 0
@@ -148,17 +95,160 @@ async def get_chart_candles(
             except Exception:
                 continue
 
-        if raw_fallback and live_vol > 0 and not before:
+        if raw_fallback and live_vol > 0 and not clean_before:
             raw_fallback[-1]["volume"] = max(raw_fallback[-1]["volume"], live_vol)
 
         raw = raw_fallback
         source_label = "NSE Verified Historical Archive"
     else:
-        source_label = "Upstox Historical Candle V3"
-        await subscription_manager.set_subscriptions([key], mode="full")
+        try:
+            if not clean_before and end == today:
+                if unit == "days":
+                    raw = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
+                    today_str = today.isoformat()
+                    has_today = any(
+                        (r[0].startswith(today_str) if isinstance(r, (list, tuple)) else str(r.get("time_iso", "")).startswith(today_str))
+                        for r in raw
+                    )
+                    try:
+                        intraday = await upstox.get_intraday_candles_v3(key, "minutes", "1")
+                        if intraday:
+                            open_p = float(intraday[-1][1])
+                            high_p = max(float(c[2]) for c in intraday)
+                            low_p = min(float(c[3]) for c in intraday)
+                            close_p = float(intraday[0][4])
+                            today_vol = sum(int(c[5]) for c in intraday if len(c) > 5 and c[5] is not None)
+                            oi_p = intraday[0][6] if len(intraday[0]) > 6 else 0
+                            today_dt = datetime.combine(today, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                            today_ts = int(today_dt.timestamp())
+                            today_candle = {
+                                "time": today_ts,
+                                "time_iso": today_dt.isoformat(),
+                                "open": open_p,
+                                "high": high_p,
+                                "low": low_p,
+                                "close": close_p,
+                                "volume": today_vol,
+                                "oi": oi_p
+                            }
+                            tick = subscription_manager.latest_ticks.get(key)
+                            if tick:
+                                if tick.get("volume") and int(tick["volume"]) > today_candle["volume"]:
+                                    today_candle["volume"] = int(tick["volume"])
+                                if tick.get("ltp"):
+                                    today_candle["close"] = float(tick["ltp"])
+                                    today_candle["high"] = max(today_candle["high"], float(tick["ltp"]))
+                                    today_candle["low"] = min(today_candle["low"], float(tick["ltp"]))
+
+                            if not has_today:
+                                raw.insert(0, today_candle)
+                            elif raw and isinstance(raw[0], list):
+                                if today_vol > (raw[0][5] or 0):
+                                    raw[0][5] = today_vol
+                    except Exception as intra_err:
+                        logger.warning("Could not merge intraday daily bar for %s: %s", key, intra_err)
+                else:
+                    historical_end = today - timedelta(days=1)
+                    previous = await upstox.get_historical_candles_v3(
+                        key, unit, interval, historical_end.isoformat(), start.isoformat())
+                    try:
+                        intraday = await upstox.get_intraday_candles_v3(key, unit, interval)
+                    except Exception:
+                        intraday = []
+                    raw = [*previous, *intraday]
+            else:
+                raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())
+            await subscription_manager.set_subscriptions([key], mode="full")
+        except (UpstoxApiError, Exception) as exc:
+            # Fall back to verified historical daily candles if Upstox API is unavailable/unauthenticated/out-of-range
+            from app.services.historical_data_service import historical_data_service
+            from app.services.scanner_service import scanner_service
+            clean_sym = symbol.upper()
+            if clean_sym in ("NIFTY", "NIFTY 50", "NIFTY50"):
+                clean_sym = "RELIANCE"  # Proxy benchmark if index candles not separately cached
+            cached = historical_data_service.get_cached_history(clean_sym)
+            candles_source = cached.get("candles", []) if cached else []
+            if not candles_source:
+                hist_res = await historical_data_service.fetch_symbol_history(clean_sym, range_period=timeframe)
+                candles_source = hist_res.get("candles", [])
+
+            if clean_before:
+                candles_source = [c for c in candles_source if c["trading_date"] < clean_before]
+
+            # Check live scan for today's live volume
+            scan = scanner_service.get_latest_scan()
+            stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
+            live_vol = int(stock_live.get("volume") or 0) if stock_live else 0
+
+            raw_fallback = []
+            for c in candles_source:
+                try:
+                    dt = datetime.strptime(c["trading_date"], "%Y-%m-%d").replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                    vol = int(c.get("volume", 0))
+                    raw_fallback.append({
+                        "time": int(dt.timestamp()),
+                        "open": float(c["open"]),
+                        "high": float(c["high"]),
+                        "low": float(c["low"]),
+                        "close": float(c["close"]),
+                        "volume": vol,
+                        "oi": c.get("oi", 0)
+                    })
+                except Exception:
+                    continue
+
+            if raw_fallback and live_vol > 0 and not clean_before:
+                raw_fallback[-1]["volume"] = max(raw_fallback[-1]["volume"], live_vol)
+
+            raw = raw_fallback
+            source_label = "NSE Verified Historical Archive"
 
     candles = [parsed for row in raw if (parsed := (upstox.parse_candle_row(row) if isinstance(row, list) else row))]
     candles.sort(key=lambda candle: candle["time"])
+
+    # Reconcile today's live volume and price from live scanner and feed ticks
+    try:
+        from app.services.scanner_service import scanner_service
+        scan = scanner_service.get_latest_scan()
+        clean_sym = symbol.upper()
+        stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
+        
+        live_vol = int(stock_live.get("volume") or stock_live.get("cumulative_volume") or 0) if stock_live else 0
+        live_price = float(stock_live.get("live_price") or stock_live.get("latest_close") or 0) if stock_live else 0.0
+
+        live_tick = subscription_manager.latest_ticks.get(key)
+        if live_tick:
+            if live_tick.get("volume"):
+                live_vol = max(live_vol, int(live_tick["volume"]))
+            if live_tick.get("ltp"):
+                live_price = float(live_tick["ltp"])
+
+        if candles and live_vol > 0 and not clean_before:
+            # Check if last candle is from today (IST)
+            last_ts = candles[-1]["time"]
+            last_dt = datetime.fromtimestamp(last_ts, tz=ZoneInfo("Asia/Kolkata")).date() if isinstance(last_ts, (int, float)) else None
+            
+            if last_dt == today or unit != "days":
+                candles[-1]["volume"] = max(int(candles[-1].get("volume") or 0), live_vol)
+                if live_price > 0:
+                    candles[-1]["close"] = live_price
+                    candles[-1]["high"] = max(float(candles[-1].get("high") or live_price), live_price)
+                    candles[-1]["low"] = min(float(candles[-1].get("low") or live_price), live_price)
+            elif last_dt and last_dt < today and unit == "days" and live_price > 0:
+                # Append today's active session candle
+                today_start_ts = int(datetime.combine(today, datetime.min.time(), tzinfo=ZoneInfo("Asia/Kolkata")).timestamp())
+                candles.append({
+                    "time": today_start_ts,
+                    "open": live_price,
+                    "high": live_price,
+                    "low": live_price,
+                    "close": live_price,
+                    "volume": live_vol,
+                    "oi": 0
+                })
+    except Exception as sync_err:
+        logger.warning(f"Error reconciling live candle volume for {symbol}: {sync_err}")
+
     closes = [candle["close"] for candle in candles]
     volumes = [int(candle.get("volume") or 0) for candle in candles]
     

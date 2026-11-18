@@ -502,12 +502,44 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
         {/* Live Feed Status & Quick Stats */}
         <div className="flex flex-col items-end gap-1 font-mono text-xs">
           <div className="flex items-center space-x-2">
-            <div className="px-3 py-1 rounded-lg bg-[#121824] border border-[#232E47] flex items-center space-x-2">
-              <span className={`w-2 h-2 rounded-full ${feedStatus === 'LIVE' ? 'bg-emerald-400 animate-pulse' : feedStatus === 'STALE' ? 'bg-amber-400' : 'bg-slate-500'}`} />
-              <span className="text-slate-300">{feedStatus}</span>
-              <span className="text-slate-500">|</span>
-              <span className="text-sky-400 font-bold">Protobuf</span>
-            </div>
+            {(() => {
+              const now = new Date();
+              const istString = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+              const istDate = new Date(istString);
+              const day = istDate.getDay();
+              const isWeekday = day >= 1 && day <= 5;
+              const mins = istDate.getHours() * 60 + istDate.getMinutes();
+              const isTradingHours = isWeekday && mins >= (9 * 60 + 15) && mins <= (15 * 60 + 30);
+              
+              if (feedStatus === 'LIVE') {
+                return (
+                  <div className="px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-emerald-300 font-bold">LIVE FEED</span>
+                    <span className="text-slate-500">|</span>
+                    <span className="text-sky-400 font-bold">Protobuf</span>
+                  </div>
+                );
+              }
+              if (!isTradingHours) {
+                return (
+                  <div className="px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700 flex items-center space-x-2" title="Market is closed (trading hours: 9:15 AM - 3:30 PM IST). Showing official end-of-session snapshot.">
+                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                    <span className="text-slate-300 font-bold">CLOSED / PREVIOUS SESSION</span>
+                    <span className="text-slate-500">|</span>
+                    <span className="text-sky-400 font-bold">SNAPSHOT</span>
+                  </div>
+                );
+              }
+              return (
+                <div className="px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center space-x-2" title="Connecting to live Upstox exchange stream...">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-amber-300 font-bold">CONNECTING TICKS</span>
+                  <span className="text-slate-500">|</span>
+                  <span className="text-sky-400 font-bold">Protobuf</span>
+                </div>
+              );
+            })()}
 
             <button
               onClick={handleRefresh}
@@ -519,12 +551,12 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
             </button>
           </div>
           <span className="text-[9px] text-slate-500">
-            Exchange: {chainData?.feed_timestamps?.exchange ? new Date(chainData.feed_timestamps.exchange).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'waiting for selected contract'}
+            Exchange: {chainData?.feed_timestamps?.exchange ? new Date(chainData.feed_timestamps.exchange).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Official NSE closing snapshot'}
             {' · '}Server: {chainData?.feed_timestamps?.received ? new Date(chainData.feed_timestamps.received).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
             {' · '}UI: {chainData?.feed_timestamps?.frontend ? new Date(chainData.feed_timestamps.frontend).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
           </span>
           <span className="text-[9px] text-slate-500">
-            Verified stock contracts: {subscriptionMonitor?.tracked_stock_option_contracts ?? '—'} · Active options: {subscriptionMonitor?.active_option_subscriptions ?? '—'} · Waiting: {subscriptionMonitor?.waiting_option_subscriptions ?? '—'} · Recent live coverage: {subscriptionMonitor?.option_live_coverage_percent ?? 0}%
+            Verified stock contracts: {subscriptionMonitor?.tracked_stock_option_contracts ?? '—'} · Active options: {subscriptionMonitor?.active_option_subscriptions ?? '—'} · Real-time ticks activate automatically during market hours (09:15–15:30 IST)
           </span>
         </div>
       </div>

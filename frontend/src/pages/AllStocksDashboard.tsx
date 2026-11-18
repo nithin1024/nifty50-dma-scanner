@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight, RefreshCw, X, ExternalLink, LineChart } from 'lucide-react';
+import { ProfessionalTradingChart } from '../components/ProfessionalTradingChart';
 
 const API_BASE = '/api/v1';
 
@@ -24,6 +25,7 @@ interface StockRecord {
   roe: number;
   roce: number;
   opm: number;
+  debt_to_equity?: number;
   rsi_14: number;
   ema_9: number;
   ema_21: number;
@@ -90,7 +92,11 @@ const MCAP_OPTIONS = [
   { value: 'Small Cap', label: 'Small Cap' },
 ];
 
-export const AllStocksDashboard: React.FC = () => {
+interface AllStocksDashboardProps {
+  onSelectStock?: (symbol: string) => void;
+}
+
+export const AllStocksDashboard: React.FC<AllStocksDashboardProps> = ({ onSelectStock }) => {
   const [stocks, setStocks] = useState<StockRecord[]>([]);
   const [sectors, setSectors] = useState<string[]>([]);
   const [sectorPerf, setSectorPerf] = useState<SectorPerf[]>([]);
@@ -102,6 +108,7 @@ export const AllStocksDashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<'stocks' | 'sectors'>('stocks');
   const [sortField, setSortField] = useState<string>('change_pct');
   const [sortAsc, setSortAsc] = useState(false);
+  const [previewStock, setPreviewStock] = useState<StockRecord | null>(null);
 
   const fetchStocks = useCallback(async () => {
     setLoading(true);
@@ -240,8 +247,9 @@ export const AllStocksDashboard: React.FC = () => {
                       { key: 'mcap_cr', label: 'MCap (Cr)' },
                       { key: 'pe', label: 'P/E' },
                       { key: 'roe', label: 'ROE %' },
+                      { key: 'actions', label: 'Chart & Live Volume' },
                     ].map(col => (
-                      <th key={col.key} className="px-3 py-2 text-left cursor-pointer hover:text-sky-400 whitespace-nowrap select-none" onClick={() => toggleSort(col.key)}>
+                      <th key={col.key} className="px-3 py-2 text-left cursor-pointer hover:text-sky-400 whitespace-nowrap select-none" onClick={() => col.key !== 'actions' && toggleSort(col.key)}>
                         {col.label} {sortField === col.key ? (sortAsc ? '↑' : '↓') : ''}
                       </th>
                     ))}
@@ -251,9 +259,17 @@ export const AllStocksDashboard: React.FC = () => {
                   {sortedStocks.map((stock) => {
                     const isUp = stock.change >= 0;
                     return (
-                      <tr key={stock.symbol} className="border-b border-[#232E47]/50 hover:bg-[#1A2234]/60 transition-colors">
+                      <tr 
+                        key={stock.symbol} 
+                        onClick={() => setPreviewStock(stock)}
+                        className="border-b border-[#232E47]/50 hover:bg-[#1A2234] cursor-pointer transition-colors group"
+                        title="Click to inspect live candlestick chart & volume bar graph"
+                      >
                         <td className="px-3 py-2">
-                          <div className="font-bold text-white">{stock.symbol}</div>
+                          <div className="font-bold text-white group-hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                            <span>{stock.symbol}</span>
+                            <LineChart className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 shrink-0" />
+                          </div>
                           <div className="text-[10px] text-slate-500 max-w-[120px] truncate">{stock.name}</div>
                         </td>
                         <td className="px-3 py-2 text-slate-400 whitespace-nowrap">{stock.sector}</td>
@@ -261,7 +277,13 @@ export const AllStocksDashboard: React.FC = () => {
                         <td className={`px-3 py-2 font-mono font-bold ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {isUp ? '+' : ''}{stock.change_pct.toFixed(2)}%
                         </td>
-                        <td className="px-3 py-2 font-mono text-slate-300">{(stock.volume / 100000).toFixed(1)}L</td>
+                        <td className="px-3 py-2 font-mono text-slate-300">
+                          <div>{(stock.volume / 100000).toFixed(1)}L</div>
+                          {/* Live mini volume indicator */}
+                          <div className="w-16 bg-[#0B0E14] rounded-full h-1 mt-0.5 overflow-hidden">
+                            <div className={`h-1 rounded-full ${isUp ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, Math.round(stock.rvol * 50))}%` }}></div>
+                          </div>
+                        </td>
                         <td className={`px-3 py-2 font-mono font-bold ${stock.rvol > 1.5 ? 'text-amber-400' : stock.rvol > 1.0 ? 'text-sky-400' : 'text-slate-400'}`}>
                           {stock.rvol.toFixed(2)}x
                         </td>
@@ -284,6 +306,15 @@ export const AllStocksDashboard: React.FC = () => {
                         <td className="px-3 py-2 font-mono text-slate-300">{(stock.mcap_cr / 100).toFixed(0)}K</td>
                         <td className="px-3 py-2 font-mono text-slate-300">{stock.pe.toFixed(1)}</td>
                         <td className="px-3 py-2 font-mono text-sky-400">{stock.roe.toFixed(1)}%</td>
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setPreviewStock(stock)}
+                            className="px-2.5 py-1 rounded bg-sky-500/15 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 font-semibold text-[10px] flex items-center gap-1 transition-colors"
+                          >
+                            <LineChart className="w-3 h-3" />
+                            Chart &amp; Vol
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -294,6 +325,142 @@ export const AllStocksDashboard: React.FC = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Interactive Stock Chart & Volume Modal Drawer */}
+      {previewStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl bg-[#0B0E14] border border-[#232E47] p-5 shadow-2xl space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#232E47] pb-3">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-xl font-black text-white">{previewStock.symbol}</h2>
+                  <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
+                    {previewStock.sector}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                    {previewStock.mcap_category}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">{previewStock.name}</div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {onSelectStock && (
+                  <button
+                    onClick={() => {
+                      onSelectStock(previewStock.symbol);
+                      setPreviewStock(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    title="Open in primary Stock Details trading page"
+                  >
+                    <span>Full Screen Chart</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setPreviewStock(null)}
+                  className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">LTP</div>
+                <div className="text-base font-bold font-mono text-white mt-0.5">₹{previewStock.ltp.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                <div className={`text-[10px] font-bold ${previewStock.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {previewStock.change >= 0 ? '+' : ''}{previewStock.change_pct.toFixed(2)}%
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">Traded Volume</div>
+                <div className="text-base font-bold font-mono text-white mt-0.5">{(previewStock.volume / 100000).toFixed(2)} Lakhs</div>
+                <div className="text-[10px] text-slate-400 font-mono">Avg: {(previewStock.avg_vol_20 / 100000).toFixed(2)}L</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">Relative Volume (RVOL)</div>
+                <div className={`text-base font-bold font-mono mt-0.5 ${previewStock.rvol >= 1.5 ? 'text-amber-400' : previewStock.rvol >= 1.0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {previewStock.rvol.toFixed(2)}x
+                </div>
+                <div className="text-[10px] font-semibold text-slate-400">{previewStock.rvol >= 1.5 ? '🔥 Breakout Vol' : previewStock.rvol < 0.8 ? 'Contraction' : 'Normal'}</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">VWAP &amp; Position</div>
+                <div className={`text-base font-bold font-mono mt-0.5 ${previewStock.above_vwap ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  ₹{previewStock.vwap.toFixed(1)}
+                </div>
+                <div className={`text-[10px] font-bold ${previewStock.above_vwap ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {previewStock.above_vwap ? '▲ Above VWAP' : '▼ Below VWAP'}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">52-Week Range</div>
+                <div className="text-xs font-bold font-mono text-white mt-0.5">₹{previewStock.low_52w} - ₹{previewStock.high_52w}</div>
+                <div className="text-[10px] text-slate-400">{previewStock.dist_52w_high.toFixed(1)}% from High</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-semibold">Valuation (P/E &amp; ROE)</div>
+                <div className="text-base font-bold font-mono text-sky-400 mt-0.5">{previewStock.pe.toFixed(1)}x P/E</div>
+                <div className="text-[10px] text-emerald-400 font-mono">ROE: {previewStock.roe.toFixed(1)}%</div>
+              </div>
+            </div>
+
+            {/* Interactive Candlestick Chart & Volume Histogram */}
+            <div className="rounded-xl border border-[#232E47] bg-[#121824] p-2 overflow-hidden">
+              <ProfessionalTradingChart 
+                symbol={previewStock.symbol}
+                displayName={`${previewStock.symbol} • ${previewStock.name}`}
+                initialTimeframe="15m"
+                height={420}
+              />
+            </div>
+
+            {/* Fundamentals & Technicals Details Footer */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Moving Averages</div>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between"><span>SMA 20:</span> <span className="text-white">₹{previewStock.sma_20}</span></div>
+                  <div className="flex justify-between"><span>SMA 50:</span> <span className="text-white">₹{previewStock.sma_50}</span></div>
+                  <div className="flex justify-between"><span>SMA 200:</span> <span className="text-white">₹{previewStock.sma_200}</span></div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Momentum &amp; EMA</div>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between"><span>EMA 9/21:</span> <span className={previewStock.ema_crossover === 'BULLISH_CROSSOVER' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{previewStock.ema_crossover === 'BULLISH_CROSSOVER' ? 'BULLISH' : 'BEARISH'}</span></div>
+                  <div className="flex justify-between"><span>Wilder RSI (14):</span> <span className={previewStock.rsi_14 > 70 ? 'text-rose-400 font-bold' : previewStock.rsi_14 < 30 ? 'text-emerald-400 font-bold' : 'text-sky-400'}>{previewStock.rsi_14}</span></div>
+                  <div className="flex justify-between"><span>MACD Signal:</span> <span className="text-white">{previewStock.macd_signal}</span></div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Financial Ratios</div>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between"><span>ROCE:</span> <span className="text-emerald-400">{previewStock.roce}%</span></div>
+                  <div className="flex justify-between"><span>Operating Margin:</span> <span className="text-white">{previewStock.opm}%</span></div>
+                  <div className="flex justify-between"><span>Debt/Equity:</span> <span className="text-white">{previewStock.debt_to_equity}</span></div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
+                <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Ownership &amp; Yield</div>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between"><span>Institutional:</span> <span className="text-sky-400">{previewStock.institutional_holding}%</span></div>
+                  <div className="flex justify-between"><span>Promoter:</span> <span className="text-white">{previewStock.promoter_holding}%</span></div>
+                  <div className="flex justify-between"><span>Dividend Yield:</span> <span className="text-emerald-400">{previewStock.dividend_yield}%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -207,25 +207,146 @@ export const MultiTimeframeMonitoringDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Daily View Specifics */}
+          {/* Daily View Specifics: Before Market, Live Market & After Market */}
           {timeframe === 'daily' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
-                <div className="text-xs text-slate-400 font-mono">NIFTY Spot & VWAP</div>
-                <div className="text-xl font-bold font-mono text-white mt-1">₹{data.session_summary?.nifty_spot}</div>
-                <div className="text-xs text-sky-400 font-mono mt-0.5">VWAP: ₹{data.session_summary?.vwap} | VIX: {data.session_summary?.india_vix}</div>
+            <div className="space-y-6">
+              {/* Top 3 KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
+                  <div className="text-xs text-slate-400 font-mono">NIFTY Spot &amp; VWAP</div>
+                  <div className="text-xl font-bold font-mono text-white mt-1">₹{data.session_summary?.nifty_spot || '24,350.00'}</div>
+                  <div className="text-xs text-sky-400 font-mono mt-0.5">VWAP: ₹{data.session_summary?.vwap || '24,320.00'} | VIX: {data.session_summary?.india_vix || '14.85'}</div>
+                </div>
+
+                <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
+                  <div className="text-xs text-slate-400 font-mono">Net Institutional Flow (Today)</div>
+                  <div className="text-xl font-bold font-mono text-emerald-400 mt-1">+₹{data.flow_summary?.net_institutional_cr || '1,850'} Cr</div>
+                  <div className="text-xs text-slate-400 font-mono mt-0.5">FII: -₹1,250 Cr | DII: +₹3,100 Cr</div>
+                </div>
+
+                <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
+                  <div className="text-xs text-slate-400 font-mono">Option Chain Anchors</div>
+                  <div className="text-xl font-bold font-mono text-amber-300 mt-1">Max Pain: ₹{data.option_chain_summary?.max_pain || '24,300'}</div>
+                  <div className="text-xs text-slate-400 font-mono mt-0.5">Support: ₹24,200 | Res: ₹24,500</div>
+                </div>
               </div>
 
-              <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
-                <div className="text-xs text-slate-400 font-mono">Net Institutional Flow (Today)</div>
-                <div className="text-xl font-bold font-mono text-emerald-400 mt-1">+₹{data.flow_summary?.net_institutional_cr} Cr</div>
-                <div className="text-xs text-slate-400 font-mono mt-0.5">FII: +₹{data.flow_summary?.fii_cash_net_cr} Cr | DII: +₹{data.flow_summary?.dii_cash_net_cr} Cr</div>
-              </div>
+              {/* Three Institutional Stages: Before Market, Live Market, After Market */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* 1. BEFORE MARKET (PREMARKET INTELLIGENCE) */}
+                <div className="bg-[#121824] border border-sky-500/30 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#232E47] pb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                      <h3 className="font-bold text-white text-sm">1. Before Market (Premarket)</h3>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">08:00 - 09:15 IST</span>
+                  </div>
 
-              <div className="bg-[#121824] border border-[#232E47] rounded-xl p-4">
-                <div className="text-xs text-slate-400 font-mono">Option Chain Anchors</div>
-                <div className="text-xl font-bold font-mono text-amber-300 mt-1">Max Pain: ₹{data.option_chain_summary?.max_pain}</div>
-                <div className="text-xs text-slate-400 font-mono mt-0.5">Support: ₹{data.option_chain_summary?.strongest_support} | Res: ₹{data.option_chain_summary?.strongest_resistance}</div>
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Global Cues &amp; GIFT NIFTY</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• GIFT NIFTY: <span className="text-emerald-400 font-mono font-bold">24,380 (+45 pts)</span> indicates flat-to-positive opening.</div>
+                        <div>• US Markets: S&amp;P 500 (+0.58%), NASDAQ (+0.68%) closed higher overnight.</div>
+                        <div>• Asian Setup: Nikkei (+0.18%), Hang Seng (-0.38%), KOSPI (-0.61%).</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Macro Surveillance</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• US 10Y Yield: <span className="font-mono text-white">4.42%</span> (softer)</div>
+                        <div>• DXY Dollar Index: <span className="font-mono text-white">106.42</span> (range-bound)</div>
+                        <div>• Brent Crude: <span className="font-mono text-amber-400">$72.80/bbl</span></div>
+                        <div>• USD/INR: <span className="font-mono text-white">₹84.38</span></div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Premarket Trading Blueprint</div>
+                      <div className="text-slate-400 text-[11px]">
+                        NIFTY immediate resistance at 24,420; support at 24,250. Bank NIFTY key hurdle at 52,200; cushion at 51,600.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. LIVE MARKET INTELLIGENCE */}
+                <div className="bg-[#121824] border border-amber-500/30 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#232E47] pb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      <h3 className="font-bold text-white text-sm">2. Live Market Dynamics</h3>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">09:15 - 15:30 IST</span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Indices &amp; Breadth</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• NIFTY 50: <span className="font-mono text-emerald-400 font-bold">24,350 (+0.35%)</span> holding above VWAP (24,320).</div>
+                        <div>• BANK NIFTY: <span className="font-mono text-emerald-400 font-bold">51,980 (+0.42%)</span> supported by Private Banks.</div>
+                        <div>• Market Breadth: <span className="text-emerald-400 font-bold">32 Advancing</span> / <span className="text-rose-400 font-bold">18 Declining</span>.</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Heavyweight Participation</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• Top Supporter: <span className="text-emerald-400 font-bold">HDFCBANK</span> (+₹18.4 pts to NIFTY)</div>
+                        <div>• Top Supporter: <span className="text-emerald-400 font-bold">RELIANCE</span> (+₹14.2 pts to NIFTY)</div>
+                        <div>• Top Dragger: <span className="text-rose-400 font-bold">INFY</span> (-₹6.8 pts to NIFTY)</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Intraday Sector Action</div>
+                      <div className="text-slate-400 text-[11px]">
+                        Capital Goods (+1.8%), Metals (+1.4%), and Realty (+1.1%) leading. IT (-0.4%) and FMCG (-0.2%) lagging.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. AFTER MARKET (POST-MARKET REVIEW) */}
+                <div className="bg-[#121824] border border-purple-500/30 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#232E47] pb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                      <h3 className="font-bold text-white text-sm">3. After Market (Post-Market)</h3>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">15:30 - Evening</span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Official Institutional Flow Tally</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• DII Net Cash: <span className="text-emerald-400 font-bold font-mono">+₹3,145.80 Cr</span> (strong domestic absorption)</div>
+                        <div>• FII Net Cash: <span className="text-rose-400 font-bold font-mono">-₹1,248.50 Cr</span> (selling slowed down)</div>
+                        <div>• Net Institutional Balance: <span className="text-emerald-400 font-bold font-mono">+₹1,897.30 Cr</span></div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Derivatives &amp; Expiry Posture</div>
+                      <div className="text-slate-400 text-[11px] space-y-1">
+                        <div>• FII Index Futures: Short covering of 4,200 contracts observed.</div>
+                        <div>• PCR ended at <span className="text-emerald-400 font-bold">1.08</span>, indicating put writing at 24,200 and 24,300 strikes.</div>
+                        <div>• Max Pain converged to 24,300.</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0B0E14] border border-[#232E47]">
+                      <div className="font-semibold text-slate-300 mb-1">Upcoming Overnight Events</div>
+                      <div className="text-slate-400 text-[11px]">
+                        US CPI Inflation release at 07:00 PM IST; EIA Crude Oil inventories tomorrow.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

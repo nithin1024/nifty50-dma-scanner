@@ -38,10 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   ];
 
   const derivativesItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'option-chain', label: '4. Live Option Chain', icon: <Layers className="w-4 h-4" /> },
-    { id: 'oi-pcr', label: '5. OI & PCR Analysis', icon: <Activity className="w-4 h-4" /> },
-    { id: 'max-pain', label: '6. Max Pain Engine', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'support-resistance', label: '7. Support & Resistance', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'option-chain', label: '4. Live Option Chain & F&O', icon: <Layers className="w-4 h-4" /> },
     { id: 'live-market', label: '3. Live Market & Levels', icon: <Zap className="w-4 h-4" /> },
   ];
 
@@ -58,11 +55,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   ];
 
   const reportsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'daily-report', label: '14. Daily Report', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'weekly-report', label: '15. Weekly Report', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'monthly-report', label: '16. Monthly Report', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'historical', label: '17. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'data-quality', label: '18. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'daily-report', label: '14. Institutional Reports (Daily/Weekly/Monthly)', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'historical', label: '15. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'data-quality', label: '16. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   return (

@@ -197,7 +197,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'all-stocks' && (
-          <AllStocksDashboard />
+          <AllStocksDashboard onSelectStock={handleSelectStock} />
         )}
 
         {(activeTab === 'daily-report' || activeTab === 'weekly-report' || activeTab === 'monthly-report') && (

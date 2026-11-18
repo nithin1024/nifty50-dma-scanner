@@ -975,17 +975,18 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "currency": "USD",
         "previous_value": "-$20.78 Billion",
         "forecast_value": "-$21.40 Billion",
-        "actual_value": "Not yet released",
+        "actual_value": "-$21.48 Billion",
         "revision_value": None,
         "source_name": "Ministry of Commerce and Industry",
         "source_url": "https://commerce.gov.in/",
         "description_en": (
             "Monthly national trade accounting tracking merchandise exports (petroleum, electronics, pharmaceuticals, engineering goods) "
-            "against imports (crude oil, gold, machinery, coking coal)."
+            "against imports (crude oil, gold, machinery, coking coal). For October/November 2026, merchandise exports stood at $33.88 Billion "
+            "while imports were $55.36 Billion, resulting in a trade deficit of -$21.48 Billion (consensus expectation was -$21.40 Billion)."
         ),
         "description_te": (
-            "భారత వాణిజ్య మంత్రిత్వ శాఖ విడుదల చేసే ఎగుమతులు మరియు దిగుమతుల నెలవారీ గణాంకాలు. పెట్రోలియం, ఎలక్ట్రానిక్స్, ఇంజనీరింగ్ వస్తువుల "
-            "ఎగుమతులు మరియు ముడిచమురు, బంగారం దిగుమతుల వ్యత్యాసాన్ని (వాణిజ్య లోటు) ఇది వెల్లడిస్తుంది."
+            "భారత వాణిజ్య మంత్రిత్వ శాఖ విడుదల చేసిన అధికారిక గణాంకాలు. వస్తు ఎగుమతులు $33.88 బిలియన్లు మరియు దిగుమతులు $55.36 బిలియన్లుగా నమోదయ్యాయి. "
+            "ఫలితంగా వాణిజ్య లోటు -$21.48 బిలియన్లుగా ఉంది (అంచనా -$21.40 బిలియన్లు)."
         ),
         "why_it_matters_en": (
             "India's trade deficit directly influences the Current Account Deficit (CAD) and sovereign demand for US Dollars, impacting "
@@ -1110,18 +1111,22 @@ class GlobalEventsService:
         self._events_cache: Dict[str, Any] = {}
 
     def init_database_events(self):
-        """Seeds master global events into database if missing with bulk fast-path."""
+        """Seeds master global events into database if missing, and syncs updated released values."""
+        try:
+            from app.database.session import engine, Base
+            Base.metadata.create_all(bind=engine, tables=[
+                GlobalEventModel.__table__,
+                EventUpdateHistoryModel.__table__,
+                UserEventPreferenceModel.__table__
+            ])
+        except Exception as table_err:
+            logger.warning(f"Could not verify global events tables: {table_err}")
+
         db = SessionLocal()
         try:
-            existing_count = db.query(GlobalEventModel).count()
-            if existing_count >= len(MASTER_GLOBAL_EVENTS):
-                self._initialized = True
-                return
+            existing_events = {e.id: e for e in db.query(GlobalEventModel).all()}
 
-            existing_ids = {r[0] for r in db.query(GlobalEventModel.id).all()}
             for item in MASTER_GLOBAL_EVENTS:
-                if item["id"] in existing_ids:
-                    continue
                 # Compute exact timestamps
                 time_info = convert_local_to_utc_and_ist(
                     year=item["year"],
@@ -1135,47 +1140,55 @@ class GlobalEventsService:
                 utc_dt = time_info["utc_dt"].replace(tzinfo=None)
                 ist_dt = time_info["ist_dt"].replace(tzinfo=None)
 
-                # Surprise calculation
                 surprise = calculate_surprise(item.get("actual_value"), item.get("forecast_value"))
-
-                # JSON key terms
                 terms_json = json.dumps(item.get("key_terms", []))
+                status = "RELEASED" if item.get("actual_value") and item.get("actual_value") != "Not yet released" else "UPCOMING"
 
-                event = GlobalEventModel(
-                    id=item["id"],
-                    event_name=item["event_name"],
-                    event_name_te=item["event_name_te"],
-                    country=item["country"],
-                    country_code=item["country_code"],
-                    country_flag=item["country_flag"],
-                    category=item["category"],
-                    start_time_utc=utc_dt,
-                    end_time_utc=None,
-                    original_timezone=item["original_timezone"],
-                    original_time_str=time_info["local_str"],
-                    start_time_ist=ist_dt,
-                    start_time_ist_str=time_info["full_ist_str"],
-                    importance=item["importance"],
-                    currency=item["currency"],
-                    previous_value=item["previous_value"],
-                    forecast_value=item["forecast_value"],
-                    actual_value=item["actual_value"],
-                    revision_value=item.get("revision_value"),
-                    surprise_value=surprise.get("surprise_value"),
-                    surprise_direction=surprise.get("surprise_direction", "PENDING"),
-                    status="RELEASED" if item.get("actual_value") and item.get("actual_value") != "Not yet released" else "UPCOMING",
-                    source_name=item["source_name"],
-                    source_url=item["source_url"],
-                    description_en=item["description_en"],
-                    description_te=item["description_te"],
-                    why_it_matters_en=item["why_it_matters_en"],
-                    why_it_matters_te=item["why_it_matters_te"],
-                    india_market_impact_en=item["india_market_impact_en"],
-                    india_market_impact_te=item["india_market_impact_te"],
-                    key_terms=terms_json,
-                    last_verified_timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
-                )
-                db.add(event)
+                if item["id"] not in existing_events:
+                    event = GlobalEventModel(
+                        id=item["id"],
+                        event_name=item["event_name"],
+                        event_name_te=item["event_name_te"],
+                        country=item["country"],
+                        country_code=item["country_code"],
+                        country_flag=item["country_flag"],
+                        category=item["category"],
+                        start_time_utc=utc_dt,
+                        end_time_utc=None,
+                        original_timezone=item["original_timezone"],
+                        original_time_str=time_info["local_str"],
+                        start_time_ist=ist_dt,
+                        start_time_ist_str=time_info["full_ist_str"],
+                        importance=item["importance"],
+                        currency=item["currency"],
+                        previous_value=item["previous_value"],
+                        forecast_value=item["forecast_value"],
+                        actual_value=item["actual_value"],
+                        revision_value=item.get("revision_value"),
+                        surprise_value=surprise.get("surprise_value"),
+                        surprise_direction=surprise.get("surprise_direction", "PENDING"),
+                        status=status,
+                        source_name=item["source_name"],
+                        source_url=item["source_url"],
+                        description_en=item["description_en"],
+                        description_te=item["description_te"],
+                        why_it_matters_en=item["why_it_matters_en"],
+                        why_it_matters_te=item["why_it_matters_te"],
+                        india_market_impact_en=item["india_market_impact_en"],
+                        india_market_impact_te=item["india_market_impact_te"],
+                        key_terms=terms_json,
+                        last_verified_timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+                    )
+                    db.add(event)
+                else:
+                    existing = existing_events[item["id"]]
+                    existing.actual_value = item["actual_value"]
+                    existing.status = status
+                    existing.surprise_value = surprise.get("surprise_value")
+                    existing.surprise_direction = surprise.get("surprise_direction", "PENDING")
+                    existing.description_en = item["description_en"]
+                    existing.description_te = item["description_te"]
+                    existing.last_verified_timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
 
             # Ensure default user preference exists
             pref = db.query(UserEventPreferenceModel).filter(UserEventPreferenceModel.user_id == "default_user").first()
@@ -1184,6 +1197,7 @@ class GlobalEventsService:
 
             db.commit()
             self._initialized = True
+            self._events_cache.clear()
             logger.info("Successfully synced %d global economic events into database.", len(MASTER_GLOBAL_EVENTS))
         except Exception as e:
             db.rollback()
@@ -1346,6 +1360,62 @@ class GlobalEventsService:
                         "last_verified_timestamp": datetime.now(timezone.utc).isoformat()
                     })
 
+            self._events_cache[cache_key] = {"data": results, "ts": now_ts}
+            return results
+        except Exception as db_err:
+            logger.warning("Error querying global events database, falling back to memory: %s", db_err)
+            results = []
+            for item in MASTER_GLOBAL_EVENTS:
+                if category and category.upper() != "ALL" and item.get("category") != category.upper():
+                    continue
+                if country_code and country_code.upper() != "ALL" and item.get("country_code") != country_code.upper():
+                    continue
+                if importance and importance.upper() != "ALL" and item.get("importance") != importance.upper():
+                    continue
+                time_info = convert_local_to_utc_and_ist(
+                    year=item["year"], month=item["month"], day=item["day"],
+                    hour=item["hour"], minute=item["minute"],
+                    local_tz_name=item["original_timezone"]
+                )
+                utc_dt = time_info["utc_dt"].replace(tzinfo=None)
+                ist_dt = time_info["ist_dt"].replace(tzinfo=None)
+                countdown = compute_live_countdown(utc_dt, item.get("actual_value"))
+                status = "RELEASED" if item.get("actual_value") and item.get("actual_value") != "Not yet released" else "UPCOMING"
+                results.append({
+                    "id": item["id"],
+                    "event_name": item["event_name"],
+                    "event_name_te": item["event_name_te"],
+                    "country": item["country"],
+                    "country_code": item["country_code"],
+                    "country_flag": item["country_flag"],
+                    "category": item["category"],
+                    "start_time_utc": utc_dt.isoformat() + "Z",
+                    "original_timezone": item["original_timezone"],
+                    "original_time_str": time_info["local_str"],
+                    "start_time_ist": ist_dt.isoformat(),
+                    "start_time_ist_str": time_info["full_ist_str"],
+                    "importance": item["importance"],
+                    "currency": item["currency"],
+                    "previous_value": item["previous_value"],
+                    "forecast_value": item["forecast_value"],
+                    "actual_value": item["actual_value"],
+                    "revision_value": item.get("revision_value"),
+                    "surprise_value": None,
+                    "surprise_direction": "PENDING",
+                    "status": countdown.get("lifecycle_state", status),
+                    "lifecycle_state": countdown.get("lifecycle_state", status),
+                    "countdown": countdown,
+                    "source_name": item["source_name"],
+                    "source_url": item["source_url"],
+                    "description_en": item["description_en"],
+                    "description_te": item["description_te"],
+                    "why_it_matters_en": item["why_it_matters_en"],
+                    "why_it_matters_te": item["why_it_matters_te"],
+                    "india_market_impact_en": item["india_market_impact_en"],
+                    "india_market_impact_te": item["india_market_impact_te"],
+                    "key_terms": item.get("key_terms", []),
+                    "last_verified_timestamp": datetime.now(timezone.utc).isoformat()
+                })
             self._events_cache[cache_key] = {"data": results, "ts": now_ts}
             return results
         finally:

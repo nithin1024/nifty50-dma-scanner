@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 from sqlalchemy import inspect, text
 
 from app.database.session import engine, SessionLocal
+import app.models  # Ensures all models (stock, global_event, option_snapshot, institutional_flow) are registered on Base
 from app.models.stock import (
     Base,
     ConstituentModel,
@@ -15,6 +16,7 @@ from app.models.stock import (
 )
 from app.models.option_snapshot import OptionOISnapshotModel
 from app.models.institutional_flow import InstitutionalCashFlowSnapshot
+from app.models.global_event import GlobalEventModel, EventUpdateHistoryModel, UserEventPreferenceModel
 from app.services.constituents_service import constituents_service
 
 logger = logging.getLogger("db_service")
