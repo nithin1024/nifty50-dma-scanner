@@ -22,23 +22,57 @@ IST = ZoneInfo("Asia/Kolkata")
 
 @router.get("/auth-status")
 async def upstox_auth_status() -> Dict[str, Any]:
-    """Verify credentials against Upstox User Profile without returning account identifiers."""
-    try:
-        profile = await upstox.get_user_profile()
-        subscription_manager.authentication_status = "AUTHENTICATED" if profile.get("authenticated") else "DISCONNECTED"
-        if profile.get("authenticated"):
-            subscription_manager.start()
-        else:
-            subscription_manager.status = "DISCONNECTED"
-        return {"authenticated": profile.get("authenticated", False), "is_active": profile.get("is_active"),
-                "broker": profile.get("broker"), "status": "CONNECTED" if profile.get("authenticated") else "DISCONNECTED",
-                "profile_endpoint": "/v2/user/profile", "feed_status": subscription_manager.get_status()}
-    except UpstoxApiError as exc:
-        subscription_manager.authentication_status = "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"
-        subscription_manager.status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
-        raise HTTPException(status_code=exc.status_code or 503,
-                            detail={"message": exc.message, "endpoint": exc.endpoint,
-                                    "authentication": "FAILED" if exc.status_code in (401, 403) else "UNAVAILABLE"})
+    """Verify Upstox Analytics Token credentials and market data feed connection."""
+    settings = get_settings()
+    has_token = bool((settings.UPSTOX_ACCESS_TOKEN or "").strip())
+    if not has_token:
+        return {
+            "authenticated": False,
+            "is_active": False,
+            "broker": "UPSTOX",
+            "status": "DISCONNECTED",
+            "authentication": "MISSING_TOKEN",
+            "feed_status": subscription_manager.get_status(),
+        }
+
+    # If already verified or authenticated by the feed manager, return live state
+    if subscription_manager.authentication_status == "AUTHENTICATED":
+        return {
+            "authenticated": True,
+            "is_active": True,
+            "broker": "UPSTOX",
+            "status": "CONNECTED",
+            "profile_endpoint": "/v3/feed/market-data-feed/authorize",
+            "feed_status": subscription_manager.get_status(),
+            "is_analytics_token": True,
+        }
+
+    # Verify market data token against documented market feed / contracts endpoint
+    verification = await upstox.verify_market_data_access()
+    if verification.get("authenticated"):
+        subscription_manager.authentication_status = "AUTHENTICATED"
+        subscription_manager.start()
+        return {
+            "authenticated": True,
+            "is_active": True,
+            "broker": "UPSTOX",
+            "status": "CONNECTED",
+            "profile_endpoint": verification.get("feed_endpoint", "/v3/feed/market-data-feed/authorize"),
+            "feed_status": subscription_manager.get_status(),
+            "is_analytics_token": True,
+        }
+
+    # If token failed with 401/403
+    subscription_manager.authentication_status = "FAILED" if verification.get("status") == "FAILED" else "UNAVAILABLE"
+    subscription_manager.status = "DISCONNECTED" if verification.get("status") == "FAILED" else "WAITING"
+    return {
+        "authenticated": False,
+        "is_active": False,
+        "broker": "UPSTOX",
+        "status": "DISCONNECTED",
+        "error": verification.get("message", "Upstox market feed authentication failed"),
+        "feed_status": subscription_manager.get_status(),
+    }
 
 
 @router.get("/feed-status")
@@ -61,25 +95,17 @@ async def get_fo_universe() -> Dict[str, Any]:
                     "cached": True}
 
         try:
-            profile = await upstox.get_user_profile()
-            if not profile.get("authenticated"):
-                raise UpstoxApiError(401, "Upstox profile authentication failed", "/v2/user/profile")
-            subscription_manager.authentication_status = "AUTHENTICATED"
-            # Reserve NIFTY plus all 50 cash equities before option subscriptions
-            # start filling the Full-mode queue.
+            # Ensure NIFTY spot & ATM option subscriptions are configured
             await subscription_manager.configure_nifty()
+            subscription_manager.authentication_status = "AUTHENTICATED"
             subscription_manager.start()
-        except (UpstoxApiError, Exception) as exc:
-            subscription_manager.authentication_status = "DISCONNECTED"
-            subscription_manager.status = "DISCONNECTED"
-            return {
-                "universe": options_universe_service.get_fo_eligible_universe(),
-                "subscription_monitor": options_universe_service.get_subscription_stats(),
-                "constituents_source": constituents_service.last_fetch_source,
-                "fo_eligibility_source": "NSE Permitted Lot Sizes (DEMO)",
-                "cached": False,
-                "mode": "DEMO"
-            }
+        except UpstoxApiError as exc:
+            if exc.status_code in (401, 403):
+                subscription_manager.authentication_status = "FAILED"
+                subscription_manager.status = "DISCONNECTED"
+            logger.warning("F&O universe initial NIFTY configuration error: %s", exc)
+        except Exception as exc:
+            logger.warning("F&O universe initial NIFTY configuration warning: %s", exc)
 
         # Option Contracts returns each listed CE/PE contract, expiry and strike.
         # One request per underlying is sufficient: the underlying quote comes

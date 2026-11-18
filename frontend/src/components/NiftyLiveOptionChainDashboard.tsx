@@ -39,8 +39,18 @@ const displayMetric = (value: unknown, suffix = ''): string => {
   return `${typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : String(value)}${suffix}`;
 };
 
-export const NiftyLiveOptionChainDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<OptionsTab>('CHAIN');
+interface NiftyLiveOptionChainDashboardProps {
+  initialTab?: OptionsTab;
+}
+
+export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboardProps> = ({ initialTab = 'CHAIN' }) => {
+  const [activeTab, setActiveTab] = useState<OptionsTab>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [symbol, setSymbol] = useState<string>('NIFTY');
   const [strikeRange, setStrikeRange] = useState<number>(5);
   const [selectedExpiry, setSelectedExpiry] = useState<string>('');

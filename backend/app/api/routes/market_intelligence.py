@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Response
 
+from app.services.institutional_market_suite import institutional_market_suite
 from app.services.global_news_service import global_news_service
 from app.services.institutional_data_service import institutional_data_service
 from app.services.macro_analytics_suite import macro_analytics_suite
@@ -124,3 +125,39 @@ async def get_macro_topic_detail(topic_id: str) -> Dict[str, Any]:
 async def get_global_news(category: Optional[str] = Query(None, description="Optional news category filter")) -> List[Dict[str, Any]]:
     """Return the separately sourced news feed; it is not represented as Upstox data."""
     return global_news_service.get_latest_news(category=category)
+
+
+@router.get("/overview", response_model=Dict[str, Any])
+async def get_institutional_overview() -> Dict[str, Any]:
+    """Module 1: Comprehensive overview with indices, yields, commodities, currencies, FII/DII, and breadth."""
+    return institutional_market_suite.get_institutional_overview()
+
+
+@router.get("/premarket", response_model=Dict[str, Any])
+async def get_premarket_intelligence() -> Dict[str, Any]:
+    """Module 2: Premarket intelligence with global indices, GIFT Nifty gap, and 3 opening scenarios."""
+    return institutional_market_suite.get_premarket_intelligence()
+
+
+@router.get("/sectors", response_model=Dict[str, Any])
+async def get_sector_fundamentals() -> Dict[str, Any]:
+    """Module 9: Sector & Company Fundamentals across 15 key Indian sectors."""
+    return institutional_market_suite.get_sector_and_company_fundamentals()
+
+
+@router.get("/monitoring/{timeframe}", response_model=Dict[str, Any])
+async def get_monitoring_dashboard(timeframe: str) -> Dict[str, Any]:
+    """Module 10: Multi-timeframe monitoring dashboards (Daily, Weekly, Monthly with 5-year series)."""
+    return institutional_market_suite.get_monitoring_dashboard(timeframe=timeframe)
+
+
+@router.get("/nifty-trading", response_model=Dict[str, Any])
+async def get_nifty_trading_intelligence() -> Dict[str, Any]:
+    """Module 13: NIFTY Daily Trading Intelligence with VWAP, pivot levels, and action blueprint."""
+    return institutional_market_suite.get_nifty_trading_intelligence()
+
+
+@router.get("/alerts", response_model=List[Dict[str, Any]])
+async def get_market_alerts() -> List[Dict[str, Any]]:
+    """Module 14: Macroeconomic, technical, and institutional flow alerts."""
+    return institutional_market_suite.get_realtime_alerts()

@@ -564,47 +564,77 @@ class SubscriptionManager:
         state = self.status
         if state == "LIVE" and age is not None and age > settings.UPSTOX_STALE_SECONDS:
             state = "STALE"
-        return {"status": state, "websocket_connected": self._socket is not None,
-                "active_subscriptions": len(self.active),
-                "waiting_subscriptions": len(self.waiting), "verified_nifty_contracts": self.contract_count,
-                "authentication_status": self.authentication_status,
-                "subscription_limit": settings.UPSTOX_MAX_COMBINED_SUBSCRIPTIONS,
-                "full_subscription_count": sum(mode == "full" for mode in self.active.values()),
-                "ltpc_subscription_count": sum(mode == "ltpc" for mode in self.active.values()),
-                "full_subscription_limit": max_active,
-                "last_message_age_seconds": round(age, 1) if age is not None else None,
-                "last_feed_received_at": self.last_received_at,
-                "last_exchange_timestamp": _iso_milliseconds(self.last_exchange_ts),
-                "live_instrument_count": sum(
-                    1 for key in self.active if key in self.instrument_live_received_at
-                    and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
-                    <= settings.UPSTOX_STALE_SECONDS
-                ),
-                "active_option_subscriptions": sum(
-                    1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
-                ),
-                "waiting_option_subscriptions": sum(
-                    1 for key in self.waiting if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
-                ),
-                "live_option_instrument_count": sum(
-                    1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
-                    and key in self.instrument_live_received_at
-                    and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
-                    <= settings.UPSTOX_STALE_SECONDS
-                ),
+        ws_status = "CONNECTED" if self._socket is not None else ("CONNECTING" if self.status == "WAITING" else "DISCONNECTED")
+        coverage_pct = round(
+            100.0 * sum(1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
+                        and self.instrument_metadata.get(key, {}).get("underlying") != "NIFTY"
+                        and key in self.instrument_live_received_at
+                        and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
+                        <= settings.UPSTOX_STALE_SECONDS)
+            / self.stock_option_feed_key_count, 1
+        ) if self.stock_option_feed_key_count else 0.0
+
+        return {
+            "status": state,
+            "websocket_connected": self._socket is not None,
+            # Explicit 8 Independent Health Dimensions required by Section 4:
+            "upstox_auth_status": self.authentication_status,
+            "upstox_ws_status": ws_status,
+            "subscription_status": {
+                "active": len(self.active),
+                "waiting": len(self.waiting),
+                "full_active": sum(mode == "full" for mode in self.active.values()),
+                "ltpc_active": sum(mode == "ltpc" for mode in self.active.values()),
+                "max_full": max_active,
+                "max_total": settings.UPSTOX_MAX_COMBINED_SUBSCRIPTIONS,
+            },
+            "instrument_verification_status": {
+                "verified_nifty_contracts": self.contract_count,
                 "tracked_stock_option_contracts": self.stock_option_contract_count,
                 "stock_option_feed_keys": self.stock_option_feed_key_count,
-                "failed_option_underlyings": self.failed_option_underlyings,
-                "last_subscription_refresh": self.last_universe_refresh,
-                "option_live_coverage_percent": round(
-                    100.0 * sum(1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
-                                and self.instrument_metadata.get(key, {}).get("underlying") != "NIFTY"
-                                and key in self.instrument_live_received_at
-                                and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
-                                <= settings.UPSTOX_STALE_SECONDS)
-                    / self.stock_option_feed_key_count, 1
-                ) if self.stock_option_feed_key_count else 0.0,
-                "last_error": self.last_error}
+            },
+            "last_tick_timestamp": self.last_received_at,
+            "frontend_ws_status": {
+                "connected_clients": len(self.clients),
+            },
+            "market_data_freshness": state,
+            "feed_coverage_pct": coverage_pct,
+            # Preserved legacy and extended metadata:
+            "active_subscriptions": len(self.active),
+            "waiting_subscriptions": len(self.waiting),
+            "verified_nifty_contracts": self.contract_count,
+            "authentication_status": self.authentication_status,
+            "subscription_limit": settings.UPSTOX_MAX_COMBINED_SUBSCRIPTIONS,
+            "full_subscription_count": sum(mode == "full" for mode in self.active.values()),
+            "ltpc_subscription_count": sum(mode == "ltpc" for mode in self.active.values()),
+            "full_subscription_limit": max_active,
+            "last_message_age_seconds": round(age, 1) if age is not None else None,
+            "last_feed_received_at": self.last_received_at,
+            "last_exchange_timestamp": _iso_milliseconds(self.last_exchange_ts),
+            "live_instrument_count": sum(
+                1 for key in self.active if key in self.instrument_live_received_at
+                and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
+                <= settings.UPSTOX_STALE_SECONDS
+            ),
+            "active_option_subscriptions": sum(
+                1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
+            ),
+            "waiting_option_subscriptions": sum(
+                1 for key in self.waiting if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
+            ),
+            "live_option_instrument_count": sum(
+                1 for key in self.active if self.instrument_metadata.get(key, {}).get("option_type") in ("CE", "PE")
+                and key in self.instrument_live_received_at
+                and time.time() - datetime.fromisoformat(self.instrument_live_received_at[key]).timestamp()
+                <= settings.UPSTOX_STALE_SECONDS
+            ),
+            "tracked_stock_option_contracts": self.stock_option_contract_count,
+            "stock_option_feed_keys": self.stock_option_feed_key_count,
+            "failed_option_underlyings": self.failed_option_underlyings,
+            "last_subscription_refresh": self.last_universe_refresh,
+            "option_live_coverage_percent": coverage_pct,
+            "last_error": self.last_error
+        }
 
     def capture_oi_snapshot(self) -> int:
         """Persist latest exchange OI only; never creates placeholder rows."""

@@ -415,3 +415,39 @@ export function getChartCsvDownloadUrl(
   return `${API_BASE}/chart/export/csv?${params.toString()}`;
 }
 
+export async function fetchInstitutionalOverview(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/overview`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPremarketIntelligence(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/premarket`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchSectorFundamentals(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/sectors`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchMonitoringDashboard(timeframe: string = 'daily'): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/monitoring/${timeframe}`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchNiftyTradingIntelligence(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/nifty-trading`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchMarketAlerts(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/alerts`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+

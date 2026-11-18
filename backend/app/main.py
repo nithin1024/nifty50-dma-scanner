@@ -37,16 +37,10 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     snapshot_task = asyncio.create_task(_oi_snapshot_scheduler(), name="oi-snapshot-scheduler")
     if settings.UPSTOX_ACCESS_TOKEN.strip():
-        try:
-            profile = await get_user_profile()
-            if profile.get("authenticated"):
-                subscription_manager.authentication_status = "AUTHENTICATED"
-                subscription_manager.start()
-            else:
-                subscription_manager.authentication_status = "DISCONNECTED"
-        except UpstoxApiError as exc:
-            subscription_manager.authentication_status = "DISCONNECTED" if exc.status_code in (401, 403) else "WAITING"
-            logger.warning("Upstox profile validation failed with HTTP %s", exc.status_code)
+        # Start subscription manager directly with the configured Analytics Token.
+        # Upstox Analytics Tokens support Market Data Feed V3 and Option Chain APIs without daily OAuth.
+        logger.info("Initializing Upstox Market Data Feed V3 subscription manager with configured access token")
+        subscription_manager.start()
     else:
         subscription_manager.status = "WAITING"
         subscription_manager.authentication_status = "WAITING"

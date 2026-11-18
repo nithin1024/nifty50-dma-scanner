@@ -28,19 +28,43 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   const { language, toggleLanguage, t } = useLanguage();
   const [logoDropdownOpen, setLogoDropdownOpen] = React.useState(false);
 
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+  const primaryItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'all-volume', label: '3. All 50 Volume', icon: <Activity className="w-4 h-4" /> },
-    { id: 'heavyweights', label: '4. Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
-    { id: 'historical', label: '5. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'global-events', label: '6. Global Events', icon: <Globe className="w-4 h-4" /> },
-    { id: 'data-quality', label: '7. Data Quality', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'premarket', label: '2. Premarket', icon: <Globe className="w-4 h-4" /> },
+    { id: 'dma-scanner', label: '8. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'ema-scanner', label: '9. EMA Scanner', icon: <Zap className="w-4 h-4" /> },
   ];
 
-  const newToolItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'option-chain', label: 'Live Option Chain', icon: <Layers className="w-4 h-4" /> },
-    { id: 'ema-scanner', label: 'EMA Scanner', icon: <Zap className="w-4 h-4" /> },
+  const derivativesItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'option-chain', label: '4. Live Option Chain', icon: <Layers className="w-4 h-4" /> },
+    { id: 'oi-pcr', label: '5. OI & PCR Analysis', icon: <Activity className="w-4 h-4" /> },
+    { id: 'max-pain', label: '6. Max Pain Engine', icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'support-resistance', label: '7. Support & Resistance', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'live-market', label: '3. Live Market & Levels', icon: <Zap className="w-4 h-4" /> },
+  ];
+
+  const macroNewsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'global-markets', label: '10. Global Markets', icon: <Globe className="w-4 h-4" /> },
+    { id: 'indian-economy', label: '11. Indian Economy', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'global-economy', label: '12. Global Economy', icon: <Globe className="w-4 h-4" /> },
+    { id: 'economic-calendar', label: '13. Economic Calendar', icon: <Activity className="w-4 h-4" /> },
+    { id: 'news-intelligence', label: '14. News Intelligence', icon: <LineChart className="w-4 h-4" /> },
+  ];
+
+  const institutionalItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'fii-dii', label: '15. FII / DII Analysis', icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'sector-analysis', label: '16. Sector Analysis', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'company-fundamentals', label: '17. Company Fundamentals', icon: <Crown className="w-4 h-4" /> },
+    { id: 'heavyweights', label: 'Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
+    { id: 'all-volume', label: 'All 50 Volume', icon: <Activity className="w-4 h-4" /> },
+  ];
+
+  const reportsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'daily-report', label: '18. Daily Report', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'weekly-report', label: '19. Weekly Report', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'monthly-report', label: '20. Monthly Report', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'historical', label: '21. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
+    { id: 'data-quality', label: '22. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   return (
@@ -110,38 +134,40 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
           </div>
 
           {/* Desktop Nav Items */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navItems.map((item) => {
+          <div className="hidden xl:flex items-center space-x-1">
+            {primaryItems.map((item) => {
               const active = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                     active
                       ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   {item.icon}
-                  <span>{t(item.label)}</span>
+                  <span>{item.label}</span>
                 </button>
               );
             })}
+
+            {/* F&O Derivatives Dropdown */}
             <details className="relative">
               <summary
-                className={`flex cursor-pointer list-none items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  newToolItems.some((item) => item.id === activeTab)
-                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  derivativesItems.some((item) => item.id === activeTab)
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
-                <Layers className="w-4 h-4" />
-                <span>{t('Market Tools')}</span>
-                <ChevronDown className="w-3.5 h-3.5" />
+                <Layers className="w-3.5 h-3.5" />
+                <span>Derivatives</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
               </summary>
-              <div className="absolute right-0 top-full mt-2 min-w-52 rounded-lg border border-[#232E47] bg-[#121824] p-1.5 shadow-xl">
-                {newToolItems.map((item) => (
+              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
+                {derivativesItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={(event) => {
@@ -149,14 +175,119 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                       const menu = event.currentTarget.closest('details');
                       if (menu) menu.open = false;
                     }}
-                    className={`flex w-full items-center space-x-2 rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
                       activeTab === item.id
-                        ? 'bg-sky-500/20 text-sky-300'
+                        ? 'bg-amber-500/20 text-amber-300 font-bold'
                         : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
                     }`}
                   >
                     {item.icon}
-                    <span>{t(item.label)}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </details>
+
+            {/* Macro & News Dropdown */}
+            <details className="relative">
+              <summary
+                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  macroNewsItems.some((item) => item.id === activeTab)
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Macro &amp; News</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </summary>
+              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
+                {macroNewsItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={(event) => {
+                      onTabChange(item.id);
+                      const menu = event.currentTarget.closest('details');
+                      if (menu) menu.open = false;
+                    }}
+                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
+                      activeTab === item.id
+                        ? 'bg-sky-500/20 text-sky-300 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </details>
+
+            {/* Institutional & Sectors Dropdown */}
+            <details className="relative">
+              <summary
+                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  institutionalItems.some((item) => item.id === activeTab)
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Institutional</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </summary>
+              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
+                {institutionalItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={(event) => {
+                      onTabChange(item.id);
+                      const menu = event.currentTarget.closest('details');
+                      if (menu) menu.open = false;
+                    }}
+                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
+                      activeTab === item.id
+                        ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </details>
+
+            {/* Reports & Audits Dropdown */}
+            <details className="relative">
+              <summary
+                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  reportsItems.some((item) => item.id === activeTab)
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <LineChart className="w-3.5 h-3.5" />
+                <span>Reports</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </summary>
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
+                {reportsItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={(event) => {
+                      onTabChange(item.id);
+                      const menu = event.currentTarget.closest('details');
+                      if (menu) menu.open = false;
+                    }}
+                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
+                      activeTab === item.id
+                        ? 'bg-purple-500/20 text-purple-300 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -201,8 +332,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
         </div>
 
         {/* Mobile / Tablet Horizontal Navigation Scroll */}
-        <div className="lg:hidden flex space-x-1 overflow-x-auto py-2 border-t border-[#232E47]/50 no-scrollbar">
-          {[...navItems, ...newToolItems].map((item) => {
+        <div className="xl:hidden flex space-x-1 overflow-x-auto py-2 border-t border-[#232E47]/50 no-scrollbar">
+          {[...primaryItems, ...derivativesItems, ...macroNewsItems, ...institutionalItems, ...reportsItems].map((item) => {
             const active = activeTab === item.id;
             return (
               <button
@@ -215,7 +346,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 }`}
               >
                 {item.icon}
-                <span>{t(item.label)}</span>
+                <span>{item.label}</span>
               </button>
             );
           })}

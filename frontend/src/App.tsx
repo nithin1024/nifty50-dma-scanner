@@ -12,6 +12,10 @@ import { DataStatus } from './pages/DataStatus';
 import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
 import { NiftyLiveOptionChainDashboard } from './components/NiftyLiveOptionChainDashboard';
+import { PremarketDashboard } from './components/PremarketDashboard';
+import { SectorFundamentalsDashboard } from './components/SectorFundamentalsDashboard';
+import { MultiTimeframeMonitoringDashboard } from './components/MultiTimeframeMonitoringDashboard';
+import { NiftyTradingIntelligenceDashboard } from './components/NiftyTradingIntelligenceDashboard';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -149,8 +153,50 @@ export const App: React.FC = () => {
           />
         )}
 
+        {activeTab === 'premarket' && (
+          <PremarketDashboard />
+        )}
+
+        {activeTab === 'live-market' && (
+          <NiftyTradingIntelligenceDashboard />
+        )}
+
         {activeTab === 'option-chain' && (
-          <NiftyLiveOptionChainDashboard />
+          <NiftyLiveOptionChainDashboard initialTab="CHAIN" />
+        )}
+
+        {activeTab === 'oi-pcr' && (
+          <NiftyLiveOptionChainDashboard initialTab="OI_PCR" />
+        )}
+
+        {activeTab === 'max-pain' && (
+          <NiftyLiveOptionChainDashboard initialTab="MAX_PAIN" />
+        )}
+
+        {activeTab === 'support-resistance' && (
+          <NiftyLiveOptionChainDashboard initialTab="SUPPORT_RESISTANCE" />
+        )}
+
+        {(activeTab === 'sector-analysis' || activeTab === 'company-fundamentals') && (
+          <SectorFundamentalsDashboard />
+        )}
+
+        {(activeTab === 'daily-report' || activeTab === 'weekly-report' || activeTab === 'monthly-report') && (
+          <MultiTimeframeMonitoringDashboard />
+        )}
+
+        {(activeTab === 'fii-dii' || activeTab === 'indian-economy' || activeTab === 'global-economy' || activeTab === 'news-intelligence') && (
+          <MarketOverview 
+            health={health}
+            dataStatus={dataStatus}
+            dailyScan={dailyScan}
+            heavyweights={heavyweights}
+            intelligence={intelligence}
+            loading={loading}
+            onRefresh={loadAllData}
+            onNavigate={setActiveTab}
+            onSelectStock={handleSelectStock}
+          />
         )}
 
         {(activeTab === 'historical' || activeTab === 'trading-chart') && (
