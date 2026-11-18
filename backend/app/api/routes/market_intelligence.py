@@ -217,3 +217,64 @@ async def get_pmi_alerts() -> List[Dict[str, Any]]:
     """Real-time rule-based PMI alerts for crossings, surprises, and divergences."""
     from app.services.pmi_intelligence_service import pmi_suite
     return pmi_suite.get_pmi_alerts()
+
+
+# ---------------------------------------------------------
+# IIP INTELLIGENCE SUITE (4 SECTORS & 6 USE-BASED CATEGORIES)
+# ---------------------------------------------------------
+
+@router.get("/iip/dashboard", response_model=Dict[str, Any])
+async def get_iip_dashboard() -> Dict[str, Any]:
+    """Complete Institutional IIP Intelligence Suite (4 Producing Sectors, 6 Use-Based Categories, Cross-Confirmation)."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_full_dashboard()
+
+
+@router.get("/iip/sectors", response_model=List[Dict[str, Any]])
+async def get_iip_producing_sectors() -> List[Dict[str, Any]]:
+    """4 Officially defined producing sectors (Manufacturing, Mining, Electricity, Water/Waste)."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_four_producing_sectors()
+
+
+@router.get("/iip/use-based", response_model=List[Dict[str, Any]])
+async def get_iip_use_based_categories() -> List[Dict[str, Any]]:
+    """6 Officially defined use-based categories (Primary, Capital, Intermediate, Infra, Durables, Non-Durables)."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_six_use_based_categories()
+
+
+@router.get("/iip/educational", response_model=Dict[str, Any])
+async def get_iip_educational_framework() -> Dict[str, Any]:
+    """Educational & Analytical framework (Level, YoY, Base Effect, Revised, 3M/6M patterns, Breadth)."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_educational_framework()
+
+
+@router.get("/iip/cross-confirmation", response_model=Dict[str, Any])
+async def get_iip_cross_confirmation() -> Dict[str, Any]:
+    """10-indicator cross-confirmation matrix with confidence score."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_cross_confirmation_matrix()
+
+
+@router.get("/iip/production-to-earnings", response_model=Dict[str, Any])
+async def get_iip_production_to_earnings() -> Dict[str, Any]:
+    """Production-to-earnings flow covering all 3 cash flows (Operating, Investing, Financing), ROCE & ROE."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_production_to_earnings_flow()
+
+
+@router.get("/iip/history", response_model=Dict[str, Any])
+async def get_iip_history() -> Dict[str, Any]:
+    """5-year historical IIP series with PMI and NIFTY 50 comparison."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_5year_historical_data()
+
+
+@router.get("/iip/alerts", response_model=List[Dict[str, Any]])
+async def get_iip_alerts() -> List[Dict[str, Any]]:
+    """Official IIP release alerts, sector surges, and revisions."""
+    from app.services.iip_intelligence_service import iip_suite
+    return iip_suite.get_iip_alerts()
+

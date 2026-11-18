@@ -24,11 +24,14 @@ async def get_chart_candles(
     key = instrument_key or upstox.instrument_key_for_symbol(symbol.upper())
     if not key:
         raise HTTPException(status_code=404, detail="No Upstox instrument key for symbol")
-    units = {"1m": ("minutes", "1"), "5m": ("minutes", "5"), "15m": ("minutes", "15"),
-             "1h": ("hours", "1"), "1d": ("days", "1"), "1D": ("days", "1"),
-             "Daily": ("days", "1"), "daily": ("days", "1"), "1M": ("days", "1"), "3M": ("days", "1"),
-             "6M": ("days", "1"), "1Y": ("days", "1"), "3Y": ("days", "1"),
-             "5Y": ("days", "1")}
+    units = {
+        "1m": ("minutes", "1"), "5m": ("minutes", "5"), "15m": ("minutes", "15"),
+        "30m": ("minutes", "30"), "1h": ("hours", "1"), "1d": ("days", "1"), 
+        "1D": ("days", "1"), "1W": ("weeks", "1"), "1w": ("weeks", "1"),
+        "Daily": ("days", "1"), "daily": ("days", "1"), 
+        "1M": ("days", "1"), "3M": ("days", "1"), "6M": ("days", "1"), 
+        "1Y": ("days", "1"), "3Y": ("days", "1"), "5Y": ("days", "1"), "max": ("days", "1")
+    }
     unit, interval = units.get(timeframe, ("minutes", "15"))
     today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
     end = date.fromisoformat(before) - timedelta(days=1) if before else today
@@ -36,11 +39,21 @@ async def get_chart_candles(
         lookback = 30 if int(interval) <= 15 else 90
     elif unit == "hours":
         lookback = 90
+    elif unit in ("weeks", "months"):
+        lookback = 365 * 5
     elif unit == "days":
         lookback = {"1M": 31, "3M": 93, "6M": 186, "1Y": 370,
                     "3Y": 365 * 3 + 5, "5Y": 365 * 5 + 10}.get(timeframe, 370)
     start = end - timedelta(days=lookback)
+    
+    # If timeframe is a multi-year range (>365 days), Upstox V3 historical-candle rejects requests with HTTP 400.
+    # Seamlessly route to verified historical archive with full multi-year data.
+    use_historical_archive = (lookback > 365 and unit == "days")
+
     try:
+        if use_historical_archive:
+            raise UpstoxApiError(400, "Multi-year range routed to verified historical archive")
+
         if not before and end == today:
             if unit == "days":
                 raw = await upstox.get_historical_candles_v3(key, "days", "1", end.isoformat(), start.isoformat())
@@ -98,23 +111,23 @@ async def get_chart_candles(
         else:
             raw = await upstox.get_historical_candles_v3(key, unit, interval, end.isoformat(), start.isoformat())
     except (UpstoxApiError, Exception) as exc:
-        # Fall back to verified historical daily candles if Upstox API is unavailable/unauthenticated
+        # Fall back to verified historical daily candles if Upstox API is unavailable/unauthenticated/out-of-range
         from app.services.historical_data_service import historical_data_service
-        from app.services.db_service import db_service
+        from app.services.scanner_service import scanner_service
         clean_sym = symbol.upper()
         if clean_sym in ("NIFTY", "NIFTY 50", "NIFTY50"):
             clean_sym = "RELIANCE"  # Proxy benchmark if index candles not separately cached
         cached = historical_data_service.get_cached_history(clean_sym)
         candles_source = cached.get("candles", []) if cached else []
         if not candles_source:
-            hist_res = await historical_data_service.fetch_symbol_history(clean_sym)
+            hist_res = await historical_data_service.fetch_symbol_history(clean_sym, range_period=timeframe)
             candles_source = hist_res.get("candles", [])
 
         if before:
             candles_source = [c for c in candles_source if c["trading_date"] < before]
 
         # Check live scan for today's live volume
-        scan = db_service.get_latest_daily_scan()
+        scan = scanner_service.get_latest_scan()
         stock_live = next((s for s in (scan.get("all_results") or []) if s.get("symbol") == clean_sym), None) if scan else None
         live_vol = int(stock_live.get("volume") or 0) if stock_live else 0
 
@@ -147,6 +160,8 @@ async def get_chart_candles(
     candles = [parsed for row in raw if (parsed := (upstox.parse_candle_row(row) if isinstance(row, list) else row))]
     candles.sort(key=lambda candle: candle["time"])
     closes = [candle["close"] for candle in candles]
+    volumes = [int(candle.get("volume") or 0) for candle in candles]
+    
     indicators = {"sma_20": [], "sma_50": [], "sma_100": [], "sma_200": [], "ema_9": [], "ema_21": []}
     for index, close in enumerate(closes):
         for period in (20, 50, 100, 200):
@@ -162,9 +177,51 @@ async def get_chart_candles(
                 ema = closes[index] * alpha + ema * (1 - alpha)
                 values[index] = round(ema, 2)
         indicators[f"ema_{period}"] = values
+
+    # Volume Analytics Computation (Part 1.C)
+    current_vol = volumes[-1] if volumes else 0
+    prev_vol = volumes[-2] if len(volumes) >= 2 else current_vol
+    avg_5_vol = round(sum(volumes[-5:]) / min(len(volumes), 5), 1) if volumes else 0
+    avg_10_vol = round(sum(volumes[-10:]) / min(len(volumes), 10), 1) if volumes else 0
+    avg_20_vol = round(sum(volumes[-20:]) / min(len(volumes), 20), 1) if volumes else 0
+    rvol = round(current_vol / avg_20_vol, 2) if avg_20_vol > 0 else 1.0
+
+    # Price vs Volume Movement
+    price_change = closes[-1] - closes[-2] if len(closes) >= 2 else 0.0
+    price_rising = price_change > 0
+    high_volume = rvol >= 1.2
+    
+    if high_volume and price_rising:
+        pv_summary = "High volume + price rising (Institutional Accumulation / Bullish Expansion)"
+        pv_tag = "ACCUMULATION"
+    elif high_volume and not price_rising:
+        pv_summary = "High volume + price falling (Institutional Distribution / Heavy Selling)"
+        pv_tag = "DISTRIBUTION"
+    elif not high_volume and price_rising:
+        pv_summary = "Low volume + price rising (Light Volume Advance / Weak Buying Breadth)"
+        pv_tag = "WEAK_ADVANCE"
+    else:
+        pv_summary = "Low volume + price falling (Orderly Pullback / Controlled Decline)"
+        pv_tag = "ORDERLY_DECLINE"
+
+    volume_analytics = {
+        "current_volume": current_vol,
+        "previous_volume": prev_vol,
+        "avg_5_volume": avg_5_vol,
+        "avg_10_volume": avg_10_vol,
+        "avg_20_volume": avg_20_vol,
+        "average_volume_20": avg_20_vol,
+        "rvol": rvol,
+        "volume_breakout": rvol >= 1.5,
+        "volume_contraction": rvol < 0.7,
+        "price_volume_movement": pv_summary,
+        "price_volume_tag": pv_tag,
+        "delivery_pct_available": False
+    }
+
     return {"symbol": symbol.upper(), "instrument_key": key, "timeframe": timeframe,
             "chart_type": chart_type, "timezone": "Asia/Kolkata", "source": source_label,
-            "candles": candles, "indicators": indicators,
+            "candles": candles, "indicators": indicators, "volume_analytics": volume_analytics,
             "has_older_data": len(candles) > 0, "live_tick": None,
             "feed_status": subscription_manager.get_status()["status"], "total_records": len(candles)}
 

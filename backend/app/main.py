@@ -7,7 +7,7 @@ import logging
 import json
 
 from app.config import get_settings
-from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner, options, chart
+from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner, options, chart, all_stocks
 from app.services.db_service import db_service
 from app.services.global_events_service import global_events_service
 from app import __version__
@@ -102,6 +102,7 @@ app.include_router(global_events.router, prefix="/api/v1")
 app.include_router(ema_scanner.router, prefix="/api/v1")
 app.include_router(options.router, prefix="/api/v1")
 app.include_router(chart.router, prefix="/api/v1")
+app.include_router(all_stocks.router, prefix="/api/v1")
 
 
 @app.websocket("/ws/options-feed")

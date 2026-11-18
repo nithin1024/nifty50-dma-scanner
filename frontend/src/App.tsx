@@ -9,7 +9,6 @@ import { Top7Heavyweights } from './pages/Top7Heavyweights';
 import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
 import { StockDetails } from './pages/StockDetails';
 import { DataStatus } from './pages/DataStatus';
-import { GlobalEventsPage } from './pages/GlobalEventsPage';
 import { EmaScanner } from './pages/EmaScanner';
 import { NiftyLiveOptionChainDashboard } from './components/NiftyLiveOptionChainDashboard';
 import { PremarketDashboard } from './components/PremarketDashboard';
@@ -17,6 +16,9 @@ import { SectorFundamentalsDashboard } from './components/SectorFundamentalsDash
 import { MultiTimeframeMonitoringDashboard } from './components/MultiTimeframeMonitoringDashboard';
 import { NiftyTradingIntelligenceDashboard } from './components/NiftyTradingIntelligenceDashboard';
 import { PmiIntelligenceDashboard } from './components/PmiIntelligenceDashboard';
+import { IipIntelligenceSection } from './components/IipIntelligenceSection';
+import { AllStocksDashboard } from './pages/AllStocksDashboard';
+import { GlobalMarketsAndCalendarPage } from './pages/GlobalMarketsAndCalendarPage';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -182,12 +184,20 @@ export const App: React.FC = () => {
           <SectorFundamentalsDashboard />
         )}
 
-        {(activeTab === 'economic-calendar' || activeTab === 'global-markets' || activeTab === 'global-events') && (
-          <GlobalEventsPage />
+        {(activeTab === 'global-markets-calendar' || activeTab === 'economic-calendar' || activeTab === 'global-markets' || activeTab === 'global-events') && (
+          <GlobalMarketsAndCalendarPage />
         )}
 
         {activeTab === 'pmi-intelligence' && (
           <PmiIntelligenceDashboard />
+        )}
+
+        {activeTab === 'iip-intelligence' && (
+          <IipIntelligenceSection />
+        )}
+
+        {activeTab === 'all-stocks' && (
+          <AllStocksDashboard />
         )}
 
         {(activeTab === 'daily-report' || activeTab === 'weekly-report' || activeTab === 'monthly-report') && (
@@ -253,10 +263,6 @@ export const App: React.FC = () => {
 
         {activeTab === 'data-quality' && (
           <DataStatus dataStatus={dataStatus} />
-        )}
-
-        {activeTab === 'global-events' && (
-          <GlobalEventsPage />
         )}
       </main>
 

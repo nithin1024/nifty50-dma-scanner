@@ -13,7 +13,9 @@ import {
   Languages,
   ChevronDown,
   Globe,
-  Zap
+  Zap,
+  Search,
+  Factory
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -44,9 +46,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   ];
 
   const macroNewsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'global-markets', label: '10. Global Markets', icon: <Globe className="w-4 h-4" /> },
-    { id: 'economic-calendar', label: '11. Economic Calendar', icon: <Activity className="w-4 h-4" /> },
-    { id: 'pmi-intelligence', label: '12. PMI Intelligence', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'global-markets-calendar', label: '10. Global Markets & Calendar', icon: <Globe className="w-4 h-4" /> },
+    { id: 'pmi-intelligence', label: '11. PMI Intelligence', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'iip-intelligence', label: '12. IIP Intelligence', icon: <Factory className="w-4 h-4" /> },
   ];
 
   const institutionalItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
@@ -86,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${logoDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
                 </div>
                 <div className="text-[10px] sm:text-xs text-slate-400 font-mono">
-                  {activeTab === 'ema-scanner' ? '⚡ 9/21 EMA + RSI 14' : '📊 6-SMA DMA Corridor'}
+                  {activeTab === 'ema-scanner' ? '⚡ 9/21 EMA + RSI 14' : activeTab === 'all-stocks' ? '🔍 22 Sectors • Full NSE Universe' : '📊 6-SMA DMA Corridor'}
                 </div>
               </div>
             </div>
@@ -99,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
               >
                 <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 border-b border-[#232E47]/50 mb-1 flex items-center justify-between">
                   <span>Technical Engines</span>
-                  <span className="text-[9px] text-emerald-400 font-mono">2 OPTIONS</span>
+                  <span className="text-[9px] text-emerald-400 font-mono">3 OPTIONS</span>
                 </div>
                 <button
                   onClick={() => { onTabChange('dma-scanner'); setLogoDropdownOpen(false); }}
@@ -123,6 +125,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                   <div>
                     <div className="font-bold">2. Daily EMA Scanner</div>
                     <div className="text-[10px] text-slate-400 font-normal">Daily 9 &amp; 21 EMA + Wilder's RSI 14 (Upstox Pro Chart)</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { onTabChange('all-stocks'); setLogoDropdownOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all mt-1 ${
+                    activeTab === 'all-stocks' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <Search className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div>
+                    <div className="font-bold">3. All Stocks</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Full NSE Equity Universe &amp; 22 Sectors Technical Screener</div>
                   </div>
                 </button>
               </div>
