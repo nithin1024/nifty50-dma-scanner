@@ -48,3 +48,18 @@ async def check_health() -> HealthResponse:
 async def get_health_telemetry():
     """Return the centralized 8-state health telemetry across all 9 subsystems and 16 dashboard modules."""
     return subscription_manager.get_central_health_telemetry()
+
+
+@router.get("/scheduler")
+async def get_refresh_scheduler_status():
+    """Return the centralized data-refresh scheduler status across all market pipelines."""
+    from app.services.central_refresh_scheduler import central_refresh_scheduler
+    return central_refresh_scheduler.get_telemetry_status()
+
+
+@router.post("/refresh/{pipeline_id}")
+async def trigger_pipeline_refresh(pipeline_id: str):
+    """Trigger an immediate on-demand refresh for a specific data pipeline with exponential backoff."""
+    from app.services.central_refresh_scheduler import central_refresh_scheduler
+    return await central_refresh_scheduler.trigger_pipeline_refresh(pipeline_id)
+

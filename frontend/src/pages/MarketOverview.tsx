@@ -11,7 +11,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
-import { MarketIntelligenceDashboard } from '../components/MarketIntelligenceDashboard';
+import { IndianMarketOverviewSection } from '../components/IndianMarketOverviewSection';
+import { EconomicIndicatorsSection } from '../components/EconomicIndicatorsSection';
 import { useLanguage } from '../context/LanguageContext';
 
 interface MarketOverviewProps {
@@ -52,7 +53,8 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Session Telemetry */}
+      
+      {/* 1. TOP BANNER / SESSION TELEMETRY */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl bg-gradient-to-r from-[#121824] via-[#161F33] to-[#121824] border border-[#232E47] shadow-lg">
         <div>
           <div className="flex items-center space-x-2">
@@ -60,18 +62,18 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
               {t('NSE Settlement Session')}
             </span>
             <span className="text-xs text-slate-400">
-              {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || 'Latest'}</strong>
+              {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || '21 Nov 2026'}</strong>
             </span>
             <span className="text-xs text-slate-500 hidden sm:inline">&bull;</span>
             <span className="text-xs text-slate-400 hidden sm:inline">
-              Source: <strong className="text-sky-400">NSE Official Bhavcopy &amp; Facts</strong>
+              Source: <strong className="text-sky-400">NSE Official Bhavcopy &amp; MoSPI Facts</strong>
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1">
-            {t('NIFTY 50 Institutional DMA & Volume Executive Overview')}
+            NIFTY 50 | DMA &amp; EMA MARKET INTELLIGENCE
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            {t('Real-time quantitative screening across 6 Simple Moving Averages and 6-session volume benchmarks.')}
+            {t('Executive Market Intelligence, Fundamental Macro Suite & Quantitative Technical Scanners')}
           </p>
         </div>
 
@@ -95,7 +97,98 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         </div>
       </div>
 
-      {/* Primary KPI Metrics Grid */}
+      {/* 2. INDIAN MARKET OVERVIEW SECTION (SECTION 2.A & INTRADAYSCREENER SPECIFICATION) */}
+      <IndianMarketOverviewSection 
+        onNavigate={onNavigate}
+        onSelectStock={onSelectStock}
+      />
+
+      {/* 3. PROMINENT ECONOMIC OVERVIEW SECTION (SECTION 2.B – 10 CORE ECONOMIC INDICATORS) */}
+      <EconomicIndicatorsSection 
+        indicatorsData={(intelligence as any)?.economic_indicators} 
+        onNavigate={onNavigate} 
+      />
+
+      {/* 4. HEAVYWEIGHT IMPACT & MOMENTUM DRIVERS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Card 1: Top 7 Combined Index Weight */}
+        <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] flex flex-col justify-between">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-amber-400">
+            <Crown className="w-4 h-4" />
+            <span>{t('Top 7 Heavyweights Impact')}</span>
+          </div>
+          <div className="my-3">
+            <div className="flex justify-between items-baseline">
+              <span className="text-2xl font-black text-white">{combinedWeight}%</span>
+              <span className={`text-sm font-bold ${combinedContrib >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {combinedContrib >= 0 ? '+' : ''}{combinedContrib.toFixed(4)} pts est.
+              </span>
+            </div>
+            <div className="text-xs text-slate-400 mt-1">
+              HDFCBANK, ICICIBANK, RELIANCE, BHARTIARTL, LT, SBIN, INFY
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-400 border-t border-[#232E47]/50 pt-2">
+            {heavyweights?.concentration_analysis || 'Top 7 heavyweights determine over 45% of total index momentum.'}
+          </div>
+        </div>
+
+        {/* Card 2: Primary Supporter */}
+        <div className="p-4 rounded-xl bg-[#121824] border border-emerald-500/20 bg-emerald-500/[0.02]">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-emerald-400 flex items-center space-x-1">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>{t('Leading Index Supporter')}</span>
+            </span>
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">Top Push</span>
+          </div>
+          {topSupporter ? (
+            <div className="my-2 cursor-pointer" onClick={() => onSelectStock(topSupporter.symbol)}>
+              <div className="text-xl font-bold text-white hover:text-emerald-400 transition-colors">
+                {topSupporter.symbol} <span className="text-xs font-normal text-slate-400">({topSupporter.company_name})</span>
+              </div>
+              <div className="flex items-center space-x-3 mt-1 text-sm">
+                <span className="text-emerald-400 font-semibold">+{topSupporter.price_change_pct.toFixed(2)}%</span>
+                <span className="text-slate-400 text-xs">Contrib: +{topSupporter.contribution_pts.toFixed(4)} pts</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 my-4">Evaluating market sessions...</div>
+          )}
+          <div className="text-[11px] text-slate-400">
+            Calculated as: Weightage (%) &times; Price Change (%) / 100
+          </div>
+        </div>
+
+        {/* Card 3: Primary Dragger */}
+        <div className="p-4 rounded-xl bg-[#121824] border border-rose-500/20 bg-rose-500/[0.02]">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-rose-400 flex items-center space-x-1">
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>{t('Leading Index Dragger')}</span>
+            </span>
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-bold">Top Drag</span>
+          </div>
+          {topDragger ? (
+            <div className="my-2 cursor-pointer" onClick={() => onSelectStock(topDragger.symbol)}>
+              <div className="text-xl font-bold text-white hover:text-rose-400 transition-colors">
+                {topDragger.symbol} <span className="text-xs font-normal text-slate-400">({topDragger.company_name})</span>
+              </div>
+              <div className="flex items-center space-x-3 mt-1 text-sm">
+                <span className="text-rose-400 font-semibold">{topDragger.price_change_pct.toFixed(2)}%</span>
+                <span className="text-slate-400 text-xs">Contrib: {topDragger.contribution_pts.toFixed(4)} pts</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 my-4">Evaluating market sessions...</div>
+          )}
+          <div className="text-[11px] text-slate-400">
+            Calculated as: Weightage (%) &times; Price Change (%) / 100
+          </div>
+        </div>
+      </div>
+
+      {/* 5. PRIMARY TECHNICAL DMA KPI METRICS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: 6/6 Bullish */}
         <div 
@@ -150,7 +243,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
 
         {/* Metric 4: Verified Data Coverage */}
         <div 
-          onClick={() => onNavigate('data-quality')}
+          onClick={() => onNavigate('settings-sources')}
           className="p-4 rounded-xl bg-[#121824] border border-[#232E47] hover:border-purple-500/50 cursor-pointer transition-all shadow-sm group"
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
@@ -166,89 +259,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         </div>
       </div>
 
-      {/* Institutional Market Intelligence & Inflation Suite */}
-      <MarketIntelligenceDashboard intelligence={intelligence || null} />
-
-      {/* Heavyweight Impact Banner */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Card 1: Top 7 Combined Index Weight */}
-        <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] flex flex-col justify-between">
-          <div className="flex items-center space-x-2 text-xs font-semibold text-amber-400">
-            <Crown className="w-4 h-4" />
-            <span>{t('Top 7 Heavyweights Impact')}</span>
-          </div>
-          <div className="my-3">
-            <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-black text-white">{combinedWeight}%</span>
-              <span className={`text-sm font-bold ${combinedContrib >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {combinedContrib >= 0 ? '+' : ''}{combinedContrib.toFixed(4)} pts est.
-              </span>
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              HDFCBANK, ICICIBANK, RELIANCE, BHARTIARTL, LT, SBIN, INFY
-            </div>
-          </div>
-          <div className="text-[11px] text-slate-500 border-t border-[#232E47]/50 pt-2">
-            {heavyweights?.concentration_analysis || 'Top 7 heavyweights determine over 45% of total index momentum.'}
-          </div>
-        </div>
-
-        {/* Card 2: Primary Supporter */}
-        <div className="p-4 rounded-xl bg-[#121824] border border-emerald-500/20 bg-emerald-500/[0.02]">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold text-emerald-400 flex items-center space-x-1">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{t('Leading Index Supporter')}</span>
-            </span>
-            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Top Push</span>
-          </div>
-          {topSupporter ? (
-            <div className="my-2 cursor-pointer" onClick={() => onSelectStock(topSupporter.symbol)}>
-              <div className="text-xl font-bold text-white hover:text-emerald-400 transition-colors">
-                {topSupporter.symbol} <span className="text-xs font-normal text-slate-400">({topSupporter.company_name})</span>
-              </div>
-              <div className="flex items-center space-x-3 mt-1 text-sm">
-                <span className="text-emerald-400 font-semibold">+{topSupporter.price_change_pct.toFixed(2)}%</span>
-                <span className="text-slate-400 text-xs">Contrib: +{topSupporter.contribution_pts.toFixed(4)} pts</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-xs text-slate-400 my-4">Evaluating market sessions...</div>
-          )}
-          <div className="text-[11px] text-slate-500">
-            Calculated as: Weightage (%) &times; Price Change (%) / 100
-          </div>
-        </div>
-
-        {/* Card 3: Primary Dragger */}
-        <div className="p-4 rounded-xl bg-[#121824] border border-rose-500/20 bg-rose-500/[0.02]">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold text-rose-400 flex items-center space-x-1">
-              <TrendingDown className="w-3.5 h-3.5" />
-              <span>{t('Leading Index Dragger')}</span>
-            </span>
-            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">Top Drag</span>
-          </div>
-          {topDragger ? (
-            <div className="my-2 cursor-pointer" onClick={() => onSelectStock(topDragger.symbol)}>
-              <div className="text-xl font-bold text-white hover:text-rose-400 transition-colors">
-                {topDragger.symbol} <span className="text-xs font-normal text-slate-400">({topDragger.company_name})</span>
-              </div>
-              <div className="flex items-center space-x-3 mt-1 text-sm">
-                <span className="text-rose-400 font-semibold">{topDragger.price_change_pct.toFixed(2)}%</span>
-                <span className="text-slate-400 text-xs">Contrib: {topDragger.contribution_pts.toFixed(4)} pts</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-xs text-slate-400 my-4">Evaluating market sessions...</div>
-          )}
-          <div className="text-[11px] text-slate-500">
-            Calculated as: Weightage (%) &times; Price Change (%) / 100
-          </div>
-        </div>
-      </div>
-
-      {/* Combined Quantitative Signals Quick Table */}
+      {/* 6. COMBINED QUANTITATIVE SIGNALS QUICK TABLE */}
       <div className="p-5 rounded-xl bg-[#121824] border border-[#232E47]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>

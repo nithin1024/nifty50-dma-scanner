@@ -1,24 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { NavTab } from '../types';
 import { 
   LayoutDashboard, 
   BarChart3, 
-  Activity, 
-  Crown, 
   Layers, 
-  LineChart,
-  ShieldCheck, 
   TrendingUp, 
   Download,
   Languages,
   ChevronDown,
   Globe,
   Zap,
-  Search,
-  Factory
+  Newspaper,
+  Calendar,
+  Settings,
+  Menu,
+  X,
+  Wrench
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { MarketToolsModal, type ToolType } from './MarketToolsModal';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -26,337 +27,248 @@ interface NavbarProps {
   backendOnline: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline }) => {
-  const { language, toggleLanguage, t } = useLanguage();
-  const [logoDropdownOpen, setLogoDropdownOpen] = React.useState(false);
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline: _backendOnline }) => {
+  const { language, toggleLanguage } = useLanguage();
+  const [logoDropdownOpen, setLogoDropdownOpen] = useState(false);
+  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeModalTool, setActiveModalTool] = useState<ToolType>(null);
 
-  const primaryItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'premarket', label: '2. Premarket', icon: <Globe className="w-4 h-4" /> },
-    { id: 'dma-scanner', label: '8. DMA Scanner', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'ema-scanner', label: '9. EMA Scanner', icon: <Zap className="w-4 h-4" /> },
+  // Exact 9 Main Navigation Tabs as explicitly ordered by user
+  const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+    { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { id: 'ema-scanner', label: '3. EMA Scanner', icon: <Zap className="w-3.5 h-3.5" /> },
+    { id: 'fii-dii', label: '4. FII/DII Scanner', icon: <TrendingUp className="w-3.5 h-3.5" /> },
+    { id: 'options-intelligence', label: '5. Options & F&O', icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'economy-fundamentals', label: '6. Economy & Fundamentals', icon: <Globe className="w-3.5 h-3.5" /> },
+    { id: 'economic-calendar', label: '7. Economic Calendar', icon: <Calendar className="w-3.5 h-3.5" /> },
+    { id: 'market-news', label: '8. Market News', icon: <Newspaper className="w-3.5 h-3.5" /> },
+    { id: 'settings-sources', label: '9. Settings & Sources', icon: <Settings className="w-3.5 h-3.5" /> },
   ];
 
-  const derivativesItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'option-chain', label: '4. Live Option Chain & F&O', icon: <Layers className="w-4 h-4" /> },
-    { id: 'live-market', label: '3. Live Market & Levels', icon: <Zap className="w-4 h-4" /> },
-  ];
-
-  const macroNewsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'global-markets-calendar', label: '10. Global Markets & Calendar', icon: <Globe className="w-4 h-4" /> },
-    { id: 'pmi-intelligence', label: '11. PMI Intelligence', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'iip-intelligence', label: '12. IIP Intelligence', icon: <Factory className="w-4 h-4" /> },
-  ];
-
-  const institutionalItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'sector-fundamentals', label: '13. Sector & Fundamentals', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'heavyweights', label: 'Top 7 Heavyweights', icon: <Crown className="w-4 h-4" /> },
-    { id: 'all-volume', label: 'All 50 Volume', icon: <Activity className="w-4 h-4" /> },
-  ];
-
-  const reportsItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'daily-report', label: '14. Institutional Reports (Daily/Weekly/Monthly)', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'historical', label: '15. Historical Charts', icon: <LineChart className="w-4 h-4" /> },
-    { id: 'data-quality', label: '16. Data Quality Audit', icon: <ShieldCheck className="w-4 h-4" /> },
+  // Tools Menu Items matching the user screenshot (Image 5)
+  const toolMenuItems = [
+    { id: 'calendar', label: '2026 Events Calendar', action: () => onTabChange('economic-calendar') },
+    { id: 'lot-size', label: 'Lot Size Finder', action: () => setActiveModalTool('lot-size') },
+    { id: 'sector-companies', label: 'Sector – Companies', action: () => setActiveModalTool('sector-companies') },
+    { id: 'market-cap', label: 'Market Cap Stocks List', action: () => setActiveModalTool('market-cap') },
+    { id: 'top-etfs', label: 'Top ETFs', action: () => setActiveModalTool('top-etfs') },
+    { id: 'nse-links', label: 'NSE Official Links', action: () => setActiveModalTool('nse-links') },
+    { id: 'swing-screener', label: 'Swing Screener', action: () => setActiveModalTool('swing-screener') },
+    { id: 'trading-journal', label: 'Trading Journal', action: () => setActiveModalTool('trading-journal') },
   ];
 
   return (
-    <nav className="bg-[#121824] border-b border-[#232E47] sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand with 2-Engine Selection Dropdown */}
-          <div className="relative">
-            <div 
-              className="flex items-center space-x-2.5 cursor-pointer py-1 group"
-              onClick={() => setLogoDropdownOpen(!logoDropdownOpen)}
-              title="Click to switch between DMA Scanner and EMA Scanner"
-            >
-              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+    <>
+      <nav className="bg-[#121824] border-b border-[#232E47] sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* BRANDING: NIFTY 50 | DMA & EMA MARKET INTELLIGENCE with 2-Engine Selection */}
+            <div className="relative">
+              <div 
+                className="flex items-center space-x-2.5 cursor-pointer py-1 group"
+                onClick={() => setLogoDropdownOpen(!logoDropdownOpen)}
+                title="Click to toggle between DMA Scanner and EMA Scanner"
+              >
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="font-bold text-sm sm:text-base tracking-tight text-white">
+                      NIFTY 50 <span className="text-slate-400 font-normal">|</span> DMA &amp; EMA
+                    </span>
+                    <span className="text-[9px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      INTELLIGENCE
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${logoDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    {activeTab === 'ema-scanner' ? '⚡ EMA Scanner (9/21 EMA + RSI)' : '📊 DMA Scanner (6-SMA Corridor)'}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-base sm:text-lg tracking-tight text-white">NIFTY 50</span>
-                  <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                    {t('Institutional')}
-                  </span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${logoDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
+
+              {/* Logo Options Dropdown (EXACTLY 2 OPTIONS: DMA Scanner & EMA Scanner – NO ALL STOCKS) */}
+              {logoDropdownOpen && (
+                <div 
+                  className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-[#232E47] bg-[#121824] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  onMouseLeave={() => setLogoDropdownOpen(false)}
+                >
+                  <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 border-b border-[#232E47]/50 mb-1 flex items-center justify-between">
+                    <span>Active Technical Engines</span>
+                    <span className="text-[9px] text-emerald-400 font-mono">2 ENGINES</span>
+                  </div>
+                  <button
+                    onClick={() => { onTabChange('dma-scanner'); setLogoDropdownOpen(false); }}
+                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all ${
+                      activeTab === 'dma-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold">1. DMA Scanner</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Daily 6-SMA Corridor (5, 10, 20, 50, 100, 200 SMA)</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { onTabChange('ema-scanner'); setLogoDropdownOpen(false); }}
+                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all mt-1 ${
+                      activeTab === 'ema-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <div className="font-bold">2. EMA Scanner</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Daily 9 &amp; 21 EMA + Wilder's RSI 14 Momentum</div>
+                    </div>
+                  </button>
                 </div>
-                <div className="text-[10px] sm:text-xs text-slate-400 font-mono">
-                  {activeTab === 'ema-scanner' ? '⚡ 9/21 EMA + RSI 14' : activeTab === 'all-stocks' ? '🔍 22 Sectors • Full NSE Universe' : '📊 6-SMA DMA Corridor'}
-                </div>
+              )}
+            </div>
+
+            {/* Desktop Nav Items (9 Canonical Tabs) */}
+            <div className="hidden xl:flex items-center space-x-0.5">
+              {mainNavItems.map((item) => {
+                const active = activeTab === item.id || 
+                  (item.id === 'fii-dii' && activeTab === 'all-volume') ||
+                  (item.id === 'options-intelligence' && (activeTab === 'option-chain' || activeTab === 'oi-pcr' || activeTab === 'max-pain' || activeTab === 'live-market')) ||
+                  (item.id === 'economy-fundamentals' && (activeTab === 'pmi-intelligence' || activeTab === 'iip-intelligence' || activeTab === 'sector-fundamentals' || activeTab === 'indian-economy')) ||
+                  (item.id === 'economic-calendar' && (activeTab === 'global-markets-calendar' || activeTab === 'global-markets' || activeTab === 'calendar' || activeTab === 'global-events')) ||
+                  (item.id === 'market-news' && activeTab === 'news-intelligence') ||
+                  (item.id === 'settings-sources' && activeTab === 'data-quality');
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
+                      active
+                        ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* Tools Dropdown (Matching Image 5) */}
+              <div className="relative">
+                <button
+                  onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+                  className="flex items-center space-x-1 px-2 py-1.5 rounded-md text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
+                >
+                  <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Tools</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {toolsDropdownOpen && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50 animate-in fade-in duration-100"
+                    onMouseLeave={() => setToolsDropdownOpen(false)}
+                  >
+                    <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 border-b border-[#232E47]/50 mb-1">
+                      Market Utilities
+                    </div>
+                    {toolMenuItems.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          item.action();
+                          setToolsDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-200 hover:bg-[#161F33] hover:text-white rounded-lg transition-colors flex items-center justify-between"
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Logo Options Dropdown (2 options: DMA Scanner / EMA Scanner) */}
-            {logoDropdownOpen && (
-              <div 
-                className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-[#232E47] bg-[#121824] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                onMouseLeave={() => setLogoDropdownOpen(false)}
+            {/* Right Controls: Excel Export, Language Toggle & Mobile Hamburger */}
+            <div className="flex items-center space-x-2">
+              <a
+                href={getExcelDownloadUrl()}
+                download
+                className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm"
+                title="Download verified institutional Excel workbook (12 sheets)"
               >
-                <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 border-b border-[#232E47]/50 mb-1 flex items-center justify-between">
-                  <span>Technical Engines</span>
-                  <span className="text-[9px] text-emerald-400 font-mono">3 OPTIONS</span>
-                </div>
-                <button
-                  onClick={() => { onTabChange('dma-scanner'); setLogoDropdownOpen(false); }}
-                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all ${
-                    activeTab === 'dma-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
-                  }`}
-                >
-                  <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <div>
-                    <div className="font-bold">1. Daily DMA Scanner</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Daily 6-SMA Corridor (5, 10, 20, 50, 100, 200 SMA)</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => { onTabChange('ema-scanner'); setLogoDropdownOpen(false); }}
-                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all mt-1 ${
-                    activeTab === 'ema-scanner' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
-                  }`}
-                >
-                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                  <div>
-                    <div className="font-bold">2. Daily EMA Scanner</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Daily 9 &amp; 21 EMA + Wilder's RSI 14 (Upstox Pro Chart)</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => { onTabChange('all-stocks'); setLogoDropdownOpen(false); }}
-                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left text-xs transition-all mt-1 ${
-                    activeTab === 'all-stocks' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
-                  }`}
-                >
-                  <Search className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <div>
-                    <div className="font-bold">3. All Stocks</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Full NSE Equity Universe &amp; 22 Sectors Technical Screener</div>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
+                <Download className="w-3.5 h-3.5" />
+                <span>Excel</span>
+              </a>
 
-          {/* Desktop Nav Items */}
-          <div className="hidden xl:flex items-center space-x-1">
-            {primaryItems.map((item) => {
-              const active = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id)}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    active
-                      ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-
-            {/* F&O Derivatives Dropdown */}
-            <details className="relative">
-              <summary
-                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  derivativesItems.some((item) => item.id === activeTab)
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-[#161F33] hover:bg-slate-700/60 border border-[#232E47] text-slate-200 text-xs font-semibold transition-colors"
+                title="Switch Language (English / Telugu)"
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Derivatives</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </summary>
-              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
-                {derivativesItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={(event) => {
-                      onTabChange(item.id);
-                      const menu = event.currentTarget.closest('details');
-                      if (menu) menu.open = false;
-                    }}
-                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-amber-500/20 text-amber-300 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </details>
+                <Languages className="w-3.5 h-3.5 text-sky-400" />
+                <span>{language === 'en' ? 'తెలుగు' : 'English'}</span>
+              </button>
 
-            {/* Macro & News Dropdown */}
-            <details className="relative">
-              <summary
-                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  macroNewsItems.some((item) => item.id === activeTab)
-                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="xl:hidden p-2 rounded-lg bg-[#161F33] border border-[#232E47] text-slate-300 hover:text-white"
               >
-                <Globe className="w-3.5 h-3.5" />
-                <span>Macro &amp; News</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </summary>
-              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
-                {macroNewsItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={(event) => {
-                      onTabChange(item.id);
-                      const menu = event.currentTarget.closest('details');
-                      if (menu) menu.open = false;
-                    }}
-                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-sky-500/20 text-sky-300 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </details>
-
-            {/* Institutional & Sectors Dropdown */}
-            <details className="relative">
-              <summary
-                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  institutionalItems.some((item) => item.id === activeTab)
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>Institutional</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </summary>
-              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
-                {institutionalItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={(event) => {
-                      onTabChange(item.id);
-                      const menu = event.currentTarget.closest('details');
-                      if (menu) menu.open = false;
-                    }}
-                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-emerald-500/20 text-emerald-300 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </details>
-
-            {/* Reports & Audits Dropdown */}
-            <details className="relative">
-              <summary
-                className={`flex cursor-pointer list-none items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  reportsItems.some((item) => item.id === activeTab)
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <LineChart className="w-3.5 h-3.5" />
-                <span>Reports</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </summary>
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50">
-                {reportsItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={(event) => {
-                      onTabChange(item.id);
-                      const menu = event.currentTarget.closest('details');
-                      if (menu) menu.open = false;
-                    }}
-                    className={`flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-purple-500/20 text-purple-300 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </details>
-          </div>
-
-          {/* Action & Indicators */}
-          <div className="flex items-center space-x-2.5">
-            {/* Language Toggle Button */}
-            <button
-              onClick={toggleLanguage}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${
-                language === 'te'
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 shadow-sm'
-                  : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700/60'
-              }`}
-              title={language === 'te' ? 'Switch to English' : 'తెలుగు వెర్షన్‌కి మారండి'}
-            >
-              <Languages className="w-3.5 h-3.5 text-amber-400" />
-              <span className={language === 'te' ? 'text-amber-300 font-bold' : 'text-slate-400'}>తెలుగు</span>
-              <span className="text-slate-500">/</span>
-              <span className={language === 'en' ? 'text-sky-300 font-bold' : 'text-slate-400'}>EN</span>
-            </button>
-
-            <a
-              href={getExcelDownloadUrl()}
-              download
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors"
-              title="Download 12-sheet official daily Excel workbook"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{t('Excel (12-Sheet)')}</span>
-            </a>
-
-            <div className="flex items-center space-x-2 px-2.5 py-1 rounded-full bg-[#1A2234] border border-[#232E47] text-xs">
-              <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-              <span className={backendOnline ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
-                {backendOnline ? t('Live 50/50') : t('Offline')}
-              </span>
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile / Tablet Horizontal Navigation Scroll */}
-        <div className="xl:hidden flex space-x-1 overflow-x-auto py-2 border-t border-[#232E47]/50 no-scrollbar">
-          {[...primaryItems, ...derivativesItems, ...macroNewsItems, ...institutionalItems, ...reportsItems].map((item) => {
-            const active = activeTab === item.id;
-            return (
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="xl:hidden bg-[#121824] border-t border-[#232E47] px-4 py-3 space-y-1">
+            <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1">Main Navigation</div>
+            {mainNavItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
-                  active
-                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                onClick={() => {
+                  onTabChange(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
+                  activeTab === item.id ? 'bg-sky-500/20 text-sky-400' : 'text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 {item.icon}
                 <span>{item.label}</span>
               </button>
-            );
-          })}
-        </div>
-      </div>
-    </nav>
+            ))}
+
+            <div className="pt-2 border-t border-[#232E47] text-[10px] uppercase font-bold text-slate-400 px-2 py-1">
+              Market Tools
+            </div>
+            {toolMenuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  item.action();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white rounded transition-colors"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </nav>
+
+      {/* Market Tools Modal (Lot Size Finder, NSE Links, Top ETFs, Journal, etc.) */}
+      <MarketToolsModal
+        tool={activeModalTool}
+        onClose={() => setActiveModalTool(null)}
+        onNavigateTab={(tab) => onTabChange(tab as NavTab)}
+      />
+    </>
   );
 };

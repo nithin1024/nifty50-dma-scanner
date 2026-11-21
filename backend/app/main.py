@@ -35,7 +35,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Database startup sync warning: {e}")
     settings = get_settings()
+    from app.services.central_refresh_scheduler import central_refresh_scheduler
     snapshot_task = asyncio.create_task(_oi_snapshot_scheduler(), name="oi-snapshot-scheduler")
+    await central_refresh_scheduler.start()
     if settings.UPSTOX_ACCESS_TOKEN.strip():
         # Start subscription manager directly with the configured Analytics Token.
         # Upstox Analytics Tokens support Market Data Feed V3 and Option Chain APIs without daily OAuth.
@@ -46,6 +48,7 @@ async def lifespan(app: FastAPI):
         subscription_manager.authentication_status = "WAITING"
     yield
     snapshot_task.cancel()
+    await central_refresh_scheduler.stop()
     await asyncio.gather(snapshot_task, return_exceptions=True)
     await subscription_manager.stop()
     logger.info("Shutting down %s", settings.APP_NAME)

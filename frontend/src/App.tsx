@@ -8,17 +8,18 @@ import { AllVolumeDashboard } from './pages/AllVolumeDashboard';
 import { Top7Heavyweights } from './pages/Top7Heavyweights';
 import { VolumeAnalyticsPage } from './pages/VolumeAnalyticsPage';
 import { StockDetails } from './pages/StockDetails';
-import { DataStatus } from './pages/DataStatus';
 import { EmaScanner } from './pages/EmaScanner';
 import { NiftyLiveOptionChainDashboard } from './components/NiftyLiveOptionChainDashboard';
 import { PremarketDashboard } from './components/PremarketDashboard';
-import { SectorFundamentalsDashboard } from './components/SectorFundamentalsDashboard';
 import { MultiTimeframeMonitoringDashboard } from './components/MultiTimeframeMonitoringDashboard';
 import { NiftyTradingIntelligenceDashboard } from './components/NiftyTradingIntelligenceDashboard';
 import { PmiIntelligenceDashboard } from './components/PmiIntelligenceDashboard';
 import { IipIntelligenceSection } from './components/IipIntelligenceSection';
-import { AllStocksDashboard } from './pages/AllStocksDashboard';
 import { GlobalMarketsAndCalendarPage } from './pages/GlobalMarketsAndCalendarPage';
+import { IndianEconomyFundamentalsPage } from './pages/IndianEconomyFundamentalsPage';
+import { MarketNewsPage } from './pages/MarketNewsPage';
+import { SettingsAndDataSourcesPage } from './pages/SettingsAndDataSourcesPage';
+import { MarketIntelligenceDashboard } from './components/MarketIntelligenceDashboard';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -142,6 +143,7 @@ export const App: React.FC = () => {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+        {/* 1. OVERVIEW */}
         {activeTab === 'overview' && (
           <MarketOverview 
             health={health}
@@ -156,48 +158,73 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'premarket' && (
-          <PremarketDashboard />
+        {/* 2. DMA SCANNER */}
+        {activeTab === 'dma-scanner' && (
+          <DailyScanner 
+            dailyScan={dailyScan}
+            loading={loading}
+            onSelectStock={handleSelectStock}
+          />
         )}
 
+        {/* 3. EMA SCANNER */}
+        {activeTab === 'ema-scanner' && (
+          <EmaScanner 
+            onSelectStock={handleSelectStock}
+          />
+        )}
+
+        {/* 4. FII/DII SCANNER & INSTITUTIONAL FLOWS */}
+        {(activeTab === 'fii-dii') && (
+          <MarketIntelligenceDashboard intelligence={intelligence || null} />
+        )}
+
+        {/* 5. OPTIONS & F&O INTELLIGENCE */}
+        {(activeTab === 'options-intelligence' || activeTab === 'option-chain') && (
+          <NiftyLiveOptionChainDashboard initialTab="CHAIN" />
+        )}
+        {activeTab === 'oi-pcr' && (
+          <NiftyLiveOptionChainDashboard initialTab="OI_PCR" />
+        )}
+        {activeTab === 'max-pain' && (
+          <NiftyLiveOptionChainDashboard initialTab="MAX_PAIN" />
+        )}
+        {activeTab === 'support-resistance' && (
+          <NiftyLiveOptionChainDashboard initialTab="SUPPORT_RESISTANCE" />
+        )}
         {activeTab === 'live-market' && (
           <NiftyTradingIntelligenceDashboard />
         )}
 
-        {activeTab === 'option-chain' && (
-          <NiftyLiveOptionChainDashboard initialTab="CHAIN" />
+        {/* 6. INDIAN ECONOMY & FUNDAMENTALS (GDP, PMI, IIP, INFLATION, CAPEX, RBI) */}
+        {(activeTab === 'economy-fundamentals' || activeTab === 'indian-economy' || activeTab === 'sector-fundamentals' || activeTab === 'sector-analysis' || activeTab === 'company-fundamentals') && (
+          <IndianEconomyFundamentalsPage />
         )}
-
-        {activeTab === 'oi-pcr' && (
-          <NiftyLiveOptionChainDashboard initialTab="OI_PCR" />
-        )}
-
-        {activeTab === 'max-pain' && (
-          <NiftyLiveOptionChainDashboard initialTab="MAX_PAIN" />
-        )}
-
-        {activeTab === 'support-resistance' && (
-          <NiftyLiveOptionChainDashboard initialTab="SUPPORT_RESISTANCE" />
-        )}
-
-        {(activeTab === 'sector-analysis' || activeTab === 'company-fundamentals' || activeTab === 'sector-fundamentals') && (
-          <SectorFundamentalsDashboard />
-        )}
-
-        {(activeTab === 'global-markets-calendar' || activeTab === 'economic-calendar' || activeTab === 'global-markets' || activeTab === 'global-events') && (
-          <GlobalMarketsAndCalendarPage />
-        )}
-
         {activeTab === 'pmi-intelligence' && (
           <PmiIntelligenceDashboard />
         )}
-
         {activeTab === 'iip-intelligence' && (
           <IipIntelligenceSection />
         )}
 
-        {activeTab === 'all-stocks' && (
-          <AllStocksDashboard onSelectStock={handleSelectStock} />
+        {/* 7. ECONOMIC CALENDAR & GLOBAL MARKETS */}
+        {(activeTab === 'economic-calendar' || activeTab === 'calendar' || activeTab === 'global-markets-calendar' || activeTab === 'global-markets' || activeTab === 'global-events') && (
+          <GlobalMarketsAndCalendarPage />
+        )}
+
+        {/* 8. MARKET NEWS WIRE */}
+        {(activeTab === 'market-news' || activeTab === 'news-intelligence') && (
+          <MarketNewsPage />
+        )}
+
+        {/* 9. SETTINGS & DATA SOURCES (CENTRAL SCHEDULER + 15 STATUTORY AUTHORITIES) */}
+        {(activeTab === 'settings-sources' || activeTab === 'data-quality') && (
+          <SettingsAndDataSourcesPage dataStatus={dataStatus} />
+        )}
+
+        {/* OTHER ANCILLARY MODULES & STOCK DETAIL */}
+        {activeTab === 'premarket' && (
+          <PremarketDashboard />
         )}
 
         {(activeTab === 'daily-report' || activeTab === 'weekly-report' || activeTab === 'monthly-report') && (
@@ -209,20 +236,6 @@ export const App: React.FC = () => {
             selectedSymbol={selectedStock}
             onSymbolChange={setSelectedStock}
             availableSymbols={availableSymbols}
-          />
-        )}
-
-        {activeTab === 'dma-scanner' && (
-          <DailyScanner 
-            dailyScan={dailyScan}
-            loading={loading}
-            onSelectStock={handleSelectStock}
-          />
-        )}
-
-        {activeTab === 'ema-scanner' && (
-          <EmaScanner 
-            onSelectStock={handleSelectStock}
           />
         )}
 
@@ -252,19 +265,15 @@ export const App: React.FC = () => {
             onSelectStock={handleSelectStock}
           />
         )}
-
-        {activeTab === 'data-quality' && (
-          <DataStatus dataStatus={dataStatus} />
-        )}
       </main>
 
       <footer className="bg-[#121824] border-t border-[#232E47] py-4 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            NIFTY 50 Institutional DMA &amp; Live Volume Platform &bull; Pure SMA Engine &amp; RVOL Analytics
+            NIFTY 50 | DMA &amp; EMA MARKET INTELLIGENCE &bull; Professional Market &amp; Fundamental Economy Platform
           </div>
           <div className="text-[11px] text-slate-400">
-            Institutional Build &bull; FastAPI, PostgreSQL, SQLAlchemy &amp; React (TypeScript)
+            FastAPI, PostgreSQL &bull; React (TypeScript) &bull; Traceable Official Releases (MoSPI, RBI, NSE, BSE, DPIIT)
           </div>
         </div>
       </footer>

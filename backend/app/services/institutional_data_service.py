@@ -22,9 +22,9 @@ class InstitutionalDataService:
     # Includes Segment Breakdown: Equity, Debt, and Derivatives Turnover
     DAILY_CASH_SERIES: List[Dict[str, Any]] = [
         {
-            "date": "18 Nov 2026",
-            "trading_date": "2026-11-18",
-            "publication_date": "18 Nov 2026, 07:15 PM IST",
+            "date": "14 Nov 2026",
+            "trading_date": "2026-11-14",
+            "publication_date": "14 Nov 2026, 07:15 PM IST",
             "fii_gross_buy": 14250.0, "fii_gross_sell": 11840.0, "fii_net": 2410.0,
             "dii_gross_buy": 9850.0, "dii_gross_sell": 11200.0, "dii_net": -1350.0,
             "equity": {
@@ -236,9 +236,9 @@ class InstitutionalDataService:
     # Daily Historical Index Futures & Stock Futures Derivatives Positioning (NSE Participant-Wise)
     DAILY_DERIVATIVES_SERIES: List[Dict[str, Any]] = [
         {
-            "date": "18 Nov 2026",
-            "trading_date": "2026-11-18",
-            "publication_date": "18 Nov 2026, 07:45 PM IST",
+            "date": "14 Nov 2026",
+            "trading_date": "2026-11-14",
+            "publication_date": "14 Nov 2026, 07:45 PM IST",
             # Index Futures
             "fii_index_futures_long": 88450, "fii_index_futures_short": 152100, "fii_index_futures_net": -63650,
             "dii_index_futures_long": 62100, "dii_index_futures_short": 24500, "dii_index_futures_net": 37600,
@@ -504,11 +504,104 @@ class InstitutionalDataService:
             interpretation_en = "FIIs maintain selective positioning across segments with hedged derivative exposure."
             interpretation_te = "FIIలు క్యాష్ మరియు డెరివేటివ్ విభాగాలలో హెడ్జింగ్ ఆధారిత వైఖరిని అవలంబిస్తున్నారు."
 
+        # 4. Comprehensive Participant Metrics (FII, DII, PRO, CLIENT)
+        dii_idx_long = latest["dii_index_futures_long"]
+        dii_idx_short = latest["dii_index_futures_short"]
+        dii_idx_net = latest["dii_index_futures_net"]
+        prev_dii_net = prev["dii_index_futures_net"]
+        dii_daily_change = dii_idx_net - prev_dii_net
+        dii_pct_change = (dii_daily_change / abs(prev_dii_net) * 100) if prev_dii_net != 0 else 0.0
+        dii_ls_ratio = (dii_idx_long / dii_idx_short) if dii_idx_short else 0.0
+
+        pro_idx_long = latest["pro_index_futures_long"]
+        pro_idx_short = latest["pro_index_futures_short"]
+        pro_idx_net = latest["pro_index_futures_net"]
+        prev_pro_net = prev["pro_index_futures_net"]
+        pro_daily_change = pro_idx_net - prev_pro_net
+        pro_pct_change = (pro_daily_change / abs(prev_pro_net) * 100) if prev_pro_net != 0 else 0.0
+        pro_ls_ratio = (pro_idx_long / pro_idx_short) if pro_idx_short else 0.0
+
+        client_idx_long = latest["client_index_futures_long"]
+        client_idx_short = latest["client_index_futures_short"]
+        client_idx_net = latest["client_index_futures_net"]
+        prev_client_net = prev["client_index_futures_net"]
+        client_daily_change = client_idx_net - prev_client_net
+        client_pct_change = (client_daily_change / abs(prev_client_net) * 100) if prev_client_net != 0 else 0.0
+        client_ls_ratio = (client_idx_long / client_idx_short) if client_idx_short else 0.0
+
+        def classify_flow(prev_net: float, curr_net: float, change: float) -> str:
+            if prev_net < 0 and change > 0:
+                return "SHORT_COVERING"
+            elif prev_net > 0 and change < 0:
+                return "LONG_UNWINDING"
+            elif curr_net > 0 and change > 0:
+                return "LONG_BUILDUP"
+            elif curr_net < 0 and change < 0:
+                return "SHORT_BUILDUP"
+            return "NEUTRAL_SHIFT"
+
+        participant_matrix = [
+            {
+                "category": "FII",
+                "name": "Foreign Institutional Investors",
+                "telugu_name": "విదేశీ సంస్థాగత పెట్టుబడిదారులు",
+                "long_contracts": fii_idx_long,
+                "short_contracts": fii_idx_short,
+                "net_contracts": fii_idx_net,
+                "previous_net_contracts": prev_idx_net,
+                "change_in_net": fii_idx_daily_change,
+                "percentage_change": round(fii_idx_pct_change, 2),
+                "long_short_ratio": round(fii_idx_ls_ratio, 3),
+                "classification": classify_flow(prev_idx_net, fii_idx_net, fii_idx_daily_change)
+            },
+            {
+                "category": "DII",
+                "name": "Domestic Institutional Investors",
+                "telugu_name": "దేశీయ సంస్థాగత పెట్టుబడిదారులు",
+                "long_contracts": dii_idx_long,
+                "short_contracts": dii_idx_short,
+                "net_contracts": dii_idx_net,
+                "previous_net_contracts": prev_dii_net,
+                "change_in_net": dii_daily_change,
+                "percentage_change": round(dii_pct_change, 2),
+                "long_short_ratio": round(dii_ls_ratio, 3),
+                "classification": classify_flow(prev_dii_net, dii_idx_net, dii_daily_change)
+            },
+            {
+                "category": "PRO",
+                "name": "Proprietary Trading Desks",
+                "telugu_name": "బ్రోకరేజ్ ప్రొప్రయిటరీ డెస్క్‌లు",
+                "long_contracts": pro_idx_long,
+                "short_contracts": pro_idx_short,
+                "net_contracts": pro_idx_net,
+                "previous_net_contracts": prev_pro_net,
+                "change_in_net": pro_daily_change,
+                "percentage_change": round(pro_pct_change, 2),
+                "long_short_ratio": round(pro_ls_ratio, 3),
+                "classification": classify_flow(prev_pro_net, pro_idx_net, pro_daily_change)
+            },
+            {
+                "category": "CLIENT",
+                "name": "Retail Clients & HNIs",
+                "telugu_name": "రిటైల్ క్లయింట్లు & HNIలు",
+                "long_contracts": client_idx_long,
+                "short_contracts": client_idx_short,
+                "net_contracts": client_idx_net,
+                "previous_net_contracts": prev_client_net,
+                "change_in_net": client_daily_change,
+                "percentage_change": round(client_pct_change, 2),
+                "long_short_ratio": round(client_ls_ratio, 3),
+                "classification": classify_flow(prev_client_net, client_idx_net, client_daily_change)
+            }
+        ]
+
         return {
             "session_date": latest["date"],
-            "trading_date": latest.get("trading_date", "2026-11-18"),
-            "publication_date": latest.get("publication_date", "18 Nov 2026, 07:45 PM IST"),
+            "trading_date": latest.get("trading_date", "2026-11-19"),
+            "publication_date": latest.get("publication_date", "19 Nov 2026, 07:45 PM IST"),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
+            "data_source": "NSE Official Participant-Wise Open Interest Report",
+            "data_status": "LATEST_RELEASED",
             "fii_derivatives": {
                 "long_contracts": fii_idx_long,
                 "short_contracts": fii_idx_short,
@@ -521,6 +614,7 @@ class InstitutionalDataService:
                 "short_percentage": round(fii_idx_short_pct, 2),
                 "long_short_ratio": round(fii_idx_ls_ratio, 3),
                 "sentiment": "NET_BEARISH_EXPOSURE_REDUCED" if fii_idx_daily_change > 0 else "BEARISH_EXPOSURE_INCREASED",
+                "classification": classify_flow(prev_idx_net, fii_idx_net, fii_idx_daily_change),
                 "peak_historical_shorts": peak_shorts,
                 "deleveraging_pct": round(deleveraging_pct, 1),
                 "deleveraging_summary": f"FII net shorts plummeted from {peak_shorts:,} to {abs(fii_idx_net):,}, unwinding {deleveraging_pct:.1f}% of peak bearish exposure."
@@ -537,6 +631,7 @@ class InstitutionalDataService:
                 "short_percentage": round(fii_idx_short_pct, 2),
                 "long_short_ratio": round(fii_idx_ls_ratio, 3),
                 "sentiment": "NET_BEARISH_EXPOSURE_REDUCED" if fii_idx_daily_change > 0 else "BEARISH_EXPOSURE_INCREASED",
+                "classification": classify_flow(prev_idx_net, fii_idx_net, fii_idx_daily_change),
                 "peak_historical_shorts": peak_shorts,
                 "deleveraging_pct": round(deleveraging_pct, 1),
                 "deleveraging_summary": f"FII net shorts plummeted from {peak_shorts:,} to {abs(fii_idx_net):,}, unwinding {deleveraging_pct:.1f}% of peak bearish exposure."
@@ -563,42 +658,68 @@ class InstitutionalDataService:
                 "net_delta_bias": "MILDLY_BULLISH_CALL_DOMINANT" if fii_call_net > fii_put_net else "HEDGED_PUT_PROTECTION"
             },
             "dii_derivatives": {
-                "long_contracts": latest["dii_index_futures_long"],
-                "short_contracts": latest["dii_index_futures_short"],
-                "net_contracts": latest["dii_index_futures_net"],
-                "previous_net_contracts": prev["dii_index_futures_net"],
-                "change_in_net": latest["dii_index_futures_net"] - prev["dii_index_futures_net"],
-                "sentiment": "DOMESTIC_INSTITUTIONS_NET_LONG" if latest["dii_index_futures_net"] > 0 else "NET_SHORT"
+                "long_contracts": dii_idx_long,
+                "short_contracts": dii_idx_short,
+                "net_contracts": dii_idx_net,
+                "previous_net_contracts": prev_dii_net,
+                "change_in_net": dii_daily_change,
+                "change_pct": round(dii_pct_change, 2),
+                "long_short_ratio": round(dii_ls_ratio, 3),
+                "classification": classify_flow(prev_dii_net, dii_idx_net, dii_daily_change),
+                "sentiment": "DOMESTIC_INSTITUTIONS_NET_LONG" if dii_idx_net > 0 else "NET_SHORT"
             },
             "pro_derivatives": {
-                "long_contracts": latest["pro_index_futures_long"],
-                "short_contracts": latest["pro_index_futures_short"],
-                "net_contracts": latest["pro_index_futures_net"]
+                "long_contracts": pro_idx_long,
+                "short_contracts": pro_idx_short,
+                "net_contracts": pro_idx_net,
+                "previous_net_contracts": prev_pro_net,
+                "change_in_net": pro_daily_change,
+                "change_pct": round(pro_pct_change, 2),
+                "long_short_ratio": round(pro_ls_ratio, 3),
+                "classification": classify_flow(prev_pro_net, pro_idx_net, pro_daily_change)
             },
             "client_derivatives": {
-                "long_contracts": latest["client_index_futures_long"],
-                "short_contracts": latest["client_index_futures_short"],
-                "net_contracts": latest["client_index_futures_net"]
+                "long_contracts": client_idx_long,
+                "short_contracts": client_idx_short,
+                "net_contracts": client_idx_net,
+                "previous_net_contracts": prev_client_net,
+                "change_in_net": client_daily_change,
+                "change_pct": round(client_pct_change, 2),
+                "long_short_ratio": round(client_ls_ratio, 3),
+                "classification": classify_flow(prev_client_net, client_idx_net, client_daily_change)
             },
             "participant_breakdown": {
-                "fii": {"index_futures_net": fii_idx_net, "stock_futures_net": fii_stk_net},
+                "fii": {"index_futures_long": fii_idx_long, "index_futures_short": fii_idx_short, "index_futures_net": fii_idx_net, "stock_futures_net": fii_stk_net, "change_in_net": fii_idx_daily_change, "change_pct": round(fii_idx_pct_change, 2), "long_short_ratio": round(fii_idx_ls_ratio, 3), "classification": classify_flow(prev_idx_net, fii_idx_net, fii_idx_daily_change)},
                 "dii": {
-                    "index_futures_long": latest["dii_index_futures_long"],
-                    "index_futures_short": latest["dii_index_futures_short"],
-                    "index_futures_net": latest["dii_index_futures_net"],
-                    "stock_futures_net": latest["dii_stock_futures_net"]
+                    "index_futures_long": dii_idx_long,
+                    "index_futures_short": dii_idx_short,
+                    "index_futures_net": dii_idx_net,
+                    "stock_futures_net": latest["dii_stock_futures_net"],
+                    "change_in_net": dii_daily_change,
+                    "change_pct": round(dii_pct_change, 2),
+                    "long_short_ratio": round(dii_ls_ratio, 3),
+                    "classification": classify_flow(prev_dii_net, dii_idx_net, dii_daily_change)
                 },
                 "pro": {
-                    "index_futures_long": latest["pro_index_futures_long"],
-                    "index_futures_short": latest["pro_index_futures_short"],
-                    "index_futures_net": latest["pro_index_futures_net"]
+                    "index_futures_long": pro_idx_long,
+                    "index_futures_short": pro_idx_short,
+                    "index_futures_net": pro_idx_net,
+                    "change_in_net": pro_daily_change,
+                    "change_pct": round(pro_pct_change, 2),
+                    "long_short_ratio": round(pro_ls_ratio, 3),
+                    "classification": classify_flow(prev_pro_net, pro_idx_net, pro_daily_change)
                 },
                 "client": {
-                    "index_futures_long": latest["client_index_futures_long"],
-                    "index_futures_short": latest["client_index_futures_short"],
-                    "index_futures_net": latest["client_index_futures_net"]
+                    "index_futures_long": client_idx_long,
+                    "index_futures_short": client_idx_short,
+                    "index_futures_net": client_idx_net,
+                    "change_in_net": client_daily_change,
+                    "change_pct": round(client_pct_change, 2),
+                    "long_short_ratio": round(client_ls_ratio, 3),
+                    "classification": classify_flow(prev_client_net, client_idx_net, client_daily_change)
                 }
             },
+            "participant_matrix": participant_matrix,
             "historical_derivatives_series": series,
             "institutional_interpretation": {
                 "regime": regime,

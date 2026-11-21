@@ -51,6 +51,12 @@ async def get_market_intelligence() -> Dict[str, Any]:
     return data
 
 
+@router.get("/economic-indicators", response_model=Dict[str, Any])
+async def get_core_economic_indicators() -> Dict[str, Any]:
+    """Provides core 5 macroeconomic indicators (GDP, PMI, IIP, CPI, WPI) with Expected -> Previous -> Actual -> Surprise -> Market Impact."""
+    return macro_analytics_suite.get_core_economic_indicators()
+
+
 @router.get("/market-impact", response_model=Dict[str, Any])
 async def get_market_impact_analysis() -> Dict[str, Any]:
     """Return macro-to-market impact analytics."""

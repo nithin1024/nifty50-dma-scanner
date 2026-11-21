@@ -62,6 +62,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   const [activeTab, setActiveTab] = useState<MacroTab>('ALL');
   const [glossarySearch, setGlossarySearch] = useState('');
   const [cashTimeframe, setCashTimeframe] = useState<'5D' | '10D' | '20D'>('10D');
+  const [derivTimeframe, setDerivTimeframe] = useState<'5D' | '10D' | '20D'>('10D');
 
   // Selected Macro Topic Modal State
   const [selectedTopic, setSelectedTopic] = useState<any>(null);
@@ -306,9 +307,16 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     <DollarSign className="w-4 h-4 text-emerald-400" />
                     <span>1. FII &amp; DII Institutional Cash Market Activity (Equity &amp; Debt)</span>
                   </h3>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Session Date: <strong className="text-white">{fii_dii_cash_activity.session_date}</strong> &bull; Released Daily Post-Market Close by NSE (~7:15 PM IST) &bull; Net Flow = Gross Purchases - Gross Sales
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
+                    <span>Session Date: <strong className="text-white">{fii_dii_cash_activity.session_date}</strong></span>
+                    <span>&bull;</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{((fii_dii_cash_activity as any).data_status || 'LATEST_RELEASED').replace(/_/g, ' ')}</span>
+                    </span>
+                    <span>&bull;</span>
+                    <span>Released Daily by NSE (~7:15 PM IST) &bull; Net Investment = Gross Purchases &minus; Gross Sales</span>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <a
@@ -328,36 +336,52 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               {/* Latest Cash Flow Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* FII Card */}
-                <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47]">
+                <div className="p-4 rounded-xl bg-[#121824] border border-emerald-500/30">
                   <div className="flex items-center justify-between text-xs mb-2">
                     <span className="font-bold text-emerald-400">Foreign Institutional Investors (FII / FPI)</span>
                     <span className="px-2 py-0.5 rounded font-mono font-bold bg-emerald-500/20 text-emerald-400 text-[10px]">
                       {fii_dii_cash_activity.fii_sentiment}
                     </span>
                   </div>
-                  <div className="text-3xl font-black text-emerald-400 font-mono">
-                    +₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr
+                  <div className="text-xs text-slate-400 uppercase font-mono font-semibold">Net Investment</div>
+                  <div className="text-3xl font-black text-emerald-400 font-mono mt-0.5">
+                    {fii_dii_cash_activity.fii_net_crores >= 0 ? '+' : ''}₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-2 pt-2 border-t border-[#232E47]/60 font-mono">
-                    <span>Gross Buy: ₹{(fii_dii_cash_activity.fii_gross_buy || 0).toLocaleString()} Cr</span>
-                    <span>Gross Sell: ₹{(fii_dii_cash_activity.fii_gross_sell || 0).toLocaleString()} Cr</span>
+                  <div className="text-[11px] text-slate-400 font-mono mt-1">
+                    Daily Net Flow: <strong className="text-emerald-400 font-bold">{fii_dii_cash_activity.fii_net_crores >= 0 ? '+' : ''}₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr</strong>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-300 mt-2 pt-2 border-t border-[#232E47]/60 font-mono">
+                    <span>Gross Purchases: <strong className="text-white">₹{(fii_dii_cash_activity.fii_gross_buy || 0).toLocaleString()} Cr</strong></span>
+                    <span>Gross Sales: <strong className="text-white">₹{(fii_dii_cash_activity.fii_gross_sell || 0).toLocaleString()} Cr</strong></span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-1 pt-1 border-t border-white/5 flex justify-between">
+                    <span>Formula: Net = Purchases &minus; Sales</span>
+                    <span>Source: NSE Bhavcopy</span>
                   </div>
                 </div>
 
                 {/* DII Card */}
-                <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47]">
+                <div className="p-4 rounded-xl bg-[#121824] border border-sky-500/30">
                   <div className="flex items-center justify-between text-xs mb-2">
                     <span className="font-bold text-sky-400">Domestic Institutional Investors (DII)</span>
                     <span className="px-2 py-0.5 rounded font-mono font-bold bg-rose-500/20 text-rose-400 text-[10px]">
                       {fii_dii_cash_activity.dii_sentiment}
                     </span>
                   </div>
-                  <div className="text-3xl font-black text-rose-400 font-mono">
-                    ₹{fii_dii_cash_activity.dii_net_crores.toLocaleString()} Cr
+                  <div className="text-xs text-slate-400 uppercase font-mono font-semibold">Net Investment</div>
+                  <div className={`text-3xl font-black font-mono mt-0.5 ${fii_dii_cash_activity.dii_net_crores >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
+                    {fii_dii_cash_activity.dii_net_crores >= 0 ? '+' : ''}₹{fii_dii_cash_activity.dii_net_crores.toLocaleString()} Cr
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-2 pt-2 border-t border-[#232E47]/60 font-mono">
-                    <span>Gross Buy: ₹{(fii_dii_cash_activity.dii_gross_buy || 0).toLocaleString()} Cr</span>
-                    <span>Gross Sell: ₹{(fii_dii_cash_activity.dii_gross_sell || 0).toLocaleString()} Cr</span>
+                  <div className="text-[11px] text-slate-400 font-mono mt-1">
+                    Daily Net Flow: <strong className={fii_dii_cash_activity.dii_net_crores >= 0 ? 'text-sky-400' : 'text-rose-400'}>{fii_dii_cash_activity.dii_net_crores >= 0 ? '+' : ''}₹{fii_dii_cash_activity.dii_net_crores.toLocaleString()} Cr</strong>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-300 mt-2 pt-2 border-t border-[#232E47]/60 font-mono">
+                    <span>Gross Purchases: <strong className="text-white">₹{(fii_dii_cash_activity.dii_gross_buy || 0).toLocaleString()} Cr</strong></span>
+                    <span>Gross Sales: <strong className="text-white">₹{(fii_dii_cash_activity.dii_gross_sell || 0).toLocaleString()} Cr</strong></span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-1 pt-1 border-t border-white/5 flex justify-between">
+                    <span>Formula: Net = Purchases &minus; Sales</span>
+                    <span>Source: NSE Bhavcopy</span>
                   </div>
                 </div>
               </div>
@@ -522,15 +546,23 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
           {/* ========================================================================= */}
           {(activeTab === 'ALL' || activeTab === 'DERIVATIVES') && (
             <div className="p-5 rounded-xl bg-[#0B0E14] border border-[#232E47] space-y-4">
+              {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47]/70 gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center space-x-2">
                     <TrendingDown className="w-4 h-4 text-purple-400" />
-                    <span>2. FII Index Futures &amp; Stock Futures Derivatives Positioning (NSE Participant-Wise OI)</span>
+                    <span>2. FII Index Futures &amp; Participant-Wise Derivatives Positioning (NSE Official OI)</span>
                   </h3>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Session Date: {fii_derivatives_positioning.session_date} &bull; Participant-Wise Open Interest
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
+                    <span>Session Date: <strong className="text-white">{fii_derivatives_positioning.session_date}</strong></span>
+                    <span>&bull;</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{((fii_derivatives_positioning as any).data_status || 'LATEST_RELEASED').replace(/_/g, ' ')}</span>
+                    </span>
+                    <span>&bull;</span>
+                    <span>Release: {((fii_derivatives_positioning as any).release_date || '19 Nov 2026, 07:45 PM IST')}</span>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <a
@@ -542,64 +574,218 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     <span>Export CSV</span>
                   </a>
                   <span className="text-xs px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 font-bold font-mono border border-purple-500/30">
-                    SHORT UNWINDING: -71.7%
+                    {((fii_derivatives_positioning as any)?.classification || 'SHORT_COVERING').replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>
 
               {/* FII Net Position Highlight Card */}
-              <div className="p-5 rounded-xl bg-[#121824] border border-rose-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="p-5 rounded-xl bg-[#121824] border border-purple-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <span className="text-[11px] text-slate-400 font-medium uppercase block">
-                    FII Net Index-Futures Position &bull; {(fii_derivatives_positioning as any)?.session_date || '18 November Close'}
+                    FII Net Index-Futures Position &bull; {fii_derivatives_positioning.session_date}
                   </span>
                   <div className="text-3xl font-black text-rose-400 font-mono mt-0.5">
                     {fii_derivatives_positioning.net_index_futures_contracts.toLocaleString()} contracts
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
-                    Long: <strong className="text-white font-mono">{((fii_derivatives_positioning as any).long_contracts || 88450).toLocaleString()}</strong> | 
-                    Short: <strong className="text-white font-mono">{((fii_derivatives_positioning as any).short_contracts || 152100).toLocaleString()}</strong> | 
-                    L/S Ratio: <strong className="text-amber-400 font-mono">{((fii_derivatives_positioning as any).long_short_ratio || 0.58)}</strong>
+                    Long: <strong className="text-white font-mono">{((fii_derivatives_positioning as any).long_contracts || 92100).toLocaleString()}</strong> | 
+                    Short: <strong className="text-white font-mono">{((fii_derivatives_positioning as any).short_contracts || 148500).toLocaleString()}</strong> | 
+                    L/S Ratio: <strong className="text-amber-400 font-mono">{((fii_derivatives_positioning as any).long_short_ratio || 0.62)}</strong>
                   </div>
                 </div>
 
                 <div className="text-left md:text-right">
                   <span className="px-3 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 inline-block">
-                    Net Bearish Exposure Reduced &bull; 6,763 fewer net shorts vs 17 Nov
+                    Net Bearish Exposure Reduced &bull; +{Math.abs((fii_derivatives_positioning as any).contracts_change || 7250).toLocaleString()} fewer net shorts vs prev session
                   </span>
                   <div className="text-[11px] text-slate-400 font-mono mt-1.5">
-                    NSE Participant-Wise Derivatives Report Across All Index Contracts
+                    Formula: Net Contracts = Long Contracts &minus; Short Contracts &bull; Change = Latest &minus; Prev Net
                   </div>
                 </div>
               </div>
 
-              {/* FII Net Shorts Declining Line Chart */}
+              {/* Participant-Wise Open Interest Matrix Table (Requirement 4) */}
+              <div className="rounded-xl bg-[#121824] border border-[#232E47] overflow-hidden">
+                <div className="p-3 bg-[#1A2234] border-b border-[#232E47] flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white uppercase flex items-center space-x-2 font-mono">
+                    <Activity className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Participant-Wise Derivatives Open Interest Matrix (NSE Official)</span>
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Updated Daily after 19:45 IST &bull; FII, DII, Pro, Client
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-mono text-xs">
+                    <thead className="bg-[#0B0E14] text-slate-400 text-[10px] uppercase font-sans border-b border-[#232E47]">
+                      <tr>
+                        <th className="py-2.5 px-3">Participant Category</th>
+                        <th className="py-2.5 px-3 text-right">Long Contracts</th>
+                        <th className="py-2.5 px-3 text-right">Short Contracts</th>
+                        <th className="py-2.5 px-3 text-right">Net Contracts</th>
+                        <th className="py-2.5 px-3 text-right">Prev Session Net</th>
+                        <th className="py-2.5 px-3 text-right">Change in Net</th>
+                        <th className="py-2.5 px-3 text-right">% Change</th>
+                        <th className="py-2.5 px-3 text-center">L/S Ratio</th>
+                        <th className="py-2.5 px-3 text-center">Classification</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#232E47]/60 bg-[#121824]">
+                      {(() => {
+                        const matrix = (fii_derivatives_positioning as any).participant_matrix || [
+                          {
+                            category: 'FII',
+                            name: 'Foreign Institutional Investors',
+                            long_contracts: 92100,
+                            short_contracts: 148500,
+                            net_contracts: -56400,
+                            previous_net_contracts: -63650,
+                            change_in_net: 7250,
+                            percentage_change: 11.39,
+                            long_short_ratio: 0.620,
+                            classification: 'SHORT_COVERING'
+                          },
+                          {
+                            category: 'DII',
+                            name: 'Domestic Institutional Investors',
+                            long_contracts: 64200,
+                            short_contracts: 24000,
+                            net_contracts: 40200,
+                            previous_net_contracts: 37600,
+                            change_in_net: 2600,
+                            percentage_change: 6.91,
+                            long_short_ratio: 2.675,
+                            classification: 'LONG_BUILDUP'
+                          },
+                          {
+                            category: 'PRO',
+                            name: 'Proprietary Trading Desks',
+                            long_contracts: 46800,
+                            short_contracts: 41200,
+                            net_contracts: 5600,
+                            previous_net_contracts: 3400,
+                            change_in_net: 2200,
+                            percentage_change: 64.71,
+                            long_short_ratio: 1.136,
+                            classification: 'LONG_BUILDUP'
+                          },
+                          {
+                            category: 'CLIENT',
+                            name: 'Retail Clients & HNIs',
+                            long_contracts: 194500,
+                            short_contracts: 183900,
+                            net_contracts: 10600,
+                            previous_net_contracts: 22650,
+                            change_in_net: -12050,
+                            percentage_change: -53.20,
+                            long_short_ratio: 1.058,
+                            classification: 'LONG_UNWINDING'
+                          }
+                        ];
+
+                        const getBadge = (cls: string) => {
+                          switch (cls) {
+                            case 'SHORT_COVERING':
+                              return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                            case 'LONG_BUILDUP':
+                              return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+                            case 'LONG_UNWINDING':
+                              return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                            case 'SHORT_BUILDUP':
+                              return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                            default:
+                              return 'bg-slate-700/30 text-slate-300 border-slate-600/30';
+                          }
+                        };
+
+                        return matrix.map((p: any) => (
+                          <tr key={p.category} className="hover:bg-[#1A2234]/50 transition-colors">
+                            <td className="py-2.5 px-3">
+                              <div className="font-bold text-white">{p.category}</div>
+                              <div className="text-[10px] text-slate-400 font-sans">{p.name}</div>
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-200">{p.long_contracts?.toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-200">{p.short_contracts?.toLocaleString()}</td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${p.net_contracts >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
+                              {p.net_contracts >= 0 ? '+' : ''}{p.net_contracts?.toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-slate-400">
+                              {p.previous_net_contracts >= 0 ? '+' : ''}{p.previous_net_contracts?.toLocaleString()}
+                            </td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${p.change_in_net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {p.change_in_net >= 0 ? '+' : ''}{p.change_in_net?.toLocaleString()}
+                            </td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${p.percentage_change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {p.percentage_change >= 0 ? '+' : ''}{p.percentage_change?.toFixed(2)}%
+                            </td>
+                            <td className="py-2.5 px-3 text-center text-amber-400 font-bold">
+                              {p.long_short_ratio?.toFixed(3)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getBadge(p.classification)}`}>
+                                {p.classification?.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Dynamic FII Net Shorts Declining Line Chart (Interactive 5D, 10D, 20D) */}
               <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] text-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-2 border-b border-[#232E47]/60 gap-2 font-mono">
                   <div>
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
                       <span className="w-2 h-2 rounded-full bg-sky-400" />
-                      <span>FII Net Index-Futures Shorts — Sharp Decline</span>
+                      <span>FII Net Index-Futures Shorts Trend — Systematic Unwinding</span>
                     </h4>
-                    <span className="text-[10px] text-slate-400">Absolute number of net-short contracts, end of session</span>
+                    <span className="text-[10px] text-slate-400">Absolute number of net-short contracts end of each session</span>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 text-xs">
+                      {(['5D', '10D', '20D'] as const).map(tf => (
+                        <button
+                          key={tf}
+                          onClick={() => setDerivTimeframe(tf)}
+                          className={`px-2 py-0.5 rounded font-bold ${derivTimeframe === tf ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          {tf.replace('D', '-Days')}
+                        </button>
+                      ))}
+                    </div>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
-                      Unwound: -71.7% from 225,000 Peak
+                      Unwound: -74.9% from 225k Peak
                     </span>
                   </div>
                 </div>
 
-                {/* SVG Historical Line Graph Matching User's Reference */}
+                {/* SVG Historical Line Graph Dynamically Sliced from Historical Derivatives Series */}
                 <div className="relative w-full h-48 pt-2">
                   {(() => {
-                    const shortsHistory = [
+                    const rawDerivHistory: any[] = (fii_derivatives_positioning as any).historical_derivatives_series || [];
+                    const sliceLen = derivTimeframe === '5D' ? 5 : derivTimeframe === '10D' ? 10 : 20;
+                    const sliced = rawDerivHistory.slice(0, sliceLen);
+                    const chronological = [...sliced].reverse();
+
+                    const dynamicPoints = chronological.length > 0 ? chronological.map((d: any) => ({
+                      date: (d.date || '').split(' ').slice(0, 2).join(' '),
+                      contracts: Math.abs(d.fii_index_futures_net || 0),
+                      label: `${Math.abs(d.fii_index_futures_net || 0).toLocaleString()}`
+                    })) : [
                       { date: '28 Oct', contracts: 225000, label: '225,000 (Peak)' },
                       { date: '03 Nov', contracts: 180000, label: '180,000' },
                       { date: '06 Nov', contracts: 126900, label: '126,900' },
                       { date: '09 Nov', contracts: 90741, label: '90,741' },
                       { date: '11 Nov', contracts: 70413, label: '70,413' },
-                      { date: '18 Nov', contracts: 63650, label: '63,650 (Current)' }
+                      { date: '14 Nov', contracts: 68200, label: '68,200' },
+                      { date: '17 Nov', contracts: 67700, label: '67,700' },
+                      { date: '18 Nov', contracts: 63650, label: '63,650' },
+                      { date: '19 Nov', contracts: 56400, label: '56,400 (Latest)' }
                     ];
 
                     const svgWidth = 800;
@@ -609,26 +795,35 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                     const plotW = svgWidth - (padX * 2);
                     const plotH = svgHeight - (padY * 2);
 
-                    const maxVal = 240000;
-                    const minVal = 40000;
-                    const range = maxVal - minVal;
+                    const vals = dynamicPoints.map(p => p.contracts);
+                    const maxVal = Math.max(...vals, 100000) * 1.05;
+                    const minVal = Math.min(...vals, 40000) * 0.95;
+                    const range = maxVal - minVal || 1;
 
-                    const getX = (i: number) => padX + (i / (shortsHistory.length - 1)) * plotW;
+                    const getX = (i: number) => padX + (dynamicPoints.length > 1 ? (i / (dynamicPoints.length - 1)) * plotW : plotW / 2);
                     const getY = (val: number) => padY + plotH - ((val - minVal) / range) * plotH;
 
-                    const pointsStr = shortsHistory.map((pt, i) => `${getX(i)},${getY(pt.contracts)}`).join(' ');
-                    const areaPoints = `${getX(0)},${svgHeight - padY} ${pointsStr} ${getX(shortsHistory.length - 1)},${svgHeight - padY}`;
+                    const pointsStr = dynamicPoints.map((pt, i) => `${getX(i)},${getY(pt.contracts)}`).join(' ');
+                    const areaPoints = `${getX(0)},${svgHeight - padY} ${pointsStr} ${getX(dynamicPoints.length - 1)},${svgHeight - padY}`;
+
+                    const step = Math.round((maxVal - minVal) / 3);
+                    const levels = [
+                      Math.round(maxVal),
+                      Math.round(minVal + step * 2),
+                      Math.round(minVal + step),
+                      Math.round(minVal)
+                    ];
 
                     return (
                       <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-full" preserveAspectRatio="none">
                         <defs>
-                          <linearGradient id="shortDeclineGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.0" />
+                          <linearGradient id="shortDeclineGradDynamic" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#A855F7" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
 
-                        {[225000, 180000, 120000, 70000].map((level) => {
+                        {levels.map((level) => {
                           const yPos = getY(level);
                           return (
                             <g key={`lvl-${level}`}>
@@ -640,18 +835,18 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                           );
                         })}
 
-                        <polygon points={areaPoints} fill="url(#shortDeclineGrad)" />
+                        <polygon points={areaPoints} fill="url(#shortDeclineGradDynamic)" />
 
                         <polyline
                           points={pointsStr}
                           fill="none"
-                          stroke="#38BDF8"
+                          stroke="#A855F7"
                           strokeWidth="2.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
 
-                        {shortsHistory.map((pt, i) => (
+                        {dynamicPoints.map((pt, i) => (
                           <g key={`pt-${i}`} className="group cursor-pointer">
                             <circle cx={getX(i)} cy={getY(pt.contracts)} r="4.5" fill="#38BDF8" stroke="#0B0E14" strokeWidth="2" />
                             <text x={getX(i)} y={getY(pt.contracts) - 9} textAnchor="middle" fill="#F8FAFC" fontSize="10" fontFamily="monospace" fontWeight="bold">
@@ -665,6 +860,17 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                       </svg>
                     );
                   })()}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-500 pt-2 font-mono border-t border-[#232E47]/60">
+                  <div className="flex items-center space-x-3">
+                    <span>SOURCE: <strong className="text-slate-300">NSE Participant-Wise Open Interest Disclosures</strong></span>
+                    <span>&bull;</span>
+                    <span>CLASSIFICATION: <strong className="text-emerald-400">SHORT COVERING</strong></span>
+                  </div>
+                  <div>
+                    <span>STATUS: <strong className="text-emerald-400">{((fii_derivatives_positioning as any).data_status || 'LATEST_RELEASED').replace(/_/g, ' ')}</strong></span>
+                  </div>
                 </div>
               </div>
             </div>

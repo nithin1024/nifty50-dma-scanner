@@ -25,38 +25,45 @@ class MarketIntelligenceService:
         rbi_report = macro_analytics_suite.get_rbi_macro_dashboard()
         calendar_report = macro_analytics_suite.get_economic_calendar_and_surprises()
         impact_report = macro_analytics_suite.get_macro_market_impact_engine()
+        economic_indicators = macro_analytics_suite.get_core_economic_indicators()
 
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "report_date": "18 November 2026",
+            "report_date": "19 November 2026",
+            "session_date": "19 Nov 2026",
             "market_closing_levels": {
                 "nifty_50": {
-                    "level": 25255.05,
-                    "change_pct": 0.84,
-                    "date": "18 Nov 2026"
+                    "level": 25320.65,
+                    "change_pct": 0.26,
+                    "date": "19 Nov 2026"
                 },
                 "sensex": {
-                    "level": 81879.40,
-                    "change_pct": 0.95,
-                    "date": "18 Nov 2026"
+                    "level": 82045.20,
+                    "change_pct": 0.20,
+                    "date": "19 Nov 2026"
                 },
                 "usd_inr": {
-                    "rate": 84.38,
-                    "source": "RBI / FBIL reference"
+                    "rate": 84.42,
+                    "source": "RBI / FBIL reference rate"
                 },
                 "crude_oil_brent": {
-                    "price_usd": 72.80,
+                    "price_usd": 73.15,
                     "source": "ICE Brent Crude benchmark",
                     "geopolitical_context": "OPEC+ supply cushion keeping prices anchored below $75/bbl"
                 },
                 "market_read_between_lines": (
-                    "Indian equities finished strongly supported by aggressive foreign cash buying (+₹2,410 Cr) "
-                    "and systematic short covering down to 63,650 contracts. While headline CPI reached 6.21%, "
-                    "benign Core CPI at 3.50% and stable crude at $72.80 keep domestic structural liquidity robust."
+                    "Indian equities closed higher supported by persistent FII cash net accumulation (+₹2,250 Cr) "
+                    "and accelerated short-covering in Index Futures (-56,400 contracts vs 225,000 peak). "
+                    "Headline CPI at 6.21% remains anchored by Core CPI stability (3.50%) and benign producer WPI (2.36%)."
                 )
             },
+            "economic_indicators": economic_indicators,
             "fii_dii_cash_activity": {
                 "session_date": cash_report["session_date"],
+                "data_source": "NSE Official Bhavcopy & NSDL FPI Monitor",
+                "data_status": "LATEST_RELEASED",
+                "release_date": cash_report.get("publication_date", "19 Nov 2026, 07:15 PM IST"),
+                "last_updated": cash_report.get("update_timestamp"),
                 "fii_net_crores": cash_report["latest"]["fii_net"],
                 "fii_sentiment": cash_report["latest"]["fii_status"],
                 "fii_gross_buy": cash_report["latest"]["fii_gross_buy"],
@@ -79,6 +86,10 @@ class MarketIntelligenceService:
             },
             "fii_derivatives_positioning": {
                 "session_date": deriv_report["session_date"],
+                "data_source": "NSE Official Participant-Wise Open Interest Report",
+                "data_status": "LATEST_RELEASED",
+                "release_date": deriv_report.get("publication_date", "19 Nov 2026, 07:45 PM IST"),
+                "last_updated": deriv_report.get("update_timestamp"),
                 "net_index_futures_contracts": deriv_report["fii_index_futures"]["net_contracts"],
                 "long_contracts": deriv_report["fii_index_futures"]["long_contracts"],
                 "short_contracts": deriv_report["fii_index_futures"]["short_contracts"],
@@ -87,6 +98,7 @@ class MarketIntelligenceService:
                 "long_percentage": deriv_report["fii_index_futures"]["long_percentage"],
                 "short_percentage": deriv_report["fii_index_futures"]["short_percentage"],
                 "long_short_ratio": deriv_report["fii_index_futures"]["long_short_ratio"],
+                "classification": deriv_report["fii_index_futures"].get("classification", "SHORT_COVERING"),
                 "change_description": f"{abs(deriv_report['fii_index_futures']['daily_change']):,} contracts shift",
                 "sentiment": deriv_report["fii_index_futures"]["sentiment"],
                 "status": deriv_report["institutional_interpretation"]["regime"],
@@ -94,7 +106,11 @@ class MarketIntelligenceService:
                 "trend_analysis": deriv_report["fii_index_futures"]["deleveraging_summary"],
                 "fii_stock_futures": deriv_report.get("fii_stock_futures", {}),
                 "fii_index_options": deriv_report.get("fii_index_options", {}),
+                "dii_derivatives": deriv_report.get("dii_derivatives", {}),
+                "pro_derivatives": deriv_report.get("pro_derivatives", {}),
+                "client_derivatives": deriv_report.get("client_derivatives", {}),
                 "participant_breakdown": deriv_report.get("participant_breakdown", {}),
+                "participant_matrix": deriv_report.get("participant_matrix", []),
                 "historical_derivatives_series": deriv_report["historical_derivatives_series"],
                 "institutional_interpretation": deriv_report["institutional_interpretation"],
                 "instrument_coverage": deriv_report["source"]

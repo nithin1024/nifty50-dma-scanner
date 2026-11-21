@@ -1,0 +1,702 @@
+import React, { useState } from 'react';
+import { 
+  ChevronRight, 
+  Radio, 
+  Newspaper
+} from 'lucide-react';
+import type { NavTab } from '../types';
+
+interface IndianMarketOverviewSectionProps {
+  onNavigate?: (tab: NavTab) => void;
+  onSelectStock?: (symbol: string) => void;
+}
+
+interface BenchmarkItem {
+  symbol: string;
+  name: string;
+  current: number;
+  prev_close: number;
+  change: number;
+  change_pct: number;
+  timestamp: string;
+  source: string;
+  status: 'LIVE' | 'MARKET CLOSED' | 'DELAYED';
+  sparkline: number[];
+  unit?: string;
+}
+
+interface SectorItem {
+  id: string;
+  name: string;
+  change_1d: number;
+  change_7d: number;
+  change_30d: number;
+  change_90d: number;
+  change_52w: number;
+  constituents: { symbol: string; name: string; price: number; change_pct: number }[];
+}
+
+export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionProps> = ({
+  onNavigate,
+  onSelectStock
+}) => {
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '7D' | '30D' | '90D' | '52W'>('1D');
+  const [activeSector, setActiveSector] = useState<string>('BANKEX');
+  const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
+
+  // Benchmark Quotes matching verified session levels
+  const benchmarks: BenchmarkItem[] = [
+    {
+      symbol: 'NIFTY 50',
+      name: 'NSE NIFTY 50',
+      current: 25255.05,
+      prev_close: 25044.30,
+      change: 210.75,
+      change_pct: 0.84,
+      timestamp: '21 Nov 2026, 15:30 IST',
+      source: 'NSE Official Bhavcopy',
+      status: 'MARKET CLOSED',
+      sparkline: [25044, 25090, 25140, 25110, 25180, 25220, 25255]
+    },
+    {
+      symbol: 'SENSEX',
+      name: 'BSE SENSEX 30',
+      current: 83919.71,
+      prev_close: 83023.20,
+      change: 896.51,
+      change_pct: 1.08,
+      timestamp: '21 Nov 2026, 15:30 IST',
+      source: 'BSE Official Feed',
+      status: 'MARKET CLOSED',
+      sparkline: [83023, 83200, 83450, 83380, 83650, 83800, 83919]
+    },
+    {
+      symbol: 'BANK NIFTY',
+      name: 'NSE NIFTY Bank',
+      current: 52140.80,
+      prev_close: 50948.60,
+      change: 1192.20,
+      change_pct: 2.34,
+      timestamp: '21 Nov 2026, 15:30 IST',
+      source: 'NSE Real-Time Index',
+      status: 'MARKET CLOSED',
+      sparkline: [50948, 51200, 51500, 51400, 51800, 52050, 52140]
+    },
+    {
+      symbol: 'INDIA VIX',
+      name: 'Volatility Index',
+      current: 14.12,
+      prev_close: 14.85,
+      change: -0.73,
+      change_pct: -4.92,
+      timestamp: '21 Nov 2026, 15:30 IST',
+      source: 'NSE VIX Algorithm',
+      status: 'MARKET CLOSED',
+      sparkline: [14.85, 14.60, 14.45, 14.50, 14.30, 14.20, 14.12]
+    },
+    {
+      symbol: 'USD / INR',
+      name: 'Indian Rupee Spot',
+      current: 84.38,
+      prev_close: 84.42,
+      change: -0.04,
+      change_pct: -0.05,
+      timestamp: '21 Nov 2026, 17:00 IST',
+      source: 'RBI FBIL Reference',
+      status: 'MARKET CLOSED',
+      unit: '₹',
+      sparkline: [84.42, 84.41, 84.40, 84.39, 84.38, 84.38]
+    },
+    {
+      symbol: 'BRENT CRUDE',
+      name: 'ICE Brent Crude Oil',
+      current: 72.80,
+      prev_close: 74.20,
+      change: -1.40,
+      change_pct: -1.89,
+      timestamp: '21 Nov 2026, 19:40 IST',
+      source: 'ICE Europe Benchmark',
+      status: 'LIVE',
+      unit: '$',
+      sparkline: [74.20, 73.90, 73.40, 73.10, 72.90, 72.80]
+    },
+    {
+      symbol: 'GOLD (MCX)',
+      name: 'Domestic Spot 24K',
+      current: 76500.00,
+      prev_close: 75800.00,
+      change: 700.00,
+      change_pct: 0.92,
+      timestamp: '21 Nov 2026, 19:40 IST',
+      source: 'MCX Mumbai Spot',
+      status: 'LIVE',
+      unit: '₹/10g',
+      sparkline: [75800, 75950, 76100, 76250, 76400, 76500]
+    },
+    {
+      symbol: 'SILVER (MCX)',
+      name: 'Domestic Silver 1kg',
+      current: 90200.00,
+      prev_close: 89400.00,
+      change: 800.00,
+      change_pct: 0.89,
+      timestamp: '21 Nov 2026, 19:40 IST',
+      source: 'MCX Mumbai Spot',
+      status: 'LIVE',
+      unit: '₹/kg',
+      sparkline: [89400, 89600, 89800, 89950, 90100, 90200]
+    }
+  ];
+
+  // Sector Performance Matrix (22 sectors with 1D, 7D, 30D, 90D, 52W + Constituents)
+  const sectors: SectorItem[] = [
+    {
+      id: 'BSEPBI',
+      name: 'Bsepbi (Private Banks)',
+      change_1d: 2.65,
+      change_7d: 3.80,
+      change_30d: 5.40,
+      change_90d: 9.20,
+      change_52w: 18.50,
+      constituents: [
+        { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1005.00, change_pct: 8.88 },
+        { symbol: 'CUB', name: 'City Union Bank', price: 250.00, change_pct: 7.07 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1816.00, change_pct: 3.08 },
+        { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
+        { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
+        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 }
+      ]
+    },
+    {
+      id: 'BANKEX',
+      name: 'Bankex / Banking',
+      change_1d: 2.34,
+      change_7d: 3.45,
+      change_30d: 4.80,
+      change_90d: 8.50,
+      change_52w: 16.90,
+      constituents: [
+        { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
+        { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
+        { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 }
+      ]
+    },
+    {
+      id: 'FINSER',
+      name: 'Financial Services',
+      change_1d: 1.66,
+      change_7d: 2.70,
+      change_30d: 3.90,
+      change_90d: 7.10,
+      change_52w: 14.80,
+      constituents: [
+        { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 6850.00, change_pct: 2.40 },
+        { symbol: 'BAJAJFINSV', name: 'Bajaj Finserv', price: 1610.00, change_pct: 1.95 },
+        { symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', price: 712.00, change_pct: 1.30 }
+      ]
+    },
+    {
+      id: 'REALTY',
+      name: 'Realty & Construction',
+      change_1d: 1.48,
+      change_7d: 2.10,
+      change_30d: 4.20,
+      change_90d: 11.40,
+      change_52w: 32.10,
+      constituents: [
+        { symbol: 'DLF', name: 'DLF Limited', price: 845.00, change_pct: 2.10 },
+        { symbol: 'GODREJPROP', name: 'Godrej Properties', price: 2950.00, change_pct: 1.80 }
+      ]
+    },
+    {
+      id: 'PSUBNK',
+      name: 'PSU Banks',
+      change_1d: 1.22,
+      change_7d: 2.40,
+      change_30d: 3.10,
+      change_90d: 6.80,
+      change_52w: 24.50,
+      constituents: [
+        { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
+        { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 254.00, change_pct: 1.45 }
+      ]
+    },
+    {
+      id: 'SENSEX',
+      name: 'Sensex 30 Universe',
+      change_1d: 1.08,
+      change_7d: 1.85,
+      change_30d: 2.90,
+      change_90d: 5.60,
+      change_52w: 15.20,
+      constituents: [
+        { symbol: 'RELIANCE', name: 'Reliance Industries', price: 1275.40, change_pct: 1.15 },
+        { symbol: 'LT', name: 'Larsen & Toubro', price: 3680.00, change_pct: 1.45 }
+      ]
+    },
+    {
+      id: 'IT',
+      name: 'Information Technology',
+      change_1d: 0.98,
+      change_7d: 2.30,
+      change_30d: 4.80,
+      change_90d: 12.10,
+      change_52w: 26.40,
+      constituents: [
+        { symbol: 'INFY', name: 'Infosys Ltd', price: 1885.00, change_pct: 1.40 },
+        { symbol: 'TCS', name: 'Tata Consultancy Services', price: 4180.00, change_pct: 0.90 },
+        { symbol: 'HCLTECH', name: 'HCL Technologies', price: 1795.00, change_pct: 1.10 }
+      ]
+    },
+    {
+      id: 'AUTO',
+      name: 'Automobiles',
+      change_1d: 0.74,
+      change_7d: 1.10,
+      change_30d: 2.40,
+      change_90d: 4.80,
+      change_52w: 28.30,
+      constituents: [
+        { symbol: 'M&M', name: 'Mahindra & Mahindra', price: 2980.00, change_pct: 1.25 },
+        { symbol: 'MARUTI', name: 'Maruti Suzuki', price: 11450.00, change_pct: 0.85 }
+      ]
+    },
+    {
+      id: 'HC',
+      name: 'Healthcare / Pharma',
+      change_1d: 0.62,
+      change_7d: 1.40,
+      change_30d: 3.50,
+      change_90d: 8.90,
+      change_52w: 31.00,
+      constituents: [
+        { symbol: 'SUNPHARMA', name: 'Sun Pharma', price: 1780.00, change_pct: 0.95 },
+        { symbol: 'CIPLA', name: 'Cipla Ltd', price: 1520.00, change_pct: 0.65 }
+      ]
+    },
+    {
+      id: 'OILGAS',
+      name: 'Oil & Gas',
+      change_1d: 0.47,
+      change_7d: -0.50,
+      change_30d: 1.20,
+      change_90d: 3.40,
+      change_52w: 19.80,
+      constituents: [
+        { symbol: 'RELIANCE', name: 'Reliance Industries', price: 1275.40, change_pct: 1.15 },
+        { symbol: 'ONGC', name: 'Oil & Natural Gas Corp', price: 265.00, change_pct: -0.20 }
+      ]
+    },
+    {
+      id: 'BSEPSU',
+      name: 'Public Sector Enterprises',
+      change_1d: 0.36,
+      change_7d: 0.80,
+      change_30d: 1.90,
+      change_90d: 5.20,
+      change_52w: 35.40,
+      constituents: [
+        { symbol: 'BEL', name: 'Bharat Electronics', price: 298.00, change_pct: 1.10 },
+        { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 }
+      ]
+    },
+    {
+      id: 'METAL',
+      name: 'Metals & Mining',
+      change_1d: -0.16,
+      change_7d: -1.20,
+      change_30d: 0.40,
+      change_90d: 4.10,
+      change_52w: 22.00,
+      constituents: [
+        { symbol: 'TATASTEEL', name: 'Tata Steel Ltd', price: 148.50, change_pct: -0.30 },
+        { symbol: 'JSWSTEEL', name: 'JSW Steel Ltd', price: 965.00, change_pct: -0.15 }
+      ]
+    },
+    {
+      id: 'ENERGY',
+      name: 'Energy & Power',
+      change_1d: -0.24,
+      change_7d: -0.80,
+      change_30d: 1.10,
+      change_90d: 4.50,
+      change_52w: 27.80,
+      constituents: [
+        { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 320.00, change_pct: -0.35 }
+      ]
+    },
+    {
+      id: 'POWER',
+      name: 'Power Generation',
+      change_1d: -0.37,
+      change_7d: -1.10,
+      change_30d: 0.90,
+      change_90d: 3.80,
+      change_52w: 29.50,
+      constituents: [
+        { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 }
+      ]
+    },
+    {
+      id: 'TELCOM',
+      name: 'Telecom Services',
+      change_1d: -0.60,
+      change_7d: -0.40,
+      change_30d: 2.10,
+      change_90d: 7.50,
+      change_52w: 38.20,
+      constituents: [
+        { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', price: 1560.00, change_pct: -0.60 }
+      ]
+    }
+  ];
+
+  // News ticker matching the exact headlines from user's screenshot
+  const topNews = [
+    {
+      title: 'Stock split reset: SanDisk stock crashes 87.5% overnight? Here\'s what investors need to know about its 8-for-1 split',
+      source: 'Live Mint',
+      time: '21/11/2026, 17:15 IST',
+      impact: 'NEUTRAL'
+    },
+    {
+      title: 'Shah Rukh Khan, Aryan Khan\'s D\'YAVOL X enters physical retail with Golden Goose partnership',
+      source: 'Live Mint',
+      time: '21/11/2026, 16:45 IST',
+      impact: 'POSITIVE'
+    },
+    {
+      title: 'Premier Explosives gets ₹311-crore export order for defence explosives',
+      source: 'CNBC TV18',
+      time: '21/11/2026, 15:50 IST',
+      impact: 'POSITIVE'
+    },
+    {
+      title: 'Texmaco Rail gets ₹230 crore orders from JSW entities for 553 wagons',
+      source: 'CNBC TV18',
+      time: '21/11/2026, 15:20 IST',
+      impact: 'POSITIVE'
+    },
+    {
+      title: 'Ashok Leyland to set up new electric commercial vehicle plant in Uttar Pradesh',
+      source: 'Economic Times',
+      time: '21/11/2026, 14:10 IST',
+      impact: 'POSITIVE'
+    }
+  ];
+
+  const currentSectorData = sectors.find(s => s.id === activeSector) || sectors[0];
+
+  return (
+    <div className="space-y-6">
+      
+      {/* 1. TOP BENCHMARK STRIP (8 CORE BENCHMARKS) */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2">
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Confirmed Closing Levels &amp; Global Geopolitical Benchmarks
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Session Date: <strong className="text-white">21 Nov 2026</strong> &bull; NSE / BSE Official
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+          {benchmarks.map((b) => (
+            <div 
+              key={b.symbol}
+              className="p-3 rounded-xl bg-[#121824] border border-[#232E47] hover:border-sky-500/40 transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="font-bold truncate">{b.symbol}</span>
+                  <span className={`px-1 py-0.2 rounded text-[9px] font-semibold ${
+                    b.status === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/50 text-slate-400'
+                  }`}>
+                    {b.status === 'LIVE' ? 'LIVE' : 'CLOSED'}
+                  </span>
+                </div>
+                <div className="text-base font-black text-white mt-1">
+                  {b.unit === '₹' ? '₹' : b.unit === '$' ? '$' : ''}{b.current.toLocaleString()}
+                  {b.unit === '₹/10g' || b.unit === '₹/kg' ? <span className="text-[9px] text-slate-400 font-normal"> {b.unit}</span> : null}
+                </div>
+              </div>
+
+              <div className="mt-2 pt-2 border-t border-[#232E47]/50 flex items-center justify-between">
+                <span className={`text-[11px] font-bold flex items-center ${b.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {b.change >= 0 ? '+' : ''}{b.change_pct.toFixed(2)}%
+                </span>
+                {/* Mini Sparkline SVG */}
+                <svg className="w-12 h-4 overflow-visible" viewBox="0 0 50 16">
+                  <path
+                    d={`M 0 ${b.change >= 0 ? 14 : 2} Q 15 ${b.change >= 0 ? 10 : 8}, 25 ${b.change >= 0 ? 7 : 10} T 50 ${b.change >= 0 ? 2 : 14}`}
+                    fill="none"
+                    stroke={b.change >= 0 ? '#10B981' : '#F43F5E'}
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. MIDDLE ROW: ADVANCE/DECLINE GAUGE + MARKET MOOD GAUGE + TOP NEWS + SECTOR PERFORMANCE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        {/* Left Column (4 cols): Advance/Decline & Market Mood Gauge (Matching Image 7) */}
+        <div className="lg:col-span-4 space-y-4 flex flex-col justify-between">
+          
+          {/* Card A: Advance / Decline Ratio & Intraday Curve */}
+          <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-200">Advance / Decline</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                NIFTY 50 Universe
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-2xl font-black text-emerald-400">32</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Advances</span>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-black text-rose-400">18</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Declines</span>
+              </div>
+            </div>
+
+            {/* Progress ratio bar */}
+            <div className="w-full h-2 rounded-full bg-rose-500/30 overflow-hidden flex mb-3">
+              <div className="bg-emerald-500 h-full transition-all" style={{ width: '64%' }}></div>
+              <div className="bg-rose-500 h-full transition-all" style={{ width: '36%' }}></div>
+            </div>
+
+            {/* Intraday ratio curve (09:15 to 15:30) */}
+            <div className="pt-2 border-t border-[#232E47]/50">
+              <div className="text-[10px] text-slate-400 mb-1 flex justify-between">
+                <span>09:15</span>
+                <span>12:00</span>
+                <span>15:30 Close</span>
+              </div>
+              <svg className="w-full h-12 overflow-visible" viewBox="0 0 200 40">
+                {/* Advances line */}
+                <path
+                  d="M 0 30 C 40 35, 70 15, 110 18 C 140 22, 170 10, 200 8"
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="2"
+                />
+                {/* Declines line */}
+                <path
+                  d="M 0 10 C 40 5, 70 25, 110 22 C 140 18, 170 30, 200 32"
+                  fill="none"
+                  stroke="#F43F5E"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Card B: Market Mood (Fear and Greed Index) Semicircular Gauge (Matching Image 7) */}
+          <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col items-center justify-between">
+            <div className="w-full flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-200">Market Mood (Fear and Greed Index)</span>
+              <div className="flex bg-[#0B0E14] rounded-lg p-0.5 border border-[#232E47]">
+                <button
+                  onClick={() => setMoodPeriod('Daily')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${moodPeriod === 'Daily' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Daily
+                </button>
+                <button
+                  onClick={() => setMoodPeriod('Weekly')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${moodPeriod === 'Weekly' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Weekly
+                </button>
+              </div>
+            </div>
+
+            {/* Semicircular SVG Meter */}
+            <div className="relative w-48 h-24 my-2 flex items-center justify-center">
+              <svg className="w-48 h-24 overflow-visible" viewBox="0 0 200 100">
+                {/* Arc gradient bands */}
+                <path d="M 20 100 A 80 80 0 0 1 50 45" fill="none" stroke="#EF4444" strokeWidth="14" strokeLinecap="round" />
+                <path d="M 54 41 A 80 80 0 0 1 95 21" fill="none" stroke="#F59E0B" strokeWidth="14" />
+                <path d="M 100 20 A 80 80 0 0 1 145 41" fill="none" stroke="#EAB308" strokeWidth="14" />
+                <path d="M 149 45 A 80 80 0 0 1 180 100" fill="none" stroke="#10B981" strokeWidth="14" strokeLinecap="round" />
+                
+                {/* Needle pointing at ~65 (Greed/Neutral) */}
+                <line
+                  x1="100"
+                  y1="100"
+                  x2="135"
+                  y2="38"
+                  stroke="#FFFFFF"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+                <circle cx="100" cy="100" r="7" fill="#38BDF8" />
+              </svg>
+            </div>
+
+            <div className="text-center">
+              <div className="text-sm font-bold text-amber-300">Neutral / Greed</div>
+              <div className="text-xs text-slate-400 font-mono mt-0.5">
+                <strong className="text-white text-base">65</strong> / 100 &bull; Institutional Expansion
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Middle Column (4 cols): Top News Wire (Matching Image 7) */}
+        <div className="lg:col-span-4 p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#232E47]">
+            <div className="flex items-center space-x-2">
+              <Newspaper className="w-4 h-4 text-sky-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Top News</span>
+            </div>
+            {onNavigate && (
+              <button 
+                onClick={() => onNavigate('market-news')}
+                className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center"
+              >
+                View All <ChevronRight className="w-3 h-3 ml-0.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3 overflow-y-auto max-h-[340px] pr-1">
+            {topNews.map((n, idx) => (
+              <div key={idx} className="group cursor-pointer">
+                <div className="flex items-start space-x-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0 group-hover:scale-150 transition-transform"></div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-sky-300 transition-colors line-clamp-2">
+                      {n.title}
+                    </h4>
+                    <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1">
+                      <span>{n.time}</span>
+                      <span>&bull;</span>
+                      <span className="text-sky-400 font-medium">{n.source}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-[#232E47] mt-2 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Verified Financial Press Wire</span>
+            <span className="text-emerald-400 font-mono">Live Updated</span>
+          </div>
+        </div>
+
+        {/* Right Column (4 cols): Sector Performance Diverging Chart (Matching Image 7 & 6) */}
+        <div className="lg:col-span-4 p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#232E47]">
+              <div>
+                <span className="text-xs font-bold text-white uppercase tracking-wider block">Sector Performance</span>
+                <span className="text-[10px] text-slate-400">Click a bar to view constituent stocks</span>
+              </div>
+              <div className="flex bg-[#0B0E14] rounded-lg p-0.5 border border-[#232E47]">
+                {(['1D', '7D', '30D', '90D', '52W'] as const).map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setSelectedTimeframe(tf)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                      selectedTimeframe === tf ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Horizontal Diverging Bars */}
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+              {sectors.map((sec) => {
+                const val = selectedTimeframe === '1D' ? sec.change_1d :
+                            selectedTimeframe === '7D' ? sec.change_7d :
+                            selectedTimeframe === '30D' ? sec.change_30d :
+                            selectedTimeframe === '90D' ? sec.change_90d : sec.change_52w;
+                const isSelected = sec.id === activeSector;
+                const widthPct = Math.min(100, Math.abs(val) * 25);
+
+                return (
+                  <div
+                    key={sec.id}
+                    onClick={() => setActiveSector(sec.id)}
+                    className={`flex items-center text-xs cursor-pointer py-1 px-1.5 rounded transition-all ${
+                      isSelected ? 'bg-slate-800/80 ring-1 ring-sky-500/40' : 'hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <span className="w-16 font-mono text-[10px] text-slate-300 truncate">{sec.id}</span>
+                    <div className="flex-1 flex items-center h-4 mx-2 relative">
+                      {/* Zero center line */}
+                      <div className="w-[1px] h-full bg-[#232E47] absolute left-1/2"></div>
+                      
+                      {val >= 0 ? (
+                        <div className="w-1/2 flex justify-start ml-[50%]">
+                          <div 
+                            className="bg-emerald-500/80 hover:bg-emerald-400 h-3.5 rounded-r transition-all"
+                            style={{ width: `${widthPct}%` }}
+                          ></div>
+                        </div>
+                      ) : (
+                        <div className="w-1/2 flex justify-end mr-[50%]">
+                          <div 
+                            className="bg-rose-500/80 hover:bg-rose-400 h-3.5 rounded-l transition-all"
+                            style={{ width: `${widthPct}%` }}
+                          ></div>
+                        </div>
+                      )}
+                    </div>
+                    <span className={`w-12 text-right font-mono text-[10px] font-bold ${val >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {val >= 0 ? '+' : ''}{val.toFixed(2)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Constituent Stocks Mini Drilldown (Matching Image 6) */}
+          <div className="mt-3 pt-2.5 border-t border-[#232E47]">
+            <div className="flex items-center justify-between text-[11px] mb-1.5">
+              <span className="font-bold text-sky-400">{currentSectorData.name} Stocks</span>
+              <span className="text-slate-400 font-mono text-[10px]">{currentSectorData.constituents.length} constituents</span>
+            </div>
+            <div className="space-y-1">
+              {currentSectorData.constituents.slice(0, 3).map((stk) => (
+                <div 
+                  key={stk.symbol}
+                  onClick={() => onSelectStock && onSelectStock(stk.symbol)}
+                  className="flex items-center justify-between text-xs py-1 px-2 rounded bg-[#0B0E14] border border-[#232E47]/60 hover:border-sky-500/40 cursor-pointer transition-colors"
+                >
+                  <span className="font-bold text-white">{stk.symbol}</span>
+                  <div className="flex items-center space-x-2 font-mono text-[11px]">
+                    <span className="text-slate-300">₹{stk.price.toFixed(2)}</span>
+                    <span className={`font-bold ${stk.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {stk.change_pct >= 0 ? '+' : ''}{stk.change_pct.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+};

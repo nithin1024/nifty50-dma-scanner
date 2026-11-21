@@ -501,4 +501,25 @@ export async function fetchPmiAlerts(): Promise<any> {
   return response.json();
 }
 
+export async function fetchCoreEconomicIndicators(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/economic-indicators`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function fetchSchedulerTelemetry(): Promise<any> {
+  const response = await fetch(`${API_BASE}/health/scheduler`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+export async function triggerPipelineRefresh(pipelineId: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/health/refresh/${encodeURIComponent(pipelineId)}`, {
+    method: 'POST'
+  });
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+
 
