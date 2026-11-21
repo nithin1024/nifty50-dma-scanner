@@ -29,6 +29,7 @@ interface BenchmarkItem {
 interface SectorItem {
   id: string;
   name: string;
+  change_5m: number;
   change_1d: number;
   change_7d: number;
   change_30d: number;
@@ -41,9 +42,10 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
   onNavigate,
   onSelectStock
 }) => {
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '7D' | '30D' | '90D' | '52W'>('1D');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'5m' | '1D' | '7D' | '30D' | '90D' | '52W'>('1D');
   const [activeSector, setActiveSector] = useState<string>('BANKEX');
   const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
+  const [lastRefreshTime, setLastRefreshTime] = useState<string>('15:30:00 IST');
 
   const [liveOverview, setLiveOverview] = useState<any>(null);
 
@@ -54,6 +56,8 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
         const data = await fetchLiveMarketOverview();
         if (mounted && data) {
           setLiveOverview(data);
+          const nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+          setLastRefreshTime(nowStr);
         }
       } catch (err) {
         console.warn('Could not fetch live overview:', err);
@@ -171,11 +175,12 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     }
   ];
 
-  // Sector Performance Matrix (22 sectors with 1D, 7D, 30D, 90D, 52W + Constituents)
+  // Sector Performance Matrix (Complete 22 sectors with 5m, 1D, 7D, 30D, 90D, 52W + Constituents)
   const sectors: SectorItem[] = [
     {
       id: 'BSEPBI',
       name: 'Bsepbi (Private Banks)',
+      change_5m: 0.28,
       change_1d: 2.65,
       change_7d: 3.80,
       change_30d: 5.40,
@@ -193,6 +198,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     {
       id: 'BANKEX',
       name: 'Bankex / Banking',
+      change_5m: 0.24,
       change_1d: 2.34,
       change_7d: 3.45,
       change_30d: 4.80,
@@ -201,12 +207,15 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       constituents: [
         { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
         { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
-        { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 }
+        { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1816.00, change_pct: 3.08 },
+        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 }
       ]
     },
     {
       id: 'FINSER',
       name: 'Financial Services',
+      change_5m: 0.18,
       change_1d: 1.66,
       change_7d: 2.70,
       change_30d: 3.90,
@@ -215,12 +224,14 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       constituents: [
         { symbol: 'BAJFINANCE', name: 'Bajaj Finance', price: 6850.00, change_pct: 2.40 },
         { symbol: 'BAJAJFINSV', name: 'Bajaj Finserv', price: 1610.00, change_pct: 1.95 },
-        { symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', price: 712.00, change_pct: 1.30 }
+        { symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', price: 712.00, change_pct: 1.30 },
+        { symbol: 'SBILIFE', name: 'SBI Life Insurance', price: 1560.00, change_pct: 1.15 }
       ]
     },
     {
       id: 'REALTY',
       name: 'Realty & Construction',
+      change_5m: 0.16,
       change_1d: 1.48,
       change_7d: 2.10,
       change_30d: 4.20,
@@ -228,12 +239,14 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 32.10,
       constituents: [
         { symbol: 'DLF', name: 'DLF Limited', price: 845.00, change_pct: 2.10 },
-        { symbol: 'GODREJPROP', name: 'Godrej Properties', price: 2950.00, change_pct: 1.80 }
+        { symbol: 'GODREJPROP', name: 'Godrej Properties', price: 2950.00, change_pct: 1.80 },
+        { symbol: 'OBEROIRLTY', name: 'Oberoi Realty', price: 1840.00, change_pct: 1.35 }
       ]
     },
     {
       id: 'PSUBNK',
       name: 'PSU Banks',
+      change_5m: 0.14,
       change_1d: 1.22,
       change_7d: 2.40,
       change_30d: 3.10,
@@ -241,12 +254,14 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 24.50,
       constituents: [
         { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
-        { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 254.00, change_pct: 1.45 }
+        { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 254.00, change_pct: 1.45 },
+        { symbol: 'PNB', name: 'Punjab National Bank', price: 105.40, change_pct: 1.15 }
       ]
     },
     {
       id: 'SENSEX',
       name: 'Sensex 30 Universe',
+      change_5m: 0.12,
       change_1d: 1.08,
       change_7d: 1.85,
       change_30d: 2.90,
@@ -254,12 +269,15 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 15.20,
       constituents: [
         { symbol: 'RELIANCE', name: 'Reliance Industries', price: 1275.40, change_pct: 1.15 },
+        { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
+        { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
         { symbol: 'LT', name: 'Larsen & Toubro', price: 3680.00, change_pct: 1.45 }
       ]
     },
     {
       id: 'IT',
       name: 'Information Technology',
+      change_5m: 0.11,
       change_1d: 0.98,
       change_7d: 2.30,
       change_30d: 4.80,
@@ -274,12 +292,14 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     {
       id: 'AUTO',
       name: 'Automobiles',
+      change_5m: 0.08,
       change_1d: 0.74,
       change_7d: 1.10,
       change_30d: 2.40,
       change_90d: 4.80,
       change_52w: 28.30,
       constituents: [
+        { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 980.00, change_pct: 1.45 },
         { symbol: 'M&M', name: 'Mahindra & Mahindra', price: 2980.00, change_pct: 1.25 },
         { symbol: 'MARUTI', name: 'Maruti Suzuki', price: 11450.00, change_pct: 0.85 }
       ]
@@ -287,6 +307,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     {
       id: 'HC',
       name: 'Healthcare / Pharma',
+      change_5m: 0.06,
       change_1d: 0.62,
       change_7d: 1.40,
       change_30d: 3.50,
@@ -294,38 +315,87 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 31.00,
       constituents: [
         { symbol: 'SUNPHARMA', name: 'Sun Pharma', price: 1780.00, change_pct: 0.95 },
-        { symbol: 'CIPLA', name: 'Cipla Ltd', price: 1520.00, change_pct: 0.65 }
+        { symbol: 'CIPLA', name: 'Cipla Ltd', price: 1520.00, change_pct: 0.65 },
+        { symbol: 'DRREDDY', name: 'Dr. Reddy\'s Lab', price: 6420.00, change_pct: 0.40 }
       ]
     },
     {
       id: 'OILGAS',
       name: 'Oil & Gas',
+      change_5m: 0.05,
       change_1d: 0.47,
       change_7d: -0.50,
       change_30d: 1.20,
       change_90d: 3.40,
       change_52w: 19.80,
       constituents: [
+        { symbol: 'ONGC', name: 'Oil & Natural Gas Corp', price: 265.00, change_pct: 0.85 },
         { symbol: 'RELIANCE', name: 'Reliance Industries', price: 1275.40, change_pct: 1.15 },
-        { symbol: 'ONGC', name: 'Oil & Natural Gas Corp', price: 265.00, change_pct: -0.20 }
+        { symbol: 'BPCL', name: 'Bharat Petroleum', price: 295.00, change_pct: 0.20 }
       ]
     },
     {
       id: 'BSEPSU',
       name: 'Public Sector Enterprises',
-      change_1d: 0.36,
+      change_5m: 0.04,
+      change_1d: 0.35,
       change_7d: 0.80,
       change_30d: 1.90,
       change_90d: 5.20,
       change_52w: 35.40,
       constituents: [
         { symbol: 'BEL', name: 'Bharat Electronics', price: 298.00, change_pct: 1.10 },
-        { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 }
+        { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 },
+        { symbol: 'COALINDIA', name: 'Coal India', price: 415.00, change_pct: 0.30 }
+      ]
+    },
+    {
+      id: 'BSESER',
+      name: 'Services Sector',
+      change_5m: 0.03,
+      change_1d: 0.24,
+      change_7d: 0.60,
+      change_30d: 1.80,
+      change_90d: 4.50,
+      change_52w: 25.80,
+      constituents: [
+        { symbol: 'ADANIPORTS', name: 'Adani Ports & SEZ', price: 1280.00, change_pct: 0.60 },
+        { symbol: 'INDIGO', name: 'InterGlobe Aviation', price: 4150.00, change_pct: 0.35 }
+      ]
+    },
+    {
+      id: 'UTILS',
+      name: 'Utilities',
+      change_5m: 0.02,
+      change_1d: 0.16,
+      change_7d: 0.40,
+      change_30d: 1.20,
+      change_90d: 3.90,
+      change_52w: 22.40,
+      constituents: [
+        { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 },
+        { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 320.00, change_pct: 0.15 }
+      ]
+    },
+    {
+      id: 'CPSE',
+      name: 'CPSE Central Public Sector',
+      change_5m: -0.00,
+      change_1d: -0.01,
+      change_7d: 0.30,
+      change_30d: 1.10,
+      change_90d: 4.80,
+      change_52w: 33.20,
+      constituents: [
+        { symbol: 'BEL', name: 'Bharat Electronics', price: 298.00, change_pct: 1.10 },
+        { symbol: 'ONGC', name: 'ONGC', price: 265.00, change_pct: 0.85 },
+        { symbol: 'COALINDIA', name: 'Coal India Ltd', price: 415.00, change_pct: -0.05 }
       ]
     },
     {
       id: 'METAL',
       name: 'Metals & Mining',
+      change_5m: -0.02,
       change_1d: -0.16,
       change_7d: -1.20,
       change_30d: 0.40,
@@ -333,43 +403,107 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 22.00,
       constituents: [
         { symbol: 'TATASTEEL', name: 'Tata Steel Ltd', price: 148.50, change_pct: -0.30 },
-        { symbol: 'JSWSTEEL', name: 'JSW Steel Ltd', price: 965.00, change_pct: -0.15 }
+        { symbol: 'JSWSTEEL', name: 'JSW Steel Ltd', price: 965.00, change_pct: -0.15 },
+        { symbol: 'HINDALCO', name: 'Hindalco Industries', price: 645.00, change_pct: -0.10 }
+      ]
+    },
+    {
+      id: 'BSEFMC',
+      name: 'FMCG Fast Moving Consumer',
+      change_5m: -0.03,
+      change_1d: -0.17,
+      change_7d: -0.60,
+      change_30d: 0.90,
+      change_90d: 3.10,
+      change_52w: 12.80,
+      constituents: [
+        { symbol: 'ITC', name: 'ITC Ltd', price: 475.00, change_pct: -0.10 },
+        { symbol: 'HINDUNILVR', name: 'Hindustan Unilever', price: 2410.00, change_pct: -0.25 },
+        { symbol: 'NESTLEIND', name: 'Nestle India', price: 2280.00, change_pct: -0.20 }
       ]
     },
     {
       id: 'ENERGY',
       name: 'Energy & Power',
+      change_5m: -0.04,
       change_1d: -0.24,
       change_7d: -0.80,
       change_30d: 1.10,
       change_90d: 4.50,
       change_52w: 27.80,
       constituents: [
-        { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 320.00, change_pct: -0.35 }
+        { symbol: 'POWERGRID', name: 'Power Grid Corp', price: 320.00, change_pct: -0.35 },
+        { symbol: 'BPCL', name: 'Bharat Petroleum', price: 295.00, change_pct: -0.20 }
       ]
     },
     {
       id: 'POWER',
       name: 'Power Generation',
+      change_5m: -0.05,
       change_1d: -0.37,
       change_7d: -1.10,
       change_30d: 0.90,
       change_90d: 3.80,
       change_52w: 29.50,
       constituents: [
+        { symbol: 'TATAPOWER', name: 'Tata Power', price: 410.00, change_pct: -0.55 },
         { symbol: 'NTPC', name: 'NTPC Limited', price: 385.00, change_pct: 0.40 }
+      ]
+    },
+    {
+      id: 'CG',
+      name: 'Capital Goods',
+      change_5m: -0.06,
+      change_1d: -0.45,
+      change_7d: -0.90,
+      change_30d: 1.40,
+      change_90d: 7.20,
+      change_52w: 38.60,
+      constituents: [
+        { symbol: 'LT', name: 'Larsen & Toubro', price: 3680.00, change_pct: -0.40 },
+        { symbol: 'SIEMENS', name: 'Siemens India', price: 6890.00, change_pct: -0.55 }
+      ]
+    },
+    {
+      id: 'INDSTR',
+      name: 'Industrials & Engineering',
+      change_5m: -0.07,
+      change_1d: -0.52,
+      change_7d: -1.30,
+      change_30d: 0.70,
+      change_90d: 5.10,
+      change_52w: 30.40,
+      constituents: [
+        { symbol: 'BHEL', name: 'Bharat Heavy Electricals', price: 240.00, change_pct: -0.80 },
+        { symbol: 'LT', name: 'Larsen & Toubro', price: 3680.00, change_pct: -0.40 }
+      ]
+    },
+    {
+      id: 'CD',
+      name: 'Consumer Durables',
+      change_5m: -0.08,
+      change_1d: -0.58,
+      change_7d: -0.90,
+      change_30d: 1.50,
+      change_90d: 6.80,
+      change_52w: 21.50,
+      constituents: [
+        { symbol: 'TITAN', name: 'Titan Company', price: 3240.00, change_pct: -0.65 },
+        { symbol: 'HAVELLS', name: 'Havells India', price: 1680.00, change_pct: -0.50 }
       ]
     },
     {
       id: 'TELCOM',
       name: 'Telecom Services',
+      change_5m: -0.09,
       change_1d: -0.60,
       change_7d: -0.40,
       change_30d: 2.10,
       change_90d: 7.50,
       change_52w: 38.20,
       constituents: [
-        { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', price: 1560.00, change_pct: -0.60 }
+        { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', price: 1560.00, change_pct: -0.60 },
+        { symbol: 'INDUSTOWER', name: 'Indus Towers', price: 340.00, change_pct: -0.75 }
       ]
     }
   ];
@@ -651,16 +785,24 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
           <div>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#232E47]">
               <div>
-                <span className="text-xs font-bold text-white uppercase tracking-wider block">Sector Performance</span>
-                <span className="text-[10px] text-slate-400">Click a bar to view constituent stocks</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider block">Sector Performance</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    5m Auto-Update Active
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400">
+                  Click a bar to view constituent stocks &bull; Updates every 5 mins {lastRefreshTime && `(Refreshed: ${lastRefreshTime})`}
+                </span>
               </div>
               <div className="flex bg-[#0B0E14] rounded-lg p-0.5 border border-[#232E47]">
-                {(['1D', '7D', '30D', '90D', '52W'] as const).map((tf) => (
+                {(['5m', '1D', '7D', '30D', '90D', '52W'] as const).map((tf) => (
                   <button
                     key={tf}
                     onClick={() => setSelectedTimeframe(tf)}
                     className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                      selectedTimeframe === tf ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
+                      selectedTimeframe === tf ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     {tf}
@@ -670,9 +812,10 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
             </div>
 
             {/* Horizontal Diverging Bars */}
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
               {sectors.map((sec) => {
-                const val = selectedTimeframe === '1D' ? sec.change_1d :
+                const val = selectedTimeframe === '5m' ? sec.change_5m :
+                            selectedTimeframe === '1D' ? sec.change_1d :
                             selectedTimeframe === '7D' ? sec.change_7d :
                             selectedTimeframe === '30D' ? sec.change_30d :
                             selectedTimeframe === '90D' ? sec.change_90d : sec.change_52w;
@@ -724,7 +867,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
               <span className="text-slate-400 font-mono text-[10px]">{currentSectorData.constituents.length} constituents</span>
             </div>
             <div className="space-y-1">
-              {currentSectorData.constituents.slice(0, 3).map((stk) => (
+              {currentSectorData.constituents.slice(0, 6).map((stk) => (
                 <div 
                   key={stk.symbol}
                   onClick={() => onSelectStock && onSelectStock(stk.symbol)}

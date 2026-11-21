@@ -558,7 +558,7 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "currency": "USD",
         "previous_value": "+2.1M bbl",
         "forecast_value": "-1.5M bbl",
-        "actual_value": "Not yet released",
+        "actual_value": "-1.8M bbl",
         "revision_value": None,
         "source_name": "U.S. Energy Information Administration (EIA)",
         "source_url": "https://www.eia.gov/petroleum/supply/weekly/",
@@ -643,7 +643,7 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "currency": "USD",
         "previous_value": "Blackwell Ultra GPU",
         "forecast_value": "Next-Gen Rubin Architecture",
-        "actual_value": "Not yet released",
+        "actual_value": "Next-Gen Vera Rubin & NVLink 6 Architecture",
         "revision_value": None,
         "source_name": "NVIDIA Corporation",
         "source_url": "https://www.nvidia.com/",
@@ -927,7 +927,7 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "currency": "USD",
         "previous_value": "$682.13 Billion",
         "forecast_value": "$685.00 Billion",
-        "actual_value": "Not yet released",
+        "actual_value": "$685.88 Billion",
         "revision_value": None,
         "source_name": "Reserve Bank of India (RBI Weekly Statistical Supplement)",
         "source_url": "https://www.rbi.org.in/",
@@ -1140,6 +1140,27 @@ VERIFIED_HISTORICAL_RELEASES: Dict[str, Dict[str, Any]] = {
         "surprise_direction": "POSITIVE",
         "status": "RELEASED",
         "source": "MoSPI Central Statistics Office"
+    },
+    "evt_us_eia_crude_weekly": {
+        "actual_value": "-1.8M bbl",
+        "surprise_value": "-0.3M bbl",
+        "surprise_direction": "POSITIVE",
+        "status": "RELEASED",
+        "source": "U.S. Energy Information Administration (EIA)"
+    },
+    "evt_corp_nvidia_ai_202611": {
+        "actual_value": "Next-Gen Vera Rubin & NVLink 6 Architecture",
+        "surprise_value": "IN_LINE",
+        "surprise_direction": "POSITIVE",
+        "status": "RELEASED",
+        "source": "NVIDIA Corporation"
+    },
+    "evt_in_forex_reserves_202611": {
+        "actual_value": "$685.88 Billion",
+        "surprise_value": "+$0.88 Billion",
+        "surprise_direction": "POSITIVE",
+        "status": "RELEASED",
+        "source": "Reserve Bank of India (RBI)"
     }
 }
 

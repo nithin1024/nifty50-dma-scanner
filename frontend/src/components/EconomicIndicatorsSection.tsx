@@ -154,26 +154,26 @@ export const EconomicIndicatorsSection: React.FC<EconomicIndicatorsSectionProps>
       name: 'Institutional Cash & Derivatives Flows',
       telugu_name: 'సంస్థాగత పెట్టుబడుల ప్రవాహం (FII / DII)',
       category: 'INSTITUTIONAL_LIQUIDITY',
-      actual: '+₹1,060 Cr Net',
+      actual: '+₹5,448.62 Cr Combined Net',
       expected: 'Net Accumulation',
-      previous: '-₹1,850 Cr Net',
-      surprise: '+₹2,910 Cr Inflow',
-      surprise_direction: 'BULLISH_REVERSAL',
-      previous_period_change: '+₹2,910 Cr',
-      release_date: '21 Nov 2026, 19:15 IST',
-      next_scheduled_release: '24 Nov 2026, 19:15 IST',
+      previous: '+₹1,060 Cr Net',
+      surprise: '+₹4,388.62 Cr Inflow',
+      surprise_direction: 'BULLISH_EXPANSION',
+      previous_period_change: '+₹4,388.62 Cr',
+      release_date: '20 Nov 2026, 19:15 IST',
+      next_scheduled_release: '23 Nov 2026, 19:15 IST',
       source: 'National Stock Exchange (NSE)',
       source_url: 'https://www.nseindia.com/reports/fii-dii',
       trend_3m: 'DII_AGGRESSIVE_BUYING',
       trend_6m: 'HISTORIC_DOMESTIC_ABSORPTION',
       interpretation: 'POSITIVE',
-      market_impact: 'Strong Support. FIIs bought +₹2,410 Cr in cash and covered -71.7% of peak short contracts (-63,650 net shorts left). DII SIP inflows (₹25,000+ Cr/month) shield domestic market.',
-      market_impact_te: 'బలమైన మార్కెట్ రక్షణ: FIIలు నగదు విభాగంలో కొనుగోళ్లు ప్రారంభించారు మరియు షార్ట్ పొజిషన్లను 71.7% మూసివేశారు. DIIల స్థిరమైన SIP పెట్టుబడులు నిఫ్టీని నిలబెడుతున్నాయి.',
+      market_impact: 'Strong Bullish Inflows. FIIs bought +₹10,308.42 Cr in cash and covered 83.2% of peak short contracts (-37,700 net shorts left). DII SIP inflows (₹25,000+ Cr/month) shield domestic market.',
+      market_impact_te: 'బలమైన మార్కెట్ రక్షణ: FIIలు నగదు విభాగంలో భారీగా +₹10,308.42 కోట్ల కొనుగోళ్లు జరిపారు మరియు షార్ట్ పొజిషన్లను 83.2% కవర్ చేశారు. DIIల స్థిరమైన SIP పెట్టుబడులు నిఫ్టీని నిలబెడుతున్నాయి.',
       sub_metrics: [
-        { label: 'FII Cash Net Flow', value: '+₹2,410 Cr', desc: 'Gross Buy: ₹14,250 Cr | Sell: ₹11,840 Cr' },
-        { label: 'DII Cash Net Flow', value: '-₹1,350 Cr', desc: 'Gross Buy: ₹9,850 Cr | Sell: ₹11,200 Cr' },
-        { label: 'FII Net Index Futures', value: '-63,650 contracts', desc: 'Unwound from -225,000 peak' },
-        { label: 'FII Long/Short Ratio', value: '0.582', desc: 'Longs: 88,450 | Shorts: 152,100' }
+        { label: 'FII Cash Net Flow', value: '+₹10,308.42 Cr', desc: 'Gross Buy: ₹21,450 Cr | Sell: ₹11,141.58 Cr' },
+        { label: 'DII Cash Net Flow', value: '-₹4,859.80 Cr', desc: 'Gross Buy: ₹12,180 Cr | Sell: ₹17,039.80 Cr' },
+        { label: 'FII Net Index Futures', value: '-37,700 contracts', desc: 'Unwound from -225,000 peak (83.2% covered)' },
+        { label: 'FII Long/Short Ratio', value: '0.742', desc: 'Longs: 108,200 | Shorts: 145,900' }
       ]
     },
     {
@@ -470,7 +470,12 @@ export const EconomicIndicatorsSection: React.FC<EconomicIndicatorsSectionProps>
                 <div className="bg-[#161F33]/80 rounded-lg py-1 border border-emerald-500/30">
                   <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Actual Latest</div>
                   <div className="text-base font-mono font-black text-white mt-0.5">{ind.actual}</div>
-                  <div className="text-[10px] text-emerald-400 font-semibold">MoSPI / Official</div>
+                  <div className="text-[10px] text-emerald-400 font-semibold">
+                    {ind.id === 'fii-dii' ? 'NSE / Official' :
+                     ind.id === 'rbi-policy' || ind.id === 'bond-yields' ? 'RBI / Official' :
+                     ind.id === 'pmi' ? 'S&P Global / Official' :
+                     'MoSPI / Official'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Surprise</div>
