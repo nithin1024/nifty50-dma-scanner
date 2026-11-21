@@ -318,6 +318,14 @@ export const EconomicIndicatorsSection: React.FC<EconomicIndicatorsSectionProps>
     }
   ];
 
+  const formatTrendLabel = (val: string) => {
+    if (!val) return 'Stable';
+    return val
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
   const getInterpretationBadge = (interp: string) => {
     switch (interp) {
       case 'POSITIVE':
@@ -484,19 +492,21 @@ export const EconomicIndicatorsSection: React.FC<EconomicIndicatorsSectionProps>
                 </div>
               </div>
 
-              {/* Release Schedule & Multi-Period Trend */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] bg-[#161F33]/40 p-2.5 rounded-lg border border-[#232E47]/50">
-                <div className="flex items-center space-x-1.5 text-slate-300">
-                  <Calendar className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                  <span className="truncate">Released: <strong className="text-white">{ind.release_date}</strong></span>
+              {/* Release Schedule & Multi-Period Trend (Non-truncated responsive layout) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] bg-[#161F33]/60 p-2.5 rounded-lg border border-[#232E47]/60">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-300">
+                  <div className="flex items-center space-x-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <span>Released: <strong className="text-white">{ind.release_date}</strong></span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-amber-400 font-bold">&bull;</span>
+                    <span>Next: <strong className="text-slate-200">{ind.next_scheduled_release}</strong></span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1.5 text-slate-300">
-                  <span className="text-amber-400 font-bold">&bull;</span>
-                  <span className="truncate">Next: <strong className="text-slate-200">{ind.next_scheduled_release}</strong></span>
-                </div>
-                <div className="flex items-center space-x-1.5 text-slate-300">
+                <div className="flex items-center space-x-1.5 text-slate-300 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#232E47]/40">
                   <span className="text-purple-400 font-bold">&bull;</span>
-                  <span className="truncate">Trend (3M/6M): <strong className="text-emerald-400">{ind.trend_3m}</strong></span>
+                  <span>Trend (3M/6M): <strong className="text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">{formatTrendLabel(ind.trend_3m)}</strong></span>
                 </div>
               </div>
 

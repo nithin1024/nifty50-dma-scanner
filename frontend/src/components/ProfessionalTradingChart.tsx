@@ -481,15 +481,14 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     }
     mainSeriesRef.current = mainSeries;
 
-    // Add synchronized volume histogram in lower pane
+    // Add synchronized volume histogram in lower pane (Always Visible)
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#26a69a',
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
     });
     chart.priceScale('volume').applyOptions({
       scaleMargins: {
-        top: 0.8,
+        top: 0.70,
         bottom: 0,
       },
     });
@@ -547,8 +546,8 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
 
       const volumeItems = candlesData.map(c => ({
         time: c.time,
-        value: c.volume,
-        color: c.close >= c.open ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)',
+        value: Number(c.volume) || 0,
+        color: (c.close ?? 0) >= (c.open ?? 0) ? 'rgba(16, 185, 129, 0.70)' : 'rgba(244, 63, 94, 0.70)',
       }));
       volumeSeries.setData(volumeItems);
 
@@ -753,8 +752,11 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
     const toPriceItem = (candle: any) => chartType === 'LINE' || chartType === 'AREA'
       ? { time: candle.time, value: candle.close }
       : { time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close };
-    const toVolumeItem = (candle: any) => ({ time: candle.time, value: candle.volume ?? 0,
-      color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)' });
+    const toVolumeItem = (candle: any) => ({
+      time: candle.time,
+      value: Number(candle.volume) || 0,
+      color: (candle.close ?? 0) >= (candle.open ?? 0) ? 'rgba(16, 185, 129, 0.70)' : 'rgba(244, 63, 94, 0.70)'
+    });
 
     if (incremental) {
       const latest = candlesData[candlesData.length - 1];

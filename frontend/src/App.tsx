@@ -19,7 +19,6 @@ import { GlobalMarketsAndCalendarPage } from './pages/GlobalMarketsAndCalendarPa
 import { IndianEconomyFundamentalsPage } from './pages/IndianEconomyFundamentalsPage';
 import { MarketNewsPage } from './pages/MarketNewsPage';
 import { SettingsAndDataSourcesPage } from './pages/SettingsAndDataSourcesPage';
-import { MarketIntelligenceDashboard } from './components/MarketIntelligenceDashboard';
 import { MarketToolsModal } from './components/MarketToolsModal';
 import type { ToolType } from './components/MarketToolsModal';
 
@@ -147,8 +146,8 @@ export const App: React.FC = () => {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
-        {/* 1. OVERVIEW */}
-        {activeTab === 'overview' && (
+        {/* 1. OVERVIEW & FII/DII SCANNER (UNIFIED) */}
+        {(activeTab === 'overview' || activeTab === 'fii-dii') && (
           <MarketOverview 
             health={health}
             dataStatus={dataStatus}
@@ -176,11 +175,6 @@ export const App: React.FC = () => {
           <EmaScanner 
             onSelectStock={handleSelectStock}
           />
-        )}
-
-        {/* 4. FII/DII SCANNER & INSTITUTIONAL FLOWS */}
-        {(activeTab === 'fii-dii') && (
-          <MarketIntelligenceDashboard intelligence={intelligence || null} />
         )}
 
         {/* 5. OPTIONS & F&O INTELLIGENCE */}

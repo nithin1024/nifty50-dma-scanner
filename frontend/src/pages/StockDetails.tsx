@@ -3,6 +3,7 @@ import { Search, Sparkles, Check, X } from 'lucide-react';
 import { fetchStockDetails } from '../services/api';
 import type { StockDetailsResponse } from '../types';
 import { ProfessionalTradingChart } from '../components/ProfessionalTradingChart';
+import { VolumeTrendChart, type VolumeTrendSession } from '../components/VolumeTrendChart';
 import { useLanguage } from '../context/LanguageContext';
 
 interface StockDetailsProps {
@@ -107,6 +108,34 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
             </div>
             <ProfessionalTradingChart symbol={selectedSymbol} height={420} initialTimeframe="5m" />
           </div>
+
+          {/* Volume Bar Chart Breakdown for every stock */}
+          {(() => {
+            const chartData = data.chart_data || [];
+            const volumeSessions: VolumeTrendSession[] = chartData.slice(-10).map((c, i, arr) => {
+              const prev = i > 0 ? arr[i - 1].close : c.open;
+              const pct = prev ? ((c.close - prev) / prev) * 100 : 0;
+              return {
+                date: c.time,
+                volume: Number(c.volume) || 0,
+                close_price: c.close,
+                price_change_pct: pct,
+                isLatest: i === arr.length - 1
+              };
+            });
+            const avgVol = volumeSessions.length > 0 
+              ? volumeSessions.reduce((sum, s) => sum + s.volume, 0) / volumeSessions.length 
+              : undefined;
+
+            return (
+              <VolumeTrendChart 
+                title={`${selectedSymbol} — Daily Volume Bar Chart Breakdown (Recent Sessions)`}
+                symbol={selectedSymbol}
+                sessions={volumeSessions}
+                avgVolume={avgVol}
+              />
+            );
+          })()}
 
           {/* 6 DMA Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

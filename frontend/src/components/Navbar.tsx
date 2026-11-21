@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Globe,
   Zap,
-  Newspaper,
   Calendar,
   Settings,
   Menu,
@@ -34,17 +33,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
   const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Exact Canonical Navigation Tabs
+  // Canonical Navigation Tabs: Combined Overview & FII/DII, Market News Removed
   const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { id: 'fii-dii', label: '2. FII/DII Scanner', icon: <TrendingUp className="w-3.5 h-3.5" /> },
-    { id: 'dma-scanner', label: '3. DMA Scanner', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { id: 'ema-scanner', label: '4. EMA Scanner', icon: <Zap className="w-3.5 h-3.5" /> },
-    { id: 'options-intelligence', label: '5. Live Option Chain', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'economy-fundamentals', label: '6. Sector & Market Intelligence', icon: <Globe className="w-3.5 h-3.5" /> },
-    { id: 'economic-calendar', label: '7. Economic Calendar', icon: <Calendar className="w-3.5 h-3.5" /> },
-    { id: 'market-news', label: '8. Market News', icon: <Newspaper className="w-3.5 h-3.5" /> },
-    { id: 'settings-sources', label: '9. Settings', icon: <Settings className="w-3.5 h-3.5" /> },
+    { id: 'overview', label: '1. Overview & FII/DII Scanner', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+    { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { id: 'ema-scanner', label: '3. EMA Scanner', icon: <Zap className="w-3.5 h-3.5" /> },
+    { id: 'options-intelligence', label: '4. Live Option Chain', icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'economy-fundamentals', label: '5. Sector & Market Intelligence', icon: <Globe className="w-3.5 h-3.5" /> },
+    { id: 'economic-calendar', label: '6. Economic Calendar', icon: <Calendar className="w-3.5 h-3.5" /> },
+    { id: 'settings-sources', label: '7. Settings & Data Sources', icon: <Settings className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -117,15 +114,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
               )}
             </div>
 
-            {/* Desktop Nav Items (9 Canonical Tabs) */}
+            {/* Desktop Nav Items (Combined Overview & FII/DII) */}
             <div className="hidden xl:flex items-center space-x-0.5">
               {mainNavItems.map((item) => {
                 const active = activeTab === item.id || 
-                  (item.id === 'fii-dii' && activeTab === 'all-volume') ||
+                  (item.id === 'overview' && (activeTab === 'fii-dii' || activeTab === 'all-volume' || activeTab === 'heavyweights')) ||
                   (item.id === 'options-intelligence' && (activeTab === 'option-chain' || activeTab === 'oi-pcr' || activeTab === 'max-pain' || activeTab === 'live-market')) ||
                   (item.id === 'economy-fundamentals' && (activeTab === 'pmi-intelligence' || activeTab === 'iip-intelligence' || activeTab === 'sector-fundamentals' || activeTab === 'indian-economy')) ||
                   (item.id === 'economic-calendar' && (activeTab === 'global-markets-calendar' || activeTab === 'global-markets' || activeTab === 'calendar' || activeTab === 'global-events')) ||
-                  (item.id === 'market-news' && activeTab === 'news-intelligence') ||
                   (item.id === 'settings-sources' && activeTab === 'data-quality');
 
                 return (

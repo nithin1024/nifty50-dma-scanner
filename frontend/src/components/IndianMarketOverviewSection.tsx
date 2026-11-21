@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ChevronRight, 
-  Radio, 
-  Newspaper
+  Radio
 } from 'lucide-react';
 import type { NavTab } from '../types';
 import { fetchLiveMarketOverview } from '../services/api';
@@ -39,11 +37,11 @@ interface SectorItem {
 }
 
 export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionProps> = ({
-  onNavigate,
+  onNavigate: _onNavigate,
   onSelectStock
 }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'5m' | '1D' | '7D' | '30D' | '90D' | '52W'>('1D');
-  const [activeSector, setActiveSector] = useState<string>('BANKEX');
+  const [activeSector, setActiveSector] = useState<string>('BSEPBI');
   const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
   const [lastRefreshTime, setLastRefreshTime] = useState<string>('15:30:00 IST');
 
@@ -189,10 +187,16 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       constituents: [
         { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1005.00, change_pct: 8.88 },
         { symbol: 'CUB', name: 'City Union Bank', price: 250.00, change_pct: 7.07 },
-        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1816.00, change_pct: 3.08 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 516.00, change_pct: 3.08 },
+        { symbol: 'FEDERALBNK', name: 'Federal Bank Ltd', price: 204.50, change_pct: 2.65 },
         { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
         { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
-        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 }
+        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 },
+        { symbol: 'BANDHANBNK', name: 'Bandhan Bank Ltd', price: 178.50, change_pct: 1.40 },
+        { symbol: 'IDFCFIRSTB', name: 'IDFC First Bank', price: 68.20, change_pct: 1.10 },
+        { symbol: 'AUBANK', name: 'AU Small Finance Bank', price: 624.00, change_pct: 0.95 },
+        { symbol: 'RBLBANK', name: 'RBL Bank Ltd', price: 198.50, change_pct: 0.80 },
+        { symbol: 'YESBANK', name: 'Yes Bank Ltd', price: 20.40, change_pct: 0.50 }
       ]
     },
     {
@@ -205,11 +209,15 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_90d: 8.50,
       change_52w: 16.90,
       constituents: [
+        { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1005.00, change_pct: 8.88 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 516.00, change_pct: 3.08 },
         { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
+        { symbol: 'FEDERALBNK', name: 'Federal Bank Ltd', price: 204.50, change_pct: 2.65 },
         { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
         { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
-        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1816.00, change_pct: 3.08 },
-        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 }
+        { symbol: 'AXISBANK', name: 'Axis Bank Ltd', price: 1198.00, change_pct: 1.85 },
+        { symbol: 'BANKBARODA', name: 'Bank of Baroda', price: 254.00, change_pct: 1.45 },
+        { symbol: 'PNB', name: 'Punjab National Bank', price: 105.40, change_pct: 1.15 }
       ]
     },
     {
@@ -508,40 +516,6 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     }
   ];
 
-  // News ticker matching the exact headlines from user's screenshot
-  const topNews = [
-    {
-      title: 'Stock split reset: SanDisk stock crashes 87.5% overnight? Here\'s what investors need to know about its 8-for-1 split',
-      source: 'Live Mint',
-      time: '21/11/2026, 17:15 IST',
-      impact: 'NEUTRAL'
-    },
-    {
-      title: 'Shah Rukh Khan, Aryan Khan\'s D\'YAVOL X enters physical retail with Golden Goose partnership',
-      source: 'Live Mint',
-      time: '21/11/2026, 16:45 IST',
-      impact: 'POSITIVE'
-    },
-    {
-      title: 'Premier Explosives gets ₹311-crore export order for defence explosives',
-      source: 'CNBC TV18',
-      time: '21/11/2026, 15:50 IST',
-      impact: 'POSITIVE'
-    },
-    {
-      title: 'Texmaco Rail gets ₹230 crore orders from JSW entities for 553 wagons',
-      source: 'CNBC TV18',
-      time: '21/11/2026, 15:20 IST',
-      impact: 'POSITIVE'
-    },
-    {
-      title: 'Ashok Leyland to set up new electric commercial vehicle plant in Uttar Pradesh',
-      source: 'Economic Times',
-      time: '21/11/2026, 14:10 IST',
-      impact: 'POSITIVE'
-    }
-  ];
-
   const currentSectorData = sectors.find(s => s.id === activeSector) || sectors[0];
 
   return (
@@ -616,11 +590,11 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
         </div>
       </div>
 
-      {/* 2. MIDDLE ROW: ADVANCE/DECLINE GAUGE + MARKET MOOD GAUGE + TOP NEWS + SECTOR PERFORMANCE */}
+      {/* 2. MIDDLE ROW: ADVANCE/DECLINE & MOOD + SECTOR PERFORMANCE (2-COLUMN BALANCED DESK) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
-        {/* Left Column (4 cols): Advance/Decline & Market Mood Gauge (Matching Image 7) */}
-        <div className="lg:col-span-4 space-y-4 flex flex-col justify-between">
+        {/* Left Column (5 cols): Advance/Decline & Market Mood Gauge */}
+        <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
           
           {/* Card A: Advance / Decline Ratio & Intraday Curve */}
           <div className="p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm">
@@ -737,51 +711,8 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
           </div>
         </div>
 
-        {/* Middle Column (4 cols): Top News Wire (Matching Image 7) */}
-        <div className="lg:col-span-4 p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#232E47]">
-            <div className="flex items-center space-x-2">
-              <Newspaper className="w-4 h-4 text-sky-400" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">Top News</span>
-            </div>
-            {onNavigate && (
-              <button 
-                onClick={() => onNavigate('market-news')}
-                className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center"
-              >
-                View All <ChevronRight className="w-3 h-3 ml-0.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3 overflow-y-auto max-h-[340px] pr-1">
-            {topNews.map((n, idx) => (
-              <div key={idx} className="group cursor-pointer">
-                <div className="flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0 group-hover:scale-150 transition-transform"></div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-sky-300 transition-colors line-clamp-2">
-                      {n.title}
-                    </h4>
-                    <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1">
-                      <span>{n.time}</span>
-                      <span>&bull;</span>
-                      <span className="text-sky-400 font-medium">{n.source}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-2 border-t border-[#232E47] mt-2 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Verified Financial Press Wire</span>
-            <span className="text-emerald-400 font-mono">Live Updated</span>
-          </div>
-        </div>
-
-        {/* Right Column (4 cols): Sector Performance Diverging Chart (Matching Image 7 & 6) */}
-        <div className="lg:col-span-4 p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col justify-between">
+        {/* Right Column (7 cols): Sector Performance Diverging Chart & Drilldown */}
+        <div className="lg:col-span-7 p-4 rounded-xl bg-[#121824] border border-[#232E47] shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#232E47]">
               <div>
