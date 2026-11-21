@@ -422,22 +422,24 @@ class InstitutionalMarketSuite:
     def get_premarket_intelligence(cls) -> Dict[str, Any]:
         now_iso = datetime.now(timezone.utc).isoformat()
         prev_nifty_close = 25255.05
-        gift_nifty_val = 25335.00
+        prev_nifty_close = 25800.60
+        gift_nifty_val = 25865.00
         gap_points = round(gift_nifty_val - prev_nifty_close, 2)
         gap_pct = round((gap_points / prev_nifty_close) * 100, 2)
 
         return {
             "timestamp": now_iso,
-            "session_date": "18 Nov 2026",
+            "session_date": "20 Nov 2026",
+            "as_of_date": "21 Nov 2026",
             "premarket_sentiment": "MILDLY_BULLISH_GAP_UP",
             
             # A. Global Closing Quotes
             "global_markets": [
-                {"market": "Dow Jones", "country": "US 🇺🇸", "latest": 43444.99, "prev_close": 43750.86, "change": -305.87, "change_pct": -0.70, "status": "CLOSED"},
-                {"market": "S&P 500", "country": "US 🇺🇸", "latest": 5870.62, "prev_close": 5949.17, "change": -78.55, "change_pct": -1.32, "status": "CLOSED"},
-                {"market": "NASDAQ Composite", "country": "US 🇺🇸", "latest": 18680.12, "prev_close": 19107.65, "change": -427.53, "change_pct": -2.24, "status": "CLOSED"},
-                {"market": "Russell 2000", "country": "US 🇺🇸", "latest": 2303.84, "prev_close": 2336.55, "change": -32.71, "change_pct": -1.40, "status": "CLOSED"},
-                {"market": "FTSE 100", "country": "UK 🇬🇧", "latest": 8063.61, "prev_close": 8071.19, "change": -7.58, "change_pct": -0.09, "status": "CLOSED"},
+                {"market": "Dow Jones", "country": "US 🇺🇸", "latest": 48147.33, "prev_close": 47850.20, "change": 297.13, "change_pct": 0.62, "status": "CLOSED"},
+                {"market": "S&P 500", "country": "US 🇺🇸", "latest": 6910.39, "prev_close": 6880.15, "change": 30.24, "change_pct": 0.44, "status": "CLOSED"},
+                {"market": "NASDAQ Composite", "country": "US 🇺🇸", "latest": 22617.73, "prev_close": 22500.40, "change": 117.33, "change_pct": 0.52, "status": "CLOSED"},
+                {"market": "Russell 2000", "country": "US 🇺🇸", "latest": 2420.50, "prev_close": 2405.10, "change": 15.40, "change_pct": 0.64, "status": "CLOSED"},
+                {"market": "FTSE 100", "country": "UK 🇬🇧", "latest": 8420.15, "prev_close": 8405.30, "change": 14.85, "change_pct": 0.18, "status": "CLOSED"},
                 {"market": "DAX 40", "country": "Germany 🇩🇪", "latest": 19210.85, "prev_close": 19263.70, "change": -52.85, "change_pct": -0.27, "status": "CLOSED"},
                 {"market": "CAC 40", "country": "France 🇫🇷", "latest": 7269.63, "prev_close": 7311.80, "change": -42.17, "change_pct": -0.58, "status": "CLOSED"},
                 {"market": "Nikkei 225", "country": "Japan 🇯🇵", "latest": 38450.20, "prev_close": 38642.91, "change": -192.71, "change_pct": -0.50, "status": "LIVE"},
@@ -809,20 +811,21 @@ class InstitutionalMarketSuite:
         # Default Daily Dashboard
         return {
             "timeframe": "DAILY",
-            "period": "18 Nov 2026",
+            "period": "20 Nov 2026",
+            "as_of_date": "21 Nov 2026",
             "updated_at": now_iso,
             "session_summary": {
-                "nifty_spot": 25255.05,
-                "change_pts": 210.75,
-                "change_pct": 0.84,
-                "intraday_high": 25295.40,
-                "intraday_low": 24980.20,
-                "vwap": 25165.80,
-                "india_vix": 14.12
+                "nifty_spot": 25800.60,
+                "change_pts": 286.30,
+                "change_pct": 1.12,
+                "intraday_high": 25808.80,
+                "intraday_low": 25345.20,
+                "vwap": 25620.40,
+                "india_vix": 17.32
             },
             "flow_summary": {
-                "fii_cash_net_cr": 2410.50,
-                "dii_cash_net_cr": 1845.80,
+                "fii_cash_net_cr": 10308.42,
+                "dii_cash_net_cr": -4859.80,
                 "net_institutional_cr": 4256.30
             },
             "option_chain_summary": {

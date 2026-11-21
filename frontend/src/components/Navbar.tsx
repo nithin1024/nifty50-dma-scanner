@@ -141,8 +141,12 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
               })}
             </div>
 
-            {/* Right Controls: Excel Export, Language Toggle & Mobile Hamburger */}
+            {/* Right Controls: Date Pill, Excel Export, Language Toggle & Mobile Hamburger */}
             <div className="flex items-center space-x-2">
+              <span className="hidden md:inline-flex items-center px-2 py-1 rounded-lg bg-[#161F33] border border-[#232E47] text-[11px] font-mono text-sky-400 font-bold" title="Today's Active Date">
+                {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+
               <a
                 href={getExcelDownloadUrl()}
                 download

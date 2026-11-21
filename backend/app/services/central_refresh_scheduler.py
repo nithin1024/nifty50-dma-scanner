@@ -18,13 +18,33 @@ Includes:
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 from typing import Dict, Any, List, Optional
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger("central_refresh_scheduler")
 INDIA_TZ = ZoneInfo("Asia/Kolkata")
+
+
+def get_current_session_date() -> str:
+    """Dynamically computes the completed trading session date in IST."""
+    try:
+        now_ist = datetime.now(INDIA_TZ)
+        weekday = now_ist.weekday()
+        if weekday == 5:
+            dt = now_ist - timedelta(days=1)
+        elif weekday == 6:
+            dt = now_ist - timedelta(days=2)
+        elif weekday == 0 and (now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30)):
+            dt = now_ist - timedelta(days=3)
+        elif now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30):
+            dt = now_ist - timedelta(days=1)
+        else:
+            dt = now_ist
+        return dt.strftime("%d %b %Y")
+    except Exception:
+        return "20 Nov 2026"
 
 
 class PipelineStatus:
@@ -38,7 +58,7 @@ class PipelineStatus:
         self.retry_count: int = 0
         self.max_retries: int = 5
         self.last_error: Optional[str] = None
-        self.session_date: str = "19 Nov 2026"
+        self.session_date: str = get_current_session_date()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -113,7 +133,8 @@ class CentralRefreshScheduler:
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "scheduler_active": self._running,
-            "session_date": "19 Nov 2026",
+            "session_date": get_current_session_date(),
+            "as_of_date": datetime.now(INDIA_TZ).strftime("%d %b %Y"),
             "pipelines": {k: p.to_dict() for k, p in self.pipelines.items()},
             "summary": {
                 "total_pipelines": len(self.pipelines),

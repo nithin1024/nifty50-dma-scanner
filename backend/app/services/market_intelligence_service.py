@@ -49,21 +49,29 @@ class MarketIntelligenceService:
         sensex_level = sensex_live.get("current", 83919.71)
         sensex_pct = sensex_live.get("change_pct", 1.08)
         session_dt = nifty_live.get("session_date", "20 Nov 2026")
+        
+        from zoneinfo import ZoneInfo
+        now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+        today_str = now_ist.strftime("%d %B %Y")
+        today_short = now_ist.strftime("%d %b %Y")
 
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "report_date": "20 November 2026",
+            "report_date": today_str,
             "session_date": session_dt,
+            "as_of_date": today_short,
             "market_closing_levels": {
                 "nifty_50": {
                     "level": nifty_level,
                     "change_pct": nifty_pct,
-                    "date": session_dt
+                    "date": session_dt,
+                    "as_of": today_short
                 },
                 "sensex": {
                     "level": sensex_level,
                     "change_pct": sensex_pct,
-                    "date": session_dt
+                    "date": session_dt,
+                    "as_of": today_short
                 },
                 "usd_inr": {
                     "rate": usd_live.get("current", 84.42),

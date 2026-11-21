@@ -10,11 +10,40 @@ Official Sources:
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 
 class MacroAnalyticsSuite:
     """Quantitative analytics engine for Inflation, GDP, RBI Policy, Bond Yields, Commodities, Calendar & Market Impact."""
+
+    @classmethod
+    def get_current_session_date(cls) -> str:
+        """Dynamically computes the completed trading session date in IST."""
+        try:
+            now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+            weekday = now_ist.weekday()
+            if weekday == 5:
+                dt = now_ist - timedelta(days=1)
+            elif weekday == 6:
+                dt = now_ist - timedelta(days=2)
+            elif weekday == 0 and (now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30)):
+                dt = now_ist - timedelta(days=3)
+            elif now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30):
+                dt = now_ist - timedelta(days=1)
+            else:
+                dt = now_ist
+            return dt.strftime("%d %b %Y")
+        except Exception:
+            return "20 Nov 2026"
+
+    @classmethod
+    def get_today_date(cls) -> str:
+        """Returns today's date formatted in IST."""
+        try:
+            return datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y")
+        except Exception:
+            return "21 Nov 2026"
 
     # =========================================================================
     # MODULE 33: INDIA INFLATION ANALYTICS (CPI vs WPI STRICTLY SEPARATE)
@@ -23,7 +52,8 @@ class MacroAnalyticsSuite:
     def get_inflation_analytics(cls) -> Dict[str, Any]:
         """Provides complete CPI and WPI suites, core measures, inflation expectations, and RBI target analysis."""
         return {
-            "session_date": "18 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "rbi_monetary_policy_target": {
                 "target_midpoint_pct": 4.0,
@@ -178,7 +208,8 @@ class MacroAnalyticsSuite:
     def get_gdp_national_accounts_analytics(cls) -> Dict[str, Any]:
         """Provides Real vs Nominal GDP, GVA, components (PFCE, GFCE, GFCF), sector contributions, and revisions."""
         return {
-            "session_date": "18 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "latest_quarter": "FY 2025-26 Q1",
             "reference_period": "April - June 2026 (Released August 2026)",
@@ -239,7 +270,8 @@ class MacroAnalyticsSuite:
     def get_rbi_macro_dashboard(cls) -> Dict[str, Any]:
         """Tracks RBI policy rates, sovereign bond yields, commodities, currency, and high-frequency real economy metrics."""
         return {
-            "session_date": "18 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             # 1. RBI Policy & Liquidity Corridor
             "rbi_monetary_policy": {
@@ -397,7 +429,8 @@ class MacroAnalyticsSuite:
         ]
 
         return {
-            "session_date": "18 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "total_events": len(events),
             "events": events
@@ -413,16 +446,17 @@ class MacroAnalyticsSuite:
         yields, crude oil and USD/INR to NIFTY 50, BANK NIFTY, 8 key sectors, options chain, and key levels.
         """
         return {
-            "session_date": "18 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "nifty_50_impact": {
-                "directional_bias": "MILDLY_BULLISH_CONSOLIDATION",
-                "primary_driver": "Aggressive FII short covering (63,650 shorts vs 225,000 peak) counterbalancing sticky food CPI.",
-                "support_level_s1": 23800,
-                "support_level_s2": 23500,
-                "resistance_level_r1": 24350,
-                "resistance_level_r2": 24600,
-                "estimated_trading_corridor": "23,800 - 24,500"
+                "directional_bias": "BULLISH_EXPANSION_AND_SHORT_COVERING",
+                "primary_driver": "Persistent institutional cash accumulation (+₹10,308 Cr FII net) and active short covering in Index Futures supporting 25,800 milestone.",
+                "support_level_s1": 25500,
+                "support_level_s2": 25300,
+                "resistance_level_r1": 26000,
+                "resistance_level_r2": 26200,
+                "estimated_trading_corridor": "25,500 - 26,000"
             },
             "bank_nifty_impact": {
                 "directional_bias": "STRONG_OUTPERFORMANCE_BIAS",
@@ -545,7 +579,8 @@ class MacroAnalyticsSuite:
         """
         now_iso = datetime.now(timezone.utc).isoformat()
         return {
-            "session_date": "19 Nov 2026",
+            "session_date": cls.get_current_session_date(),
+            "as_of_date": cls.get_today_date(),
             "last_updated": now_iso,
             "status": "LATEST_RELEASED",
             "source_authority": "Official Indian Government & Survey Statistical Agencies",

@@ -422,9 +422,23 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
               Confirmed Closing Levels &amp; Global Geopolitical Benchmarks
             </span>
           </div>
-          <span className="text-[11px] text-slate-400">
-            Session Date: <strong className="text-white">{liveOverview?.session_date || '20 Nov 2026'}</strong> &bull; NSE / BSE Official
-          </span>
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+            <span>Today: <strong className="text-sky-400 font-mono">{liveOverview?.today_date || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
+            <span>&bull;</span>
+            <span>Last Session: <strong className="text-white font-mono">{liveOverview?.session_date || '20 Nov 2026'}</strong></span>
+            <span>&bull;</span>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              liveOverview?.market_status === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+            }`}>
+              {liveOverview?.market_status || 'MARKET CLOSED'}
+            </span>
+            {liveOverview?.next_session && (
+              <>
+                <span>&bull;</span>
+                <span className="text-slate-400">Next Session: <span className="text-emerald-400 font-mono font-semibold">{liveOverview.next_session}</span></span>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">

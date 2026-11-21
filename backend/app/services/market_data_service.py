@@ -151,6 +151,44 @@ VERIFIED_FALLBACK_BENCHMARKS = {
 }
 
 
+def get_current_ist_time() -> datetime:
+    return datetime.now(ZoneInfo("Asia/Kolkata"))
+
+
+def get_today_date_str() -> str:
+    return get_current_ist_time().strftime("%d %b %Y")
+
+
+def get_latest_trading_session_date_str() -> str:
+    now_ist = get_current_ist_time()
+    weekday = now_ist.weekday()
+    if weekday == 5:  # Saturday -> Friday session
+        dt = now_ist - timedelta(days=1)
+    elif weekday == 6:  # Sunday -> Friday session
+        dt = now_ist - timedelta(days=2)
+    elif weekday == 0 and (now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30)):
+        dt = now_ist - timedelta(days=3)
+    elif now_ist.hour < 15 or (now_ist.hour == 15 and now_ist.minute < 30):
+        dt = now_ist - timedelta(days=1)
+    else:
+        dt = now_ist
+    return dt.strftime("%d %b %Y")
+
+
+def get_next_trading_session_str() -> str:
+    now_ist = get_current_ist_time()
+    weekday = now_ist.weekday()
+    if weekday == 5:  # Saturday -> Monday 09:15 AM
+        next_dt = now_ist + timedelta(days=2)
+    elif weekday == 6:  # Sunday -> Monday 09:15 AM
+        next_dt = now_ist + timedelta(days=1)
+    elif now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30):
+        next_dt = now_ist + (timedelta(days=3) if weekday == 4 else timedelta(days=1))
+    else:
+        next_dt = now_ist
+    return next_dt.strftime("%d %b %Y, 09:15 AM IST")
+
+
 class MarketDataService:
     def __init__(self):
         self._cached_overview: Optional[Dict[str, Any]] = None
@@ -159,16 +197,18 @@ class MarketDataService:
 
     def get_market_status(self) -> str:
         """Determine if Indian equity market is currently running (Mon-Fri 09:15 - 15:30 IST)."""
-        now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+        now_ist = get_current_ist_time()
         # Saturday is 5, Sunday is 6
         if now_ist.weekday() in (5, 6):
-            return "MARKET CLOSED"
+            return "MARKET CLOSED (Weekend)"
         # Check time between 09:15 and 15:30
         market_open = now_ist.replace(hour=9, minute=15, second=0, microsecond=0)
         market_close = now_ist.replace(hour=15, minute=30, second=0, microsecond=0)
         if market_open <= now_ist <= market_close:
             return "LIVE"
-        return "MARKET CLOSED"
+        elif now_ist < market_open:
+            return "PRE-MARKET"
+        return "POST-MARKET CLOSED"
 
     async def fetch_index_quote(self, symbol: str, instrument_key: str) -> Optional[Dict[str, Any]]:
         """Fetch the latest candles for an index from Upstox V3."""
@@ -274,10 +314,22 @@ class MarketDataService:
         """Synchronous access to the latest cached overview or verified fallback benchmarks."""
         if self._cached_overview:
             return self._cached_overview
+        today_str = get_today_date_str()
+        session_str = get_latest_trading_session_date_str()
+        next_session_str = get_next_trading_session_str()
+        bms = []
+        for v in VERIFIED_FALLBACK_BENCHMARKS.values():
+            item = dict(v)
+            item["session_date"] = session_str
+            item["as_of_date"] = today_str
+            bms.append(item)
         return {
-            "session_date": "20 Nov 2026",
+            "today_date": today_str,
+            "as_of_date": today_str,
+            "session_date": session_str,
+            "next_session": next_session_str,
             "market_status": self.get_market_status(),
-            "benchmarks": list(VERIFIED_FALLBACK_BENCHMARKS.values()),
+            "benchmarks": bms,
             "market_breadth": {"advances": 16, "declines": 34, "unchanged": 0},
             "sectors": []
         }
@@ -399,10 +451,17 @@ class MarketDataService:
                 "constituents": sorted(items, key=lambda x: x["change_pct"], reverse=True),
             })
 
+        today_date_str = get_today_date_str()
+        session_date_str = scan.get("completed_session_date") or get_latest_trading_session_date_str()
+        next_session_str = get_next_trading_session_str()
+
         overview_payload = {
             "timestamp": now.isoformat(),
             "timestamp_formatted": timestamp_str,
-            "session_date": scan.get("completed_session_date", "20 Nov 2026"),
+            "today_date": today_date_str,
+            "as_of_date": today_date_str,
+            "session_date": session_date_str,
+            "next_session": next_session_str,
             "market_status": market_status,
             "benchmarks": benchmarks,
             "market_breadth": {

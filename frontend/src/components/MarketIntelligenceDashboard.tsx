@@ -235,9 +235,11 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   {t('Confirmed Closing Levels & Global Geopolitical Benchmarks')}
                 </span>
-                <span className="text-[11px] font-mono text-slate-500">
-                  Ref Date: {market_closing_levels.nifty_50.date}
-                </span>
+                <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                  <span>As of: <strong className="text-sky-400">{data?.as_of_date || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
+                  <span>&bull;</span>
+                  <span>Ref Session: <strong className="text-white">{market_closing_levels.nifty_50.date}</strong></span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -404,7 +406,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   </thead>
                   <tbody className="divide-y divide-[#232E47]/60 bg-[#121824]">
                     <tr>
-                      <td className="py-2.5 px-3 text-white font-medium">Latest Session ({fii_dii_cash_activity.session_date || '18 Nov 2026'})</td>
+                      <td className="py-2.5 px-3 text-white font-medium">Latest Session ({fii_dii_cash_activity.session_date || '20 Nov 2026'})</td>
                       <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">+₹{fii_dii_cash_activity.fii_net_crores.toLocaleString()} Cr</td>
                       <td className="py-2.5 px-3 text-right text-rose-400 font-bold">₹{fii_dii_cash_activity.dii_net_crores.toLocaleString()} Cr</td>
                       <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">+₹{fii_dii_cash_activity.net_institutional_crores.toLocaleString()} Cr</td>
@@ -565,7 +567,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                       <span>{((fii_derivatives_positioning as any).data_status || 'LATEST_RELEASED').replace(/_/g, ' ')}</span>
                     </span>
                     <span>&bull;</span>
-                    <span>Release: {((fii_derivatives_positioning as any).release_date || '19 Nov 2026, 07:45 PM IST')}</span>
+                    <span>Release: {((fii_derivatives_positioning as any).release_date || '20 Nov 2026, 07:45 PM IST')}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">

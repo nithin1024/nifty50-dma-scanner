@@ -62,6 +62,10 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
               {t('NSE Settlement Session')}
             </span>
             <span className="text-xs text-slate-400">
+              Today: <strong className="text-sky-400">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+            </span>
+            <span className="text-xs text-slate-500">&bull;</span>
+            <span className="text-xs text-slate-400">
               {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || '20 Nov 2026'}</strong>
             </span>
             <span className="text-xs text-slate-500 hidden sm:inline">&bull;</span>
