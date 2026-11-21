@@ -17,12 +17,12 @@ def test_fii_dii_cash_service():
     assert "historical_daily_series" in report
 
     latest = report["latest"]
-    assert latest["fii_net"] == 2410.0
-    assert latest["fii_gross_buy"] == 14250.0
-    assert latest["fii_gross_sell"] == 11840.0
+    assert round(latest["fii_net"], 2) == 10308.42
+    assert latest["fii_gross_buy"] == 23596.4
+    assert latest["fii_gross_sell"] == 13287.98
     assert latest["fii_status"] == "NET_BUYER"
 
-    assert latest["dii_net"] == -1350.0
+    assert round(latest["dii_net"], 2) == -4859.8
     assert latest["dii_status"] == "NET_SELLER"
 
     # Aggregates
@@ -31,7 +31,7 @@ def test_fii_dii_cash_service():
     assert "twenty_session_total" in aggs
     assert "monthly_mtd_total" in aggs
     assert "ytd_total" in aggs
-    assert aggs["five_session_total"]["fii_net"] == 25653.0  # 2410 + 1830 + 4600 + 12563 + 4250
+    assert aggs["five_session_total"]["fii_net"] == 19498.42
 
 
 def test_participant_derivatives_positioning():
@@ -44,13 +44,13 @@ def test_participant_derivatives_positioning():
     assert "client_derivatives" in report
 
     fii = report["fii_derivatives"]
-    assert fii["long_contracts"] == 88450
-    assert fii["short_contracts"] == 152100
-    assert fii["net_contracts"] == -63650
+    assert fii["long_contracts"] == 104800
+    assert fii["short_contracts"] == 142500
+    assert fii["net_contracts"] == -37700
     assert fii["peak_historical_shorts"] == 225000
 
     # Short covering reduction from 225k peak
-    assert fii["deleveraging_pct"] == 71.7
+    assert fii["deleveraging_pct"] == 83.2
     assert "FII net shorts" in fii["deleveraging_summary"]
 
 

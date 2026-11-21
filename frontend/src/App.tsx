@@ -20,9 +20,12 @@ import { IndianEconomyFundamentalsPage } from './pages/IndianEconomyFundamentals
 import { MarketNewsPage } from './pages/MarketNewsPage';
 import { SettingsAndDataSourcesPage } from './pages/SettingsAndDataSourcesPage';
 import { MarketIntelligenceDashboard } from './components/MarketIntelligenceDashboard';
+import { MarketToolsModal } from './components/MarketToolsModal';
+import type { ToolType } from './components/MarketToolsModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
+  const [activeTool, setActiveTool] = useState<ToolType>(null);
   const [health, setHealth] = useState<BackendHealth | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatusReport | null>(null);
   const [dailyScan, setDailyScan] = useState<DailyScanResponse | null>(null);
@@ -140,6 +143,7 @@ export const App: React.FC = () => {
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         backendOnline={backendOnline} 
+        onOpenTool={setActiveTool}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
@@ -277,6 +281,18 @@ export const App: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Institutional Market Tools Modal */}
+      {activeTool && (
+        <MarketToolsModal
+          tool={activeTool}
+          onClose={() => setActiveTool(null)}
+          onNavigateTab={(tab) => {
+            setActiveTab(tab as NavTab);
+            setActiveTool(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -22,6 +22,66 @@ class InstitutionalDataService:
     # Includes Segment Breakdown: Equity, Debt, and Derivatives Turnover
     DAILY_CASH_SERIES: List[Dict[str, Any]] = [
         {
+            "date": "20 Nov 2026",
+            "trading_date": "2026-11-20",
+            "publication_date": "20 Nov 2026, 07:15 PM IST",
+            "fii_gross_buy": 23596.4, "fii_gross_sell": 13287.98, "fii_net": 10308.42,
+            "dii_gross_buy": 18492.63, "dii_gross_sell": 23352.43, "dii_net": -4859.8,
+            "equity": {
+                "fii_buy": 22450.0, "fii_sell": 12350.0, "fii_net": 10100.0,
+                "dii_buy": 18492.63, "dii_sell": 23352.43, "dii_net": -4859.8
+            },
+            "debt": {
+                "fii_buy": 1146.4, "fii_sell": 937.98, "fii_net": 208.42,
+                "dii_buy": 4800.0, "dii_sell": 4100.0, "dii_net": 700.0
+            },
+            "derivatives_turnover": {
+                "index_futures_turnover": 52400.0,
+                "stock_futures_turnover": 112300.0,
+                "options_premium_turnover": 48900.0
+            }
+        },
+        {
+            "date": "19 Nov 2026",
+            "trading_date": "2026-11-19",
+            "publication_date": "19 Nov 2026, 07:15 PM IST",
+            "fii_gross_buy": 18450.0, "fii_gross_sell": 15200.0, "fii_net": 3250.0,
+            "dii_gross_buy": 14200.0, "dii_gross_sell": 13100.0, "dii_net": 1100.0,
+            "equity": {
+                "fii_buy": 17350.0, "fii_sell": 14250.0, "fii_net": 3100.0,
+                "dii_buy": 14200.0, "dii_sell": 13100.0, "dii_net": 1100.0
+            },
+            "debt": {
+                "fii_buy": 1100.0, "fii_sell": 950.0, "fii_net": 150.0,
+                "dii_buy": 4400.0, "dii_sell": 3900.0, "dii_net": 500.0
+            },
+            "derivatives_turnover": {
+                "index_futures_turnover": 46200.0,
+                "stock_futures_turnover": 96400.0,
+                "options_premium_turnover": 41200.0
+            }
+        },
+        {
+            "date": "18 Nov 2026",
+            "trading_date": "2026-11-18",
+            "publication_date": "18 Nov 2026, 07:15 PM IST",
+            "fii_gross_buy": 15800.0, "fii_gross_sell": 14100.0, "fii_net": 1700.0,
+            "dii_gross_buy": 12500.0, "dii_gross_sell": 11900.0, "dii_net": 600.0,
+            "equity": {
+                "fii_buy": 14750.0, "fii_sell": 13150.0, "fii_net": 1600.0,
+                "dii_buy": 12500.0, "dii_sell": 11900.0, "dii_net": 600.0
+            },
+            "debt": {
+                "fii_buy": 1050.0, "fii_sell": 950.0, "fii_net": 100.0,
+                "dii_buy": 4300.0, "dii_sell": 3850.0, "dii_net": 450.0
+            },
+            "derivatives_turnover": {
+                "index_futures_turnover": 44100.0,
+                "stock_futures_turnover": 91200.0,
+                "options_premium_turnover": 39800.0
+            }
+        },
+        {
             "date": "14 Nov 2026",
             "trading_date": "2026-11-14",
             "publication_date": "14 Nov 2026, 07:15 PM IST",
@@ -236,6 +296,54 @@ class InstitutionalDataService:
     # Daily Historical Index Futures & Stock Futures Derivatives Positioning (NSE Participant-Wise)
     DAILY_DERIVATIVES_SERIES: List[Dict[str, Any]] = [
         {
+            "date": "20 Nov 2026",
+            "trading_date": "2026-11-20",
+            "publication_date": "20 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 104800, "fii_index_futures_short": 142500, "fii_index_futures_net": -37700,
+            "dii_index_futures_long": 68500, "dii_index_futures_short": 22100, "dii_index_futures_net": 46400,
+            "pro_index_futures_long": 48200, "pro_index_futures_short": 39500, "pro_index_futures_net": 8700,
+            "client_index_futures_long": 198000, "client_index_futures_short": 180400, "client_index_futures_net": 17600,
+            # Stock Futures (Participant-Wise Open Interest)
+            "fii_stock_futures_long": 1535000, "fii_stock_futures_short": 965000, "fii_stock_futures_net": 570000,
+            "dii_stock_futures_long": 752000, "dii_stock_futures_short": 1695000, "dii_stock_futures_net": -943000,
+            # Index Options (Calls & Puts)
+            "fii_index_call_long": 465000, "fii_index_call_short": 375000, "fii_index_call_net": 90000,
+            "fii_index_put_long": 442000, "fii_index_put_short": 428000, "fii_index_put_net": 14000
+        },
+        {
+            "date": "19 Nov 2026",
+            "trading_date": "2026-11-19",
+            "publication_date": "19 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 98500, "fii_index_futures_short": 145200, "fii_index_futures_net": -46700,
+            "dii_index_futures_long": 66200, "dii_index_futures_short": 23100, "dii_index_futures_net": 43100,
+            "pro_index_futures_long": 47100, "pro_index_futures_short": 40200, "pro_index_futures_net": 6900,
+            "client_index_futures_long": 196500, "client_index_futures_short": 178200, "client_index_futures_net": 18300,
+            # Stock Futures
+            "fii_stock_futures_long": 1512000, "fii_stock_futures_short": 975000, "fii_stock_futures_net": 537000,
+            "dii_stock_futures_long": 749000, "dii_stock_futures_short": 1689000, "dii_stock_futures_net": -940000,
+            # Index Options
+            "fii_index_call_long": 445000, "fii_index_call_short": 382000, "fii_index_call_net": 63000,
+            "fii_index_put_long": 452000, "fii_index_put_short": 421000, "fii_index_put_net": 31000
+        },
+        {
+            "date": "18 Nov 2026",
+            "trading_date": "2026-11-18",
+            "publication_date": "18 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 92400, "fii_index_futures_short": 148900, "fii_index_futures_net": -56500,
+            "dii_index_futures_long": 64500, "dii_index_futures_short": 23900, "dii_index_futures_net": 40600,
+            "pro_index_futures_long": 46000, "pro_index_futures_short": 41100, "pro_index_futures_net": 4900,
+            "client_index_futures_long": 195800, "client_index_futures_short": 175600, "client_index_futures_net": 20200,
+            # Stock Futures
+            "fii_stock_futures_long": 1498000, "fii_stock_futures_short": 981000, "fii_stock_futures_net": 517000,
+            "dii_stock_futures_long": 747000, "dii_stock_futures_short": 1685000, "dii_stock_futures_net": -938000,
+            # Index Options
+            "fii_index_call_long": 432000, "fii_index_call_short": 385000, "fii_index_call_net": 47000,
+            "fii_index_put_long": 461000, "fii_index_put_short": 418000, "fii_index_put_net": 43000
+        },
+        {
             "date": "14 Nov 2026",
             "trading_date": "2026-11-14",
             "publication_date": "14 Nov 2026, 07:45 PM IST",
@@ -380,8 +488,8 @@ class InstitutionalDataService:
 
         return {
             "session_date": latest["date"],
-            "trading_date": latest.get("trading_date", "2026-11-18"),
-            "publication_date": latest.get("publication_date", "18 Nov 2026, 07:15 PM IST"),
+            "trading_date": latest.get("trading_date", "2026-11-20"),
+            "publication_date": latest.get("publication_date", "20 Nov 2026, 07:15 PM IST"),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "latest": {
                 "fii_gross_buy": latest["fii_gross_buy"],

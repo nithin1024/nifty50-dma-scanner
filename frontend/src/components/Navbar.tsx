@@ -14,20 +14,24 @@ import {
   Calendar,
   Settings,
   Menu,
-  X
+  X,
+  Wrench
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import type { ToolType } from './MarketToolsModal';
 
 interface NavbarProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   backendOnline: boolean;
+  onOpenTool?: (tool: ToolType) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline: _backendOnline }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline: _backendOnline, onOpenTool }) => {
   const { language, toggleLanguage } = useLanguage();
   const [logoDropdownOpen, setLogoDropdownOpen] = useState(false);
+  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Exact Canonical Navigation Tabs
@@ -139,6 +143,84 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                   </button>
                 );
               })}
+
+              {/* MARKET TOOLS DROPDOWN (8 Essential Institutional Tools) */}
+              <div className="relative">
+                <button
+                  onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+                  className={`flex items-center space-x-1 px-2 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
+                    toolsDropdownOpen
+                      ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Market Tools & Financial Resources"
+                >
+                  <Wrench className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Market Tools</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${toolsDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
+                </button>
+
+                {toolsDropdownOpen && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    onMouseLeave={() => setToolsDropdownOpen(false)}
+                  >
+                    <div className="text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 border-b border-[#232E47]/50 mb-1 flex items-center justify-between">
+                      <span>Market Tools</span>
+                      <span className="text-[9px] text-sky-400 font-mono">8 TOOLS</span>
+                    </div>
+
+                    <button
+                      onClick={() => { onTabChange('economic-calendar'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      2026 Events Calendar
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('lot-size'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Lot Size Finder
+                    </button>
+                    <button
+                      onClick={() => { onTabChange('economy-fundamentals'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Sector – Companies
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('market-cap'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Market Cap Stocks List
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('top-etfs'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Top ETFs
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('nse-links'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      NSE Official Links
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('swing-screener'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Swing Screener
+                    </button>
+                    <button
+                      onClick={() => { onOpenTool?.('trading-journal'); setToolsDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+                    >
+                      Trading Journal
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Controls: Date Pill, Excel Export, Language Toggle & Mobile Hamburger */}
@@ -196,6 +278,58 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 <span>{item.label}</span>
               </button>
             ))}
+
+            <div className="text-[10px] uppercase font-bold text-sky-400 px-2 pt-3 pb-1 border-t border-[#232E47] mt-2">
+              Market Tools
+            </div>
+            <button
+              onClick={() => { onTabChange('economic-calendar'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              2026 Events Calendar
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('lot-size'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Lot Size Finder
+            </button>
+            <button
+              onClick={() => { onTabChange('economy-fundamentals'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Sector – Companies
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('market-cap'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Market Cap Stocks List
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('top-etfs'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Top ETFs
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('nse-links'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              NSE Official Links
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('swing-screener'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Swing Screener
+            </button>
+            <button
+              onClick={() => { onOpenTool?.('trading-journal'); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg"
+            >
+              Trading Journal
+            </button>
           </div>
         )}
       </nav>

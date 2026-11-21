@@ -304,3 +304,11 @@ async def get_iip_alerts() -> List[Dict[str, Any]]:
     from app.services.iip_intelligence_service import iip_suite
     return iip_suite.get_iip_alerts()
 
+
+@router.get("/freshness", response_model=Dict[str, Any])
+def get_data_freshness() -> Dict[str, Any]:
+    """Centralized Data Freshness & Validation System covering all 25 modules."""
+    from app.services.data_freshness_service import data_freshness_service
+    return data_freshness_service.get_full_freshness_audit()
+
+

@@ -69,7 +69,7 @@ export const MarketToolsModal: React.FC<MarketToolsModalProps> = ({ tool, onClos
   const [searchTerm, setSearchTerm] = useState('');
   const [journalNote, setJournalNote] = useState('');
   const [journalTrades, setJournalTrades] = useState<string[]>([
-    '21 Nov 2026: NIFTY 50 Closed 25,255 (+0.84%). Heavyweight support by HDFCBANK & ICICIBANK. FII bought +₹2,410 Cr in cash, unwound -71.7% index short contracts.',
+    '20 Nov 2026: NIFTY 50 Closed 25,800.60 (+1.12%). Heavyweight support by HDFCBANK & ICICIBANK. FII bought +₹10,308.42 Cr in cash, unwound 83.2% of index short contracts.',
     '18 Nov 2026: IIP printed +4.80% beat vs +4.00% expected. Capital Goods leading industrial expansion. Setup 6/6 DMA Bullish on BEL and LT.'
   ]);
 

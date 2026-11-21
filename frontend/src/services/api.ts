@@ -528,5 +528,12 @@ export async function triggerPipelineRefresh(pipelineId: string): Promise<any> {
   return response.json();
 }
 
+export async function fetchDataFreshness(): Promise<any> {
+  const response = await fetch(`${API_BASE}/market-intelligence/freshness`);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
+
 
 
