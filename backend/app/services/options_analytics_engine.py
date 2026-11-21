@@ -108,21 +108,9 @@ class OptionsAnalyticsEngine:
         lot_size = fo_spec.get("lot_size", 25)
         step = fo_spec.get("strike_step", 50)
 
-        # Baseline reference spots
-        spot_map = {
-            "NIFTY": 23532.70,
-            "BANKNIFTY": 50175.40,
-            "RELIANCE": 1274.60,
-            "HDFCBANK": 1745.80,
-            "ICICIBANK": 1258.40,
-            "INFY": 1862.30,
-            "TCS": 4125.00,
-            "BHARTIARTL": 1584.20,
-            "SBIN": 812.50,
-            "LT": 3540.00,
-            "ITC": 472.30,
-        }
-        spot = spot_map.get(symbol, 1000.0)
+        # Dynamic spot price from MarketDataService
+        from app.services.market_data_service import market_data_service
+        spot = market_data_service.get_spot_price(symbol)
         atm_strike = round(spot / step) * step
 
         expiries = options_universe_service.get_upcoming_expiries(symbol)

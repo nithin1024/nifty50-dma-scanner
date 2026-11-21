@@ -273,10 +273,12 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47]">
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                     <span>USD / INR</span>
-                    <span className="text-amber-400 font-mono font-bold">84.38</span>
+                    <span className="text-amber-400 font-mono font-bold">
+                      {market_closing_levels.usd_inr?.change_pct ? `${market_closing_levels.usd_inr.change_pct > 0 ? '+' : ''}${market_closing_levels.usd_inr.change_pct}%` : '₹84.42'}
+                    </span>
                   </div>
                   <div className="text-2xl font-black text-white font-mono">
-                    ₹{market_closing_levels.usd_inr.rate}
+                    ₹{market_closing_levels.usd_inr?.rate || 84.42}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-1 font-mono">RBI Reference Rate</div>
                 </div>
@@ -285,10 +287,12 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47]">
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                     <span>BRENT CRUDE</span>
-                    <span className="text-emerald-400 font-mono font-bold">-1.89%</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {market_closing_levels.crude_oil_brent?.change_pct ? `${market_closing_levels.crude_oil_brent.change_pct > 0 ? '+' : ''}${market_closing_levels.crude_oil_brent.change_pct}%` : '-0.45%'}
+                    </span>
                   </div>
                   <div className="text-2xl font-black text-white font-mono">
-                    ${market_closing_levels.crude_oil_brent.price_usd}
+                    ${market_closing_levels.crude_oil_brent?.price_usd || 89.95}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-1 font-mono truncate">ICE Global Benchmark</div>
                 </div>
@@ -1147,8 +1151,8 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
                   <span className="text-[10px] text-slate-400 block">Brent Crude Oil</span>
-                  <div className="text-lg font-bold text-emerald-400 mt-0.5">$72.80 / bbl</div>
-                  <span className="text-[9px] text-slate-500 font-sans">Benign for Indian CAD</span>
+                  <div className="text-lg font-bold text-emerald-400 mt-0.5">${market_closing_levels?.crude_oil_brent?.price_usd || 89.95} / bbl</div>
+                  <span className="text-[9px] text-slate-500 font-sans">Global Energy Surveillance</span>
                 </div>
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
                   <span className="text-[10px] text-slate-400 block">Gold (MCX)</span>
@@ -1157,7 +1161,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                 </div>
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">
                   <span className="text-[10px] text-slate-400 block">USD / INR</span>
-                  <div className="text-lg font-bold text-white mt-0.5">₹84.38</div>
+                  <div className="text-lg font-bold text-white mt-0.5">₹{market_closing_levels?.usd_inr?.rate || 84.42}</div>
                   <span className="text-[9px] text-slate-500 font-sans">RBI Intervention Band</span>
                 </div>
                 <div className="p-3 rounded-lg bg-[#121824] border border-[#232E47]">

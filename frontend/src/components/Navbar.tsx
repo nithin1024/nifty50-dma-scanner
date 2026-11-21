@@ -14,12 +14,10 @@ import {
   Calendar,
   Settings,
   Menu,
-  X,
-  Wrench
+  X
 } from 'lucide-react';
 import { getExcelDownloadUrl } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { MarketToolsModal, type ToolType } from './MarketToolsModal';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -30,33 +28,19 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendOnline: _backendOnline }) => {
   const { language, toggleLanguage } = useLanguage();
   const [logoDropdownOpen, setLogoDropdownOpen] = useState(false);
-  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeModalTool, setActiveModalTool] = useState<ToolType>(null);
 
-  // Exact 9 Main Navigation Tabs as explicitly ordered by user
+  // Exact Canonical Navigation Tabs
   const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '1. Overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { id: 'dma-scanner', label: '2. DMA Scanner', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { id: 'ema-scanner', label: '3. EMA Scanner', icon: <Zap className="w-3.5 h-3.5" /> },
-    { id: 'fii-dii', label: '4. FII/DII Scanner', icon: <TrendingUp className="w-3.5 h-3.5" /> },
-    { id: 'options-intelligence', label: '5. Options & F&O', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'economy-fundamentals', label: '6. Economy & Fundamentals', icon: <Globe className="w-3.5 h-3.5" /> },
+    { id: 'fii-dii', label: '2. FII/DII Scanner', icon: <TrendingUp className="w-3.5 h-3.5" /> },
+    { id: 'dma-scanner', label: '3. DMA Scanner', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { id: 'ema-scanner', label: '4. EMA Scanner', icon: <Zap className="w-3.5 h-3.5" /> },
+    { id: 'options-intelligence', label: '5. Live Option Chain', icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'economy-fundamentals', label: '6. Sector & Market Intelligence', icon: <Globe className="w-3.5 h-3.5" /> },
     { id: 'economic-calendar', label: '7. Economic Calendar', icon: <Calendar className="w-3.5 h-3.5" /> },
     { id: 'market-news', label: '8. Market News', icon: <Newspaper className="w-3.5 h-3.5" /> },
-    { id: 'settings-sources', label: '9. Settings & Sources', icon: <Settings className="w-3.5 h-3.5" /> },
-  ];
-
-  // Tools Menu Items matching the user screenshot (Image 5)
-  const toolMenuItems = [
-    { id: 'calendar', label: '2026 Events Calendar', action: () => onTabChange('economic-calendar') },
-    { id: 'lot-size', label: 'Lot Size Finder', action: () => setActiveModalTool('lot-size') },
-    { id: 'sector-companies', label: 'Sector – Companies', action: () => setActiveModalTool('sector-companies') },
-    { id: 'market-cap', label: 'Market Cap Stocks List', action: () => setActiveModalTool('market-cap') },
-    { id: 'top-etfs', label: 'Top ETFs', action: () => setActiveModalTool('top-etfs') },
-    { id: 'nse-links', label: 'NSE Official Links', action: () => setActiveModalTool('nse-links') },
-    { id: 'swing-screener', label: 'Swing Screener', action: () => setActiveModalTool('swing-screener') },
-    { id: 'trading-journal', label: 'Trading Journal', action: () => setActiveModalTool('trading-journal') },
+    { id: 'settings-sources', label: '9. Settings', icon: <Settings className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -155,41 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                   </button>
                 );
               })}
-
-              {/* Tools Dropdown (Matching Image 5) */}
-              <div className="relative">
-                <button
-                  onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
-                  className="flex items-center space-x-1 px-2 py-1.5 rounded-md text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
-                >
-                  <Wrench className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Tools</span>
-                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                </button>
-
-                {toolsDropdownOpen && (
-                  <div 
-                    className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#232E47] bg-[#121824] p-1.5 shadow-2xl z-50 animate-in fade-in duration-100"
-                    onMouseLeave={() => setToolsDropdownOpen(false)}
-                  >
-                    <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 border-b border-[#232E47]/50 mb-1">
-                      Market Utilities
-                    </div>
-                    {toolMenuItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          item.action();
-                          setToolsDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-200 hover:bg-[#161F33] hover:text-white rounded-lg transition-colors flex items-center justify-between"
-                      >
-                        <span>{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Right Controls: Excel Export, Language Toggle & Mobile Hamburger */}
@@ -243,32 +192,9 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, backendO
                 <span>{item.label}</span>
               </button>
             ))}
-
-            <div className="pt-2 border-t border-[#232E47] text-[10px] uppercase font-bold text-slate-400 px-2 py-1">
-              Market Tools
-            </div>
-            {toolMenuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  item.action();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white rounded transition-colors"
-              >
-                {item.label}
-              </button>
-            ))}
           </div>
         )}
       </nav>
-
-      {/* Market Tools Modal (Lot Size Finder, NSE Links, Top ETFs, Journal, etc.) */}
-      <MarketToolsModal
-        tool={activeModalTool}
-        onClose={() => setActiveModalTool(null)}
-        onNavigateTab={(tab) => onTabChange(tab as NavTab)}
-      />
     </>
   );
 };

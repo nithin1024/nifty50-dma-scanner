@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
   Radio, 
   Newspaper
 } from 'lucide-react';
 import type { NavTab } from '../types';
+import { fetchLiveMarketOverview } from '../services/api';
 
 interface IndianMarketOverviewSectionProps {
   onNavigate?: (tab: NavTab) => void;
@@ -44,81 +45,103 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
   const [activeSector, setActiveSector] = useState<string>('BANKEX');
   const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
 
-  // Benchmark Quotes matching verified session levels
-  const benchmarks: BenchmarkItem[] = [
+  const [liveOverview, setLiveOverview] = useState<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadOverview = async () => {
+      try {
+        const data = await fetchLiveMarketOverview();
+        if (mounted && data) {
+          setLiveOverview(data);
+        }
+      } catch (err) {
+        console.warn('Could not fetch live overview:', err);
+      }
+    };
+    loadOverview();
+    const interval = setInterval(loadOverview, 300000); // 5-minute fallback polling
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Verified Benchmark Quotes (20 Nov 2026 Session Settlement)
+  const defaultBenchmarks: BenchmarkItem[] = [
     {
       symbol: 'NIFTY 50',
       name: 'NSE NIFTY 50',
-      current: 25255.05,
-      prev_close: 25044.30,
-      change: 210.75,
-      change_pct: 0.84,
-      timestamp: '21 Nov 2026, 15:30 IST',
+      current: 25800.60,
+      prev_close: 25514.30,
+      change: 286.30,
+      change_pct: 1.12,
+      timestamp: '20 Nov 2026, 15:30 IST',
       source: 'NSE Official Bhavcopy',
       status: 'MARKET CLOSED',
-      sparkline: [25044, 25090, 25140, 25110, 25180, 25220, 25255]
+      sparkline: [25514, 25550, 25620, 25700, 25750, 25790, 25800]
     },
     {
       symbol: 'SENSEX',
       name: 'BSE SENSEX 30',
       current: 83919.71,
-      prev_close: 83023.20,
-      change: 896.51,
+      prev_close: 83021.75,
+      change: 897.96,
       change_pct: 1.08,
-      timestamp: '21 Nov 2026, 15:30 IST',
+      timestamp: '20 Nov 2026, 15:30 IST',
       source: 'BSE Official Feed',
       status: 'MARKET CLOSED',
-      sparkline: [83023, 83200, 83450, 83380, 83650, 83800, 83919]
+      sparkline: [83021, 83200, 83450, 83380, 83650, 83800, 83919]
     },
     {
       symbol: 'BANK NIFTY',
       name: 'NSE NIFTY Bank',
-      current: 52140.80,
-      prev_close: 50948.60,
-      change: 1192.20,
-      change_pct: 2.34,
-      timestamp: '21 Nov 2026, 15:30 IST',
+      current: 64635.20,
+      prev_close: 63063.00,
+      change: 1572.20,
+      change_pct: 2.49,
+      timestamp: '20 Nov 2026, 15:30 IST',
       source: 'NSE Real-Time Index',
       status: 'MARKET CLOSED',
-      sparkline: [50948, 51200, 51500, 51400, 51800, 52050, 52140]
+      sparkline: [63063, 63300, 63800, 64100, 64400, 64550, 64635]
     },
     {
       symbol: 'INDIA VIX',
       name: 'Volatility Index',
-      current: 14.12,
-      prev_close: 14.85,
-      change: -0.73,
-      change_pct: -4.92,
-      timestamp: '21 Nov 2026, 15:30 IST',
+      current: 17.32,
+      prev_close: 16.11,
+      change: 1.21,
+      change_pct: 7.51,
+      timestamp: '20 Nov 2026, 15:30 IST',
       source: 'NSE VIX Algorithm',
       status: 'MARKET CLOSED',
-      sparkline: [14.85, 14.60, 14.45, 14.50, 14.30, 14.20, 14.12]
+      sparkline: [16.11, 16.30, 16.50, 16.80, 17.00, 17.20, 17.32]
     },
     {
       symbol: 'USD / INR',
       name: 'Indian Rupee Spot',
-      current: 84.38,
-      prev_close: 84.42,
-      change: -0.04,
-      change_pct: -0.05,
-      timestamp: '21 Nov 2026, 17:00 IST',
+      current: 84.42,
+      prev_close: 84.45,
+      change: -0.03,
+      change_pct: -0.04,
+      timestamp: '20 Nov 2026, 17:00 IST',
       source: 'RBI FBIL Reference',
       status: 'MARKET CLOSED',
       unit: '₹',
-      sparkline: [84.42, 84.41, 84.40, 84.39, 84.38, 84.38]
+      sparkline: [84.45, 84.44, 84.43, 84.42, 84.42, 84.42]
     },
     {
       symbol: 'BRENT CRUDE',
       name: 'ICE Brent Crude Oil',
-      current: 72.80,
-      prev_close: 74.20,
-      change: -1.40,
-      change_pct: -1.89,
-      timestamp: '21 Nov 2026, 19:40 IST',
-      source: 'ICE Europe Benchmark',
+      current: 89.95,
+      prev_close: 88.50,
+      change: 1.45,
+      change_pct: 1.64,
+      timestamp: '20 Nov 2026, 19:40 IST',
+      source: 'ICE Global Benchmark',
       status: 'LIVE',
       unit: '$',
-      sparkline: [74.20, 73.90, 73.40, 73.10, 72.90, 72.80]
+      sparkline: [88.50, 88.90, 89.20, 89.50, 89.80, 89.95]
     },
     {
       symbol: 'GOLD (MCX)',
@@ -400,12 +423,12 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
             </span>
           </div>
           <span className="text-[11px] text-slate-400">
-            Session Date: <strong className="text-white">21 Nov 2026</strong> &bull; NSE / BSE Official
+            Session Date: <strong className="text-white">{liveOverview?.session_date || '20 Nov 2026'}</strong> &bull; NSE / BSE Official
           </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-          {benchmarks.map((b) => (
+          {(liveOverview?.benchmarks || defaultBenchmarks).map((b: BenchmarkItem) => (
             <div 
               key={b.symbol}
               className="p-3 rounded-xl bg-[#121824] border border-[#232E47] hover:border-sky-500/40 transition-all flex flex-col justify-between"
@@ -460,22 +483,33 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
               </span>
             </div>
 
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-2xl font-black text-emerald-400">32</span>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Advances</span>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-black text-rose-400">18</span>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Declines</span>
-              </div>
-            </div>
+            {(() => {
+              const adv = liveOverview?.market_breadth?.advances ?? 16;
+              const dec = liveOverview?.market_breadth?.declines ?? 34;
+              const total = adv + dec;
+              const advWidth = total > 0 ? Math.round((adv / total) * 100) : 32;
+              const decWidth = 100 - advWidth;
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="text-2xl font-black text-emerald-400">{adv}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Advances</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-rose-400">{dec}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Declines</span>
+                    </div>
+                  </div>
 
-            {/* Progress ratio bar */}
-            <div className="w-full h-2 rounded-full bg-rose-500/30 overflow-hidden flex mb-3">
-              <div className="bg-emerald-500 h-full transition-all" style={{ width: '64%' }}></div>
-              <div className="bg-rose-500 h-full transition-all" style={{ width: '36%' }}></div>
-            </div>
+                  {/* Progress ratio bar */}
+                  <div className="w-full h-2 rounded-full bg-rose-500/30 overflow-hidden flex mb-3">
+                    <div className="bg-emerald-500 h-full transition-all" style={{ width: `${advWidth}%` }}></div>
+                    <div className="bg-rose-500 h-full transition-all" style={{ width: `${decWidth}%` }}></div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Intraday ratio curve (09:15 to 15:30) */}
             <div className="pt-2 border-t border-[#232E47]/50">

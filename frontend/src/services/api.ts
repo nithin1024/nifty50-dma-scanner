@@ -507,6 +507,13 @@ export async function fetchCoreEconomicIndicators(): Promise<any> {
   return response.json();
 }
 
+export async function fetchLiveMarketOverview(forceRefresh: boolean = false): Promise<any> {
+  const url = `${API_BASE}/market-intelligence/live-overview${forceRefresh ? '?force_refresh=true' : ''}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+  return response.json();
+}
+
 export async function fetchSchedulerTelemetry(): Promise<any> {
   const response = await fetch(`${API_BASE}/health/scheduler`);
   if (!response.ok) throw new Error(`HTTP error ${response.status}`);

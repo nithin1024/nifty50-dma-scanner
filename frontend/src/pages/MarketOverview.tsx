@@ -62,7 +62,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
               {t('NSE Settlement Session')}
             </span>
             <span className="text-xs text-slate-400">
-              {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || '21 Nov 2026'}</strong>
+              {t('Completed Date')}: <strong className="text-slate-200">{dailyScan?.completed_session_date || '20 Nov 2026'}</strong>
             </span>
             <span className="text-xs text-slate-500 hidden sm:inline">&bull;</span>
             <span className="text-xs text-slate-400 hidden sm:inline">

@@ -139,6 +139,13 @@ async def get_institutional_overview() -> Dict[str, Any]:
     return institutional_market_suite.get_institutional_overview()
 
 
+@router.get("/live-overview", response_model=Dict[str, Any])
+async def get_live_market_overview(force_refresh: bool = Query(False, description="Force live market recalculation")) -> Dict[str, Any]:
+    """Live and verified session benchmark quotes, market breadth, and sector performance."""
+    from app.services.market_data_service import market_data_service
+    return await market_data_service.get_live_market_overview(force_refresh=force_refresh)
+
+
 @router.get("/global-markets", response_model=Dict[str, Any])
 async def get_global_markets() -> Dict[str, Any]:
     """All 24 global benchmarks, currencies, sovereign yields, and commodities with market session awareness."""
