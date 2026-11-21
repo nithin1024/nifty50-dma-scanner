@@ -29,14 +29,20 @@ class MarketIntelligenceService:
 
         try:
             from app.services.market_data_service import market_data_service
-            live_bm = market_data_service.get_overview_sync().get("benchmarks", {})
+            raw_bm = market_data_service.get_overview_sync().get("benchmarks", {})
+            if isinstance(raw_bm, list):
+                bm_dict = {item.get("symbol", ""): item for item in raw_bm if isinstance(item, dict)}
+            elif isinstance(raw_bm, dict):
+                bm_dict = raw_bm
+            else:
+                bm_dict = {}
         except Exception:
-            live_bm = {}
+            bm_dict = {}
 
-        nifty_live = live_bm.get("NIFTY 50", {})
-        sensex_live = live_bm.get("SENSEX", {})
-        usd_live = live_bm.get("USD / INR", {})
-        brent_live = live_bm.get("Brent Crude", {})
+        nifty_live = bm_dict.get("NIFTY 50", {})
+        sensex_live = bm_dict.get("SENSEX", {})
+        usd_live = bm_dict.get("USD / INR", {})
+        brent_live = bm_dict.get("Brent Crude", {}) or bm_dict.get("BRENT CRUDE", {})
 
         nifty_level = nifty_live.get("current", 25800.60)
         nifty_pct = nifty_live.get("change_pct", 1.12)

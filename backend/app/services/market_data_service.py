@@ -277,7 +277,7 @@ class MarketDataService:
         return {
             "session_date": "20 Nov 2026",
             "market_status": self.get_market_status(),
-            "benchmarks": dict(VERIFIED_FALLBACK_BENCHMARKS),
+            "benchmarks": list(VERIFIED_FALLBACK_BENCHMARKS.values()),
             "market_breadth": {"advances": 16, "declines": 34, "unchanged": 0},
             "sectors": []
         }
