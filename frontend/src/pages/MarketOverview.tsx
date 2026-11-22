@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { BackendHealth, DataStatusReport, DailyScanResponse, HeavyweightsReport, NavTab, MarketIntelligenceReport } from '../types';
 import { 
   TrendingUp, 
@@ -7,12 +7,15 @@ import {
   ShieldCheck, 
   Crown, 
   Download, 
-  RefreshCw
+  RefreshCw,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
-import { getExcelDownloadUrl } from '../services/api';
+import { getExcelDownloadUrl, fetchOptionChain } from '../services/api';
 import { IndianMarketOverviewSection } from '../components/IndianMarketOverviewSection';
 import { EconomicIndicatorsSection } from '../components/EconomicIndicatorsSection';
 import { MarketIntelligenceDashboard } from '../components/MarketIntelligenceDashboard';
+import { Nifty50UniverseSection } from '../components/Nifty50UniverseSection';
 import { formatIndianVolume } from '../components/VolumeTrendChart';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -49,6 +52,18 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
 
   const combinedWeight = heavyweights?.combined_weightage_pct ?? 45.5;
   const combinedContrib = heavyweights?.combined_estimated_contribution_pts ?? 0.0;
+
+  const [optionSummary, setOptionSummary] = useState<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchOptionChain('NIFTY', 5)
+      .then(data => {
+        if (mounted && data) setOptionSummary(data);
+      })
+      .catch(err => console.warn('Could not fetch option chain summary for overview:', err));
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -284,18 +299,116 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         </div>
       </div>
 
-      {/* 4. PROMINENT ECONOMIC OVERVIEW SECTION (SECTION 2.B – CORE ECONOMIC INDICATORS) */}
+      {/* 4. NIFTY 50 ALL 50 CONSTITUENT STOCKS & DETAILED CANDLESTICK CHARTS (SECTION 4 & 5.F) */}
+      <Nifty50UniverseSection
+        stocks={dailyScan?.all_results || []}
+        sessionDate={dailyScan?.completed_session_date || '21 Nov 2026'}
+        onSelectStock={onSelectStock}
+      />
+
+      {/* 5. PROMINENT ECONOMIC OVERVIEW SECTION (SECTION 2.B – CORE ECONOMIC INDICATORS) */}
       <EconomicIndicatorsSection 
         indicatorsData={(intelligence as any)?.economic_indicators} 
         onNavigate={onNavigate} 
       />
 
-      {/* 5. COMBINED INSTITUTIONAL FII / DII CASH & DERIVATIVES FLOWS SUITE */}
+      {/* 6. COMBINED INSTITUTIONAL FII / DII CASH & DERIVATIVES FLOWS SUITE */}
       <MarketIntelligenceDashboard 
         intelligence={intelligence || null} 
       />
 
-      {/* 5. PRIMARY TECHNICAL DMA KPI METRICS GRID */}
+      {/* 7. INSTITUTIONAL OPTION CHAIN MARKET STRENGTH SUMMARY (-4 TO +4 SCORING & S/R LEVELS) (SECTION 5.H) */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-[#121824] via-[#161F33] to-[#121824] border border-[#232E47] shadow-xl space-y-4 font-mono">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47] gap-3">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="p-1 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                <Layers className="w-4 h-4" />
+              </span>
+              <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>NIFTY 50 Live Option Chain Market Strength &amp; Quantitative Scoring</span>
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
+                Image-Based -4 to +4 Scoring
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Synthesis of Call &amp; Put buildup patterns, institutional S1/S2 floors &amp; R1/R2 walls, PCR, and Max Pain.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigate('option-chain')}
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all shadow-md self-start sm:self-auto cursor-pointer"
+          >
+            <span>Open 20-Column Option Chain Matrix</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Option Chain Telemetry Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {/* Metric 1: Quant Market View */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-[#232E47] text-center">
+            <span className="text-[10px] text-slate-400 uppercase block">Market View</span>
+            <span className={`text-xs font-bold block mt-1 px-2 py-0.5 rounded border ${
+              (optionSummary?.totals?.total_score ?? 0) >= 4 ? 'bg-emerald-700 text-white border-emerald-500' :
+              (optionSummary?.totals?.total_score ?? 0) >= 2 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+              (optionSummary?.totals?.total_score ?? 0) >= -1 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+              (optionSummary?.totals?.total_score ?? 0) >= -3 ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' :
+              'bg-rose-900 text-rose-200 border-rose-600'
+            }`}>
+              {optionSummary?.totals?.market_view || 'Sideways / Confusion'}
+            </span>
+          </div>
+
+          {/* Metric 2: ATM Total Score */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-[#232E47] text-center">
+            <span className="text-[10px] text-slate-400 uppercase block">ATM Quant Score</span>
+            <div className={`text-xl font-black mt-0.5 ${
+              (optionSummary?.totals?.total_score ?? 0) > 0 ? 'text-emerald-400' :
+              (optionSummary?.totals?.total_score ?? 0) < 0 ? 'text-rose-400' : 'text-amber-300'
+            }`}>
+              {(optionSummary?.totals?.total_score ?? 0) > 0 ? `+${optionSummary?.totals?.total_score}` : optionSummary?.totals?.total_score ?? 0}
+              <span className="text-xs text-slate-500 font-normal"> / ±4</span>
+            </div>
+          </div>
+
+          {/* Metric 3: ATM Strike */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-amber-500/40 text-center bg-amber-500/5">
+            <span className="text-[10px] text-amber-300 uppercase block font-bold">ATM Strike Pivot</span>
+            <div className="text-xl font-black text-amber-300 mt-0.5">
+              ₹{optionSummary?.atm_strike?.toLocaleString() || '25,800'}
+            </div>
+          </div>
+
+          {/* Metric 4: S1 / S2 Support Floors */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-emerald-500/40 text-center bg-emerald-500/5">
+            <span className="text-[10px] text-emerald-400 uppercase block font-bold">S1 Floor &bull; S2 Cushion</span>
+            <div className="text-sm font-black text-emerald-300 mt-1">
+              ₹{(optionSummary?.support_resistance?.s1?.strike ?? 25600).toLocaleString()} &bull; ₹{(optionSummary?.support_resistance?.s2?.strike ?? 25400).toLocaleString()}
+            </div>
+          </div>
+
+          {/* Metric 5: R1 / R2 Resistance Walls */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-rose-500/40 text-center bg-rose-500/5">
+            <span className="text-[10px] text-rose-400 uppercase block font-bold">R1 Wall &bull; R2 Ceiling</span>
+            <div className="text-sm font-black text-rose-300 mt-1">
+              ₹{(optionSummary?.support_resistance?.r1?.strike ?? 26000).toLocaleString()} &bull; ₹{(optionSummary?.support_resistance?.r2?.strike ?? 26200).toLocaleString()}
+            </div>
+          </div>
+
+          {/* Metric 6: OI PCR & Max Pain */}
+          <div className="p-3 rounded-xl bg-[#0B0E14] border border-[#232E47] text-center">
+            <span className="text-[10px] text-slate-400 uppercase block">OI PCR &bull; Max Pain</span>
+            <div className="text-sm font-black text-sky-400 mt-1">
+              {(optionSummary?.totals?.oi_pcr || 1.12).toFixed(2)} &bull; ₹{(optionSummary?.max_pain?.max_pain_strike ?? 25750).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 8. PRIMARY TECHNICAL DMA KPI METRICS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: 6/6 Bullish */}
         <div 

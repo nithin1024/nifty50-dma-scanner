@@ -9,7 +9,11 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 from app.services.options_universe_service import options_universe_service
-from app.services.options_analytics_engine import options_analytics_engine
+from app.services.options_analytics_engine import (
+    options_analytics_engine,
+    classify_option_pattern_and_score,
+    get_market_view
+)
 from app.services.alerts_and_monitoring_service import alerts_and_monitoring_service
 from app.services import upstox_market_client as upstox
 from app.services.upstox_feed_service import subscription_manager
@@ -475,6 +479,11 @@ async def get_option_chain(
             if strike not in kept_strikes:
                 continue
             row = {"strike_price": strike, "is_atm": strike == strikes[atm_index]}
+            ce_score = 0
+            pe_score = 0
+            ce_code = "N/A"
+            pe_code = "N/A"
+
             for name, side, is_call in (("ce", "call_options", True), ("pe", "put_options", False)):
                 option = item.get(side) or {}
                 market = option.get("market_data") or {}
@@ -484,12 +493,15 @@ async def get_option_chain(
                 ltp, close = market.get("ltp"), market.get("close_price")
                 price_change = float(ltp) - float(close) if ltp is not None and close is not None else None
                 volume = market.get("volume")
-                if price_change is None or oi_change is None:
-                    buildup = "N/A"
-                elif price_change >= 0 and oi_change >= 0: buildup = "Long Buildup"
-                elif price_change < 0 and oi_change >= 0: buildup = "Short Buildup"
-                elif price_change >= 0: buildup = "Short Covering"
-                else: buildup = "Long Unwinding"
+
+                buildup, code, leg_score = classify_option_pattern_and_score(price_change, oi_change, is_call=is_call)
+                if is_call:
+                    ce_score = leg_score
+                    ce_code = code
+                else:
+                    pe_score = leg_score
+                    pe_code = code
+
                 row[name] = {"instrument_key": option.get("instrument_key"), "ltp": ltp,
                     "change": price_change,
                     "change_pct": (price_change / float(close) * 100) if close not in (None, 0) and price_change is not None else None,
@@ -500,7 +512,17 @@ async def get_option_chain(
                     "bid_price": market.get("bid_price"), "ask_price": market.get("ask_price"),
                     "bid_qty": market.get("bid_qty"), "ask_qty": market.get("ask_qty"),
                     "classification": ("ITM" if (strike < spot if is_call else strike > spot) else "OTM" if (strike > spot if is_call else strike < spot) else "ATM"),
-                    "buildup": buildup}
+                    "buildup": buildup,
+                    "pattern_code": code,
+                    "score": leg_score}
+
+            row["quant_score"] = ce_score + pe_score
+            row["total_score"] = ce_score + pe_score
+            row["market_view"] = get_market_view(ce_score + pe_score)
+            row["ce_pattern_code"] = ce_code
+            row["ce_score"] = ce_score
+            row["pe_pattern_code"] = pe_code
+            row["pe_score"] = pe_score
             rows.append(row)
         requested_keys = [leg.get("instrument_key") for row in rows for leg in (row.get("ce"), row.get("pe")) if leg and leg.get("instrument_key")]
         subscription_manager.prioritize_instruments([key, *requested_keys])
@@ -582,16 +604,24 @@ async def get_option_chain(
         atm_ivs = [float((atm_row.get(side) or {}).get("option_greeks", {}).get("iv"))
                    for side in ("call_options", "put_options")
                    if (atm_row.get(side) or {}).get("option_greeks", {}).get("iv") is not None]
+        atm_chain_row = next((r for r in rows if r.get("is_atm")), rows[len(rows)//2] if rows else {})
+        totals_dict = {
+            "total_call_oi": total_call_oi, "total_put_oi": total_put_oi,
+            "total_call_volume": total_call_vol, "total_put_volume": total_put_vol,
+            "oi_pcr": total_put_oi / total_call_oi if total_call_oi else None,
+            "vol_pcr": total_put_vol / total_call_vol if total_call_vol else None,
+            "oi_change_pcr": total_put_change / total_call_change if total_call_change else None,
+            "total_call_oi_change": total_call_change, "total_put_oi_change": total_put_change,
+            "total_score": atm_chain_row.get("total_score", 0),
+            "market_view": atm_chain_row.get("market_view", "Sideways / Confusion"),
+            "ce_score": atm_chain_row.get("ce_score", 0),
+            "pe_score": atm_chain_row.get("pe_score", 0),
+        }
         return {"symbol": symbol.upper(), "instrument_key": key, "expiry": selected,
             "source": "/v2/option/chain", "spot_price": spot, "atm_strike": strikes[atm_index],
             "lot_size": contract.get("lot_size"),
             "strike_step": min((b - a for a, b in zip(strikes, strikes[1:])), default=None), "rows": rows,
-            "totals": {"total_call_oi": total_call_oi, "total_put_oi": total_put_oi,
-                "total_call_volume": total_call_vol, "total_put_volume": total_put_vol,
-                "oi_pcr": total_put_oi / total_call_oi if total_call_oi else None,
-                "vol_pcr": total_put_vol / total_call_vol if total_call_vol else None,
-                "oi_change_pcr": total_put_change / total_call_change if total_call_change else None,
-                "total_call_oi_change": total_call_change, "total_put_oi_change": total_put_change},
+            "totals": totals_dict,
             "exposures": {"atm_iv_pct": round(sum(atm_ivs) / len(atm_ivs), 2) if atm_ivs else None},
             "max_pain": {"max_pain_strike": max_pain, "payout_table": max_pain_rows if observed_oi > 0 else [],
                          "observed_oi": observed_oi},

@@ -88,6 +88,9 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
   const [strategyResult, setStrategyResult] = useState<any>(null);
   const [strategyError, setStrategyError] = useState<string | null>(null);
 
+  // Score Details Modal state
+  const [selectedScoreStrike, setSelectedScoreStrike] = useState<any | null>(null);
+
   // Market regime state
   const [marketRegime, setMarketRegime] = useState<any>(null);
 
@@ -667,124 +670,312 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
       {/* ========================================================================= */}
       {activeTab === 'CHAIN' && chainData && (
         <div className="p-4 rounded-xl bg-[#0B0E14] border border-[#232E47] space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#232E47] gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47] gap-3">
             <div>
               <h3 className="text-sm font-bold text-white font-mono flex items-center space-x-2">
                 <Layers className="w-4 h-4 text-sky-400" />
-                <span>NIFTY Live Option Chain Table &bull; {selectedExpiry} Expiry</span>
+                <span>NIFTY 50 Live Option Chain Table &bull; {selectedExpiry} Expiry</span>
               </h3>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Calls (CE) on Left &bull; Strike Price in Center &bull; Puts (PE) on Right
+                Exact 20-Column Table &bull; Image-Based Buildup Scoring (-4 to +4) &bull; Quantitative Market Strength
               </p>
             </div>
-            <div className="flex items-center space-x-3 text-xs font-mono">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
               <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500/20 border border-emerald-500/40" /> <span className="text-slate-300">ITM</span></span>
-              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/50" /> <span className="text-amber-300">ATM</span></span>
-              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-[#0B0E14] border border-[#232E47]" /> <span className="text-slate-400">OTM</span></span>
+              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500" /> <span className="text-amber-300 font-bold">ATM (Yellow)</span></span>
+              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500" /> <span className="text-emerald-400 font-bold">S1 (Green)</span></span>
+              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-emerald-950 border border-emerald-700" /> <span className="text-emerald-500 font-bold">S2 (Dark Green)</span></span>
+              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-rose-500/30 border border-rose-500" /> <span className="text-rose-400 font-bold">R1 (Red)</span></span>
+              <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-rose-950 border border-rose-700" /> <span className="text-rose-500 font-bold">R2 (Dark Red)</span></span>
             </div>
           </div>
 
-          {/* Option Chain Table */}
+          {/* DYNAMIC 2 SUPPORTS & 2 RESISTANCES + ATM SUMMARY DIRECTLY ABOVE TABLE */}
+          {(() => {
+            const s1Strike = chainData?.support_resistance?.s1?.strike ?? chainData?.support_resistance?.strong_support?.strike;
+            const s2Strike = chainData?.support_resistance?.s2?.strike;
+            const r1Strike = chainData?.support_resistance?.r1?.strike ?? chainData?.support_resistance?.strong_resistance?.strike;
+            const r2Strike = chainData?.support_resistance?.r2?.strike;
+            const atmStrike = chainData?.atm_strike;
+
+            return (
+              <div className="rounded-lg bg-[#121824] border border-[#232E47] p-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-2 border-b border-[#232E47]/70 gap-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Dynamic Institutional S1/S2 Supports &amp; R1/R2 Resistances (Strike Pivots)</span>
+                  </span>
+                  <div className="flex items-center gap-3 text-xs font-mono">
+                    <span className="text-slate-400">Spot: <strong className="text-white">₹{displayMetric(chainData.spot_price)}</strong></span>
+                    <span className="text-slate-400">PCR: <strong className={chainData.totals?.oi_pcr >= 1 ? 'text-emerald-400' : 'text-rose-400'}>{displayMetric(chainData.totals?.oi_pcr)}</strong></span>
+                    <span className="text-slate-400">ATM Score: <strong className={chainData.totals?.total_score > 0 ? 'text-emerald-400' : chainData.totals?.total_score < 0 ? 'text-rose-400' : 'text-amber-300'}>{chainData.totals?.total_score > 0 ? `+${chainData.totals?.total_score}` : chainData.totals?.total_score ?? 0} ({chainData.totals?.market_view ?? 'Sideways'})</strong></span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs font-mono">
+                  {/* R2 */}
+                  <div className="p-2 rounded-lg bg-rose-950/40 border border-rose-800/60 shadow-sm">
+                    <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wide">R2 (Dark Red)</div>
+                    <div className="text-base font-black text-rose-300 mt-0.5">₹{displayMetric(r2Strike ?? '—')}</div>
+                    <div className="text-[9px] text-slate-400">Secondary Resistance Ceiling</div>
+                    <div className="text-[9px] text-slate-300 mt-1 font-semibold">OI: {displayMetric(chainData.support_resistance?.r2?.total_oi)} ({chainData.support_resistance?.r2?.oi_change >= 0 ? '+' : ''}{displayMetric(chainData.support_resistance?.r2?.oi_change)})</div>
+                  </div>
+                  {/* R1 */}
+                  <div className="p-2 rounded-lg bg-rose-500/15 border border-rose-500/50 shadow-sm">
+                    <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wide">R1 (Red)</div>
+                    <div className="text-base font-black text-rose-400 mt-0.5">₹{displayMetric(r1Strike ?? '—')}</div>
+                    <div className="text-[9px] text-slate-400">Primary Resistance Wall</div>
+                    <div className="text-[9px] text-slate-300 mt-1 font-semibold">OI: {displayMetric(chainData.support_resistance?.r1?.total_oi)} ({chainData.support_resistance?.r1?.oi_change >= 0 ? '+' : ''}{displayMetric(chainData.support_resistance?.r1?.oi_change)})</div>
+                  </div>
+                  {/* ATM */}
+                  <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-500/50 shadow-sm col-span-2 sm:col-span-1">
+                    <div className="text-[10px] font-bold text-amber-300 uppercase tracking-wide">ATM Pivot (Yellow)</div>
+                    <div className="text-base font-black text-amber-300 mt-0.5">₹{displayMetric(atmStrike ?? '—')}</div>
+                    <div className="text-[9px] text-slate-400">At-The-Money Strike</div>
+                    <div className="text-[9px] text-amber-400 mt-1 font-bold">{chainData.totals?.market_view ?? 'Sideways'} ({chainData.totals?.total_score > 0 ? `+${chainData.totals?.total_score}` : chainData.totals?.total_score ?? 0})</div>
+                  </div>
+                  {/* S1 */}
+                  <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/50 shadow-sm">
+                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">S1 (Green)</div>
+                    <div className="text-base font-black text-emerald-400 mt-0.5">₹{displayMetric(s1Strike ?? '—')}</div>
+                    <div className="text-[9px] text-slate-400">Primary Support Floor</div>
+                    <div className="text-[9px] text-slate-300 mt-1 font-semibold">OI: {displayMetric(chainData.support_resistance?.s1?.total_oi)} ({chainData.support_resistance?.s1?.oi_change >= 0 ? '+' : ''}{displayMetric(chainData.support_resistance?.s1?.oi_change)})</div>
+                  </div>
+                  {/* S2 */}
+                  <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/60 shadow-sm">
+                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">S2 (Dark Green)</div>
+                    <div className="text-base font-black text-emerald-300 mt-0.5">₹{displayMetric(s2Strike ?? '—')}</div>
+                    <div className="text-[9px] text-slate-400">Secondary Support Cushion</div>
+                    <div className="text-[9px] text-slate-300 mt-1 font-semibold">OI: {displayMetric(chainData.support_resistance?.s2?.total_oi)} ({chainData.support_resistance?.s2?.oi_change >= 0 ? '+' : ''}{displayMetric(chainData.support_resistance?.s2?.oi_change)})</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* EXACT 20-COLUMN OPTION CHAIN TABLE */}
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-xs font-mono text-center border-collapse">
               <thead>
                 <tr className="bg-[#121824] text-slate-400 border-b border-[#232E47]">
-                  <th colSpan={9} className="py-2 px-2 text-emerald-400 uppercase tracking-wider border-r border-[#232E47]">
+                  <th className="py-2 px-2 text-cyan-400 uppercase tracking-wider border-r border-[#232E47]">
+                    SCORE
+                  </th>
+                  <th colSpan={8} className="py-2 px-2 text-emerald-400 uppercase tracking-wider border-r border-[#232E47]">
                     CALLS (CE)
                   </th>
                   <th className="py-2 px-3 text-white uppercase tracking-wider bg-[#171F32]">
                     STRIKE
                   </th>
-                  <th colSpan={9} className="py-2 px-2 text-rose-400 uppercase tracking-wider border-l border-[#232E47]">
+                  <th colSpan={8} className="py-2 px-2 text-rose-400 uppercase tracking-wider border-l border-[#232E47]">
                     PUTS (PE)
+                  </th>
+                  <th colSpan={2} className="py-2 px-2 text-amber-400 uppercase tracking-wider border-l border-[#232E47]">
+                    QUANT SENTIMENT
                   </th>
                 </tr>
                 <tr className="bg-[#0B0E14] text-slate-400 border-b border-[#232E47]/70 text-[10px]">
-                  {/* CE Columns */}
-                  <th className="py-1 px-1.5 text-left">Buildup</th>
-                  <th className="py-1 px-1.5 text-right">Prev OI</th>
-                  <th className="py-1 px-1.5 text-right">OI</th>
-                  <th className="py-1 px-1.5 text-right">OI Chg</th>
-                  <th className="py-1 px-1.5 text-right">Volume</th>
-                  <th className="py-1 px-1.5 text-right">IV</th>
-                  <th className="py-1 px-1.5 text-right">Delta</th>
-                  <th className="py-1 px-1.5 text-right">Prev Close</th>
-                  <th className="py-1 px-2 text-right border-r border-[#232E47] text-white">LTP</th>
-                  {/* Strike */}
-                  <th className="py-1 px-3 bg-[#171F32] text-amber-300 font-bold">Strike</th>
-                  {/* PE Columns */}
-                  <th className="py-1 px-2 text-left border-l border-[#232E47] text-white">LTP</th>
-                  <th className="py-1 px-1.5 text-left">Prev Close</th>
-                  <th className="py-1 px-1.5 text-left">Delta</th>
-                  <th className="py-1 px-1.5 text-left">IV</th>
-                  <th className="py-1 px-1.5 text-left">Volume</th>
-                  <th className="py-1 px-1.5 text-left">OI Chg</th>
-                  <th className="py-1 px-1.5 text-left">OI</th>
-                  <th className="py-1 px-1.5 text-left">Prev OI</th>
-                  <th className="py-1 px-1.5 text-right">Buildup</th>
+                  {/* Col 1 */}
+                  <th className="py-1 px-1.5 text-center text-cyan-300 border-r border-[#232E47]">1. Quant Score</th>
+                  {/* Cols 2 - 9 (CE) */}
+                  <th className="py-1 px-1.5 text-center">2. CE Pattern</th>
+                  <th className="py-1 px-1.5 text-center">3. CE Score</th>
+                  <th className="py-1 px-1.5 text-right">4. CE OI</th>
+                  <th className="py-1 px-1.5 text-right">5. Chg in CE OI</th>
+                  <th className="py-1 px-1.5 text-right">6. CE Vol</th>
+                  <th className="py-1 px-1.5 text-right">7. CE IV</th>
+                  <th className="py-1 px-1.5 text-right">8. CE Delta</th>
+                  <th className="py-1 px-2 text-right border-r border-[#232E47] text-white">9. CE LTP</th>
+                  {/* Col 10 (Strike) */}
+                  <th className="py-1 px-3 bg-[#171F32] text-amber-300 font-bold">10. Strike Price</th>
+                  {/* Cols 11 - 18 (PE) */}
+                  <th className="py-1 px-2 text-left border-l border-[#232E47] text-white">11. PE LTP</th>
+                  <th className="py-1 px-1.5 text-left">12. PE Delta</th>
+                  <th className="py-1 px-1.5 text-left">13. PE IV</th>
+                  <th className="py-1 px-1.5 text-left">14. PE Vol</th>
+                  <th className="py-1 px-1.5 text-left">15. Chg in PE OI</th>
+                  <th className="py-1 px-1.5 text-left">16. PE OI</th>
+                  <th className="py-1 px-1.5 text-center">17. PE Pattern</th>
+                  <th className="py-1 px-1.5 text-center border-r border-[#232E47]">18. PE Score</th>
+                  {/* Cols 19 - 20 (Total Score & Market View) */}
+                  <th className="py-1 px-1.5 text-center text-sky-300">19. Total Score</th>
+                  <th className="py-1 px-2 text-center text-amber-300">20. Market View</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232E47]/40">
                 {(() => {
-                  const supportStrike = chainData?.support_resistance?.strong_support?.strike;
-                  const resistanceStrike = chainData?.support_resistance?.strong_resistance?.strike;
-                  const maxPainStrike = chainData?.max_pain?.max_pain_strike;
+                  const s1Strike = chainData?.support_resistance?.s1?.strike ?? chainData?.support_resistance?.strong_support?.strike;
+                  const s2Strike = chainData?.support_resistance?.s2?.strike;
+                  const r1Strike = chainData?.support_resistance?.r1?.strike ?? chainData?.support_resistance?.strong_resistance?.strike;
+                  const r2Strike = chainData?.support_resistance?.r2?.strike;
+                  const atmStrike = chainData?.atm_strike;
 
                   return chainData.rows.map((row: any) => {
-                    const isAtm = row.is_atm;
+                    const isAtm = row.is_atm || row.strike_price === atmStrike;
+                    const isS1 = row.strike_price === s1Strike;
+                    const isS2 = row.strike_price === s2Strike;
+                    const isR1 = row.strike_price === r1Strike;
+                    const isR2 = row.strike_price === r2Strike;
+
                     const ceItm = row.ce.classification === 'ITM';
                     const peItm = row.pe.classification === 'ITM';
-                    const isResistance = row.strike_price === resistanceStrike;
-                    const isSupport = row.strike_price === supportStrike;
-                    const isMaxPain = row.strike_price === maxPainStrike;
+
+                    // Scoring fallback logic
+                    const cePriceChange = row.ce.change ?? 0;
+                    const ceOiChange = row.ce.oi_change ?? 0;
+                    const pePriceChange = row.pe.change ?? 0;
+                    const peOiChange = row.pe.oi_change ?? 0;
+
+                    let ceCode = row.ce_pattern_code || row.ce.pattern_code;
+                    let ceScore = row.ce_score ?? row.ce.score;
+                    let ceBuildup = row.ce.buildup;
+                    if (!ceCode) {
+                      if (cePriceChange >= 0 && ceOiChange >= 0) { ceCode = 'LB'; ceScore = 2; ceBuildup = 'Long Buildup'; }
+                      else if (cePriceChange >= 0 && ceOiChange < 0) { ceCode = 'SC'; ceScore = 2; ceBuildup = 'Short Covering'; }
+                      else if (cePriceChange < 0 && ceOiChange < 0) { ceCode = 'LW'; ceScore = -1; ceBuildup = 'Long Unwinding'; }
+                      else { ceCode = 'SB'; ceScore = -2; ceBuildup = 'Short Buildup'; }
+                    }
+
+                    let peCode = row.pe_pattern_code || row.pe.pattern_code;
+                    let peScore = row.pe_score ?? row.pe.score;
+                    let peBuildup = row.pe.buildup;
+                    if (!peCode) {
+                      if (pePriceChange <= 0 && peOiChange >= 0) { peCode = 'SB'; peScore = 2; peBuildup = 'Short Buildup'; }
+                      else if (pePriceChange <= 0 && peOiChange < 0) { peCode = 'LW'; peScore = 1; peBuildup = 'Long Unwinding'; }
+                      else if (pePriceChange > 0 && peOiChange >= 0) { peCode = 'LB'; peScore = -2; peBuildup = 'Long Buildup'; }
+                      else { peCode = 'SC'; peScore = -2; peBuildup = 'Short Covering'; }
+                    }
+
+                    const totalScore = row.total_score ?? row.quant_score ?? (ceScore + peScore);
+                    let marketView = row.market_view;
+                    if (!marketView) {
+                      if (totalScore >= 4) marketView = 'Strong Bullish';
+                      else if (totalScore >= 2) marketView = 'Bullish';
+                      else if (totalScore >= -1) marketView = 'Sideways / Confusion';
+                      else if (totalScore >= -3) marketView = 'Bearish';
+                      else marketView = 'Strong Bearish';
+                    }
+
+                    // Score modal data
+                    const strikeDetails = {
+                      strike: row.strike_price,
+                      spot: chainData.spot_price,
+                      ceCode,
+                      ceScore,
+                      ceBuildup,
+                      cePriceChange,
+                      ceOiChange,
+                      ceLtp: row.ce.ltp,
+                      peCode,
+                      peScore,
+                      peBuildup,
+                      pePriceChange,
+                      peOiChange,
+                      peLtp: row.pe.ltp,
+                      totalScore,
+                      marketView,
+                      isAtm,
+                      isS1,
+                      isS2,
+                      isR1,
+                      isR2
+                    };
+
+                    const scoreColorClass = totalScore >= 4
+                      ? 'bg-emerald-700 text-white border-emerald-500 font-bold shadow-sm'
+                      : totalScore >= 2
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold'
+                      : totalScore >= -1
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                      : totalScore >= -3
+                      ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 font-bold'
+                      : 'bg-rose-900/90 text-rose-200 border-rose-600 font-bold shadow-sm';
+
+                    const marketViewClass = marketView === 'Strong Bullish'
+                      ? 'bg-emerald-700/80 text-white border-emerald-400 font-bold'
+                      : marketView === 'Bullish'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold'
+                      : marketView === 'Sideways / Confusion'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold'
+                      : marketView === 'Bearish'
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold'
+                      : 'bg-rose-900/80 text-rose-200 border-rose-500 font-bold';
 
                     return (
                       <tr 
                         key={row.strike_price}
                         className={`hover:bg-[#1a2334] transition-colors ${
-                          isAtm ? 'bg-amber-500/10 font-bold' : ''
+                          isAtm ? 'bg-amber-500/10 font-semibold' : ''
                         }`}
                       >
-                        {/* CE Cells */}
-                        <td className={`py-1.5 px-1.5 text-left text-[10px] ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                          <span className={`px-1 py-0.5 rounded ${
-                            row.ce.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
-                            row.ce.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
-                            'text-slate-400'
-                          }`}>
-                            {row.ce.buildup}
-                          </span>
+                        {/* Col 1: Quant Score */}
+                        <td className="py-1.5 px-1.5 border-r border-[#232E47]">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScoreStrike(strikeDetails)}
+                            title="Click to view quantitative mathematical breakdown"
+                            className={`px-2 py-0.5 rounded text-[11px] border cursor-pointer hover:scale-105 transition-transform ${scoreColorClass}`}
+                          >
+                            {totalScore > 0 ? `+${totalScore}` : totalScore}
+                          </button>
                         </td>
-                        <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                          {displayMetric(row.ce.previous_oi)}
+
+                        {/* Col 2: CE Pattern */}
+                        <td className={`py-1.5 px-1.5 text-center text-[10px] ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScoreStrike(strikeDetails)}
+                            title={`${ceBuildup} (${ceCode})`}
+                            className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${
+                              ceCode === 'LB' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                              ceCode === 'SC' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' :
+                              ceCode === 'LW' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                              'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                            }`}
+                          >
+                            {ceCode}
+                          </button>
                         </td>
+
+                        {/* Col 3: CE Score */}
+                        <td className={`py-1.5 px-1.5 text-center font-bold ${
+                          ceScore > 0 ? 'text-emerald-400' : ceScore < 0 ? 'text-rose-400' : 'text-slate-400'
+                        } ${ceItm ? 'bg-emerald-950/20' : ''}`}>
+                          {ceScore > 0 ? `+${ceScore}` : ceScore}
+                        </td>
+
+                        {/* Col 4: CE OI */}
                         <td className={`py-1.5 px-1.5 text-right font-medium text-slate-300 ${ceItm ? 'bg-emerald-950/20' : ''} ${
-                          isResistance ? 'bg-rose-950/40 ring-1 ring-rose-500/50' : ''
+                          isR1 ? 'bg-rose-950/40 ring-1 ring-rose-500/50' : ''
                         }`}>
-                          {isResistance && (
-                            <div className="text-[8px] font-bold text-rose-400 font-mono tracking-wider">RESISTANCE WALL</div>
-                          )}
-                          <span className={isResistance ? 'text-white font-bold text-xs' : ''}>
+                          <span className={isR1 ? 'text-white font-bold text-xs' : ''}>
                             {displayMetric(row.ce.oi)}
                           </span>
                         </td>
+
+                        {/* Col 5: Chg in CE OI */}
                         <td className={`py-1.5 px-1.5 text-right font-medium ${
                           row.ce.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
                         } ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                           {row.ce.oi_change == null ? 'N/A' : `${row.ce.oi_change >= 0 ? '+' : ''}${displayMetric(row.ce.oi_change)}`}
                         </td>
+
+                        {/* Col 6: CE Vol */}
                         <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                           {displayMetric(row.ce.volume)}
                         </td>
+
+                        {/* Col 7: CE IV */}
                         <td className={`py-1.5 px-1.5 text-right text-slate-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                           {displayMetric(row.ce.iv, row.ce.iv == null ? '' : '%')}
                         </td>
+
+                        {/* Col 8: CE Delta */}
                         <td className={`py-1.5 px-1.5 text-right text-sky-400 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
                           {displayMetric(row.ce.delta)}
                         </td>
-                        <td className={`py-1.5 px-1.5 text-right text-slate-500 ${ceItm ? 'bg-emerald-950/20' : ''}`}>
-                          {row.ce.previous_close == null ? 'N/A' : `₹${displayMetric(row.ce.previous_close)}`}
-                        </td>
+
+                        {/* Col 9: CE LTP */}
                         <td className={`py-1.5 px-2 text-right font-bold text-white border-r border-[#232E47] ${ceItm ? 'bg-emerald-950/20 text-emerald-300' : ''}`}>
                           {row.ce.instrument_key ? (
                             <button type="button" onClick={() => setSelectedOptionChart({
@@ -797,36 +988,45 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
                           ) : row.ce.ltp == null ? 'N/A' : `₹${displayMetric(row.ce.ltp)}`}
                         </td>
 
-                        {/* STRIKE PRICE WITH EXPLICIT SUPPORT / RESISTANCE / MAX PAIN / ATM BADGES */}
+                        {/* Col 10: STRIKE PRICE (Center Highlight) */}
                         <td className={`py-1.5 px-3 font-black text-white bg-[#121824] text-center relative ${
                           isAtm ? 'bg-amber-500/25 text-amber-300 border-x-2 border-amber-500' : ''
-                        } ${isSupport ? 'bg-emerald-950/35 border-x-2 border-emerald-500' : ''} ${isResistance ? 'bg-rose-950/35 border-x-2 border-rose-500' : ''}`}>
+                        } ${isS1 ? 'bg-emerald-500/25 border-x-2 border-emerald-500' : ''} ${
+                          isS2 ? 'bg-emerald-950/70 border-x-2 border-emerald-700' : ''
+                        } ${isR1 ? 'bg-rose-500/25 border-x-2 border-rose-500' : ''} ${
+                          isR2 ? 'bg-rose-950/70 border-x-2 border-rose-700' : ''
+                        }`}>
                           <div className="flex flex-col items-center justify-center">
-                            {isResistance && (
-                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-500/25 text-rose-300 border border-rose-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
-                                🛡️ RESISTANCE
+                            {isR2 && (
+                              <span className="text-[7.5px] font-bold px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-700 mb-0.5 uppercase tracking-wider">
+                                🛡️ R2 CEILING
                               </span>
                             )}
-                            {isSupport && (
-                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
-                                🟢 SUPPORT
+                            {isR1 && (
+                              <span className="text-[7.5px] font-bold px-1.5 py-0.2 rounded bg-rose-500/30 text-rose-300 border border-rose-500 mb-0.5 uppercase tracking-wider">
+                                🛡️ R1 RESISTANCE
                               </span>
                             )}
-                            {isMaxPain && (
-                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/50 mb-0.5 shadow-sm uppercase tracking-wider">
-                                🎯 MAX PAIN
+                            {isS1 && (
+                              <span className="text-[7.5px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-500 mb-0.5 uppercase tracking-wider">
+                                🟢 S1 SUPPORT
+                              </span>
+                            )}
+                            {isS2 && (
+                              <span className="text-[7.5px] font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 mb-0.5 uppercase tracking-wider">
+                                🟢 S2 CUSHION
                               </span>
                             )}
                             <span className="text-sm font-mono font-bold tracking-tight">{row.strike_price.toLocaleString()}</span>
                             {isAtm && (
-                              <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 mt-0.5">
-                                ATM
+                              <span className="text-[7.5px] font-bold px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 mt-0.5">
+                                ⚡ ATM
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {/* PE Cells */}
+                        {/* Col 11: PE LTP */}
                         <td className={`py-1.5 px-2 text-left font-bold text-white border-l border-[#232E47] ${peItm ? 'bg-rose-950/20 text-rose-300' : ''}`}>
                           {row.pe.instrument_key ? (
                             <button type="button" onClick={() => setSelectedOptionChart({
@@ -838,44 +1038,84 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
                             </button>
                           ) : row.pe.ltp == null ? 'N/A' : `₹${displayMetric(row.pe.ltp)}`}
                         </td>
-                        <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                          {row.pe.previous_close == null ? 'N/A' : `₹${displayMetric(row.pe.previous_close)}`}
-                        </td>
+
+                        {/* Col 12: PE Delta */}
                         <td className={`py-1.5 px-1.5 text-left text-sky-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
                           {displayMetric(row.pe.delta)}
                         </td>
+
+                        {/* Col 13: PE IV */}
                         <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
                           {displayMetric(row.pe.iv, row.pe.iv == null ? '' : '%')}
                         </td>
+
+                        {/* Col 14: PE Vol */}
                         <td className={`py-1.5 px-1.5 text-left text-slate-400 ${peItm ? 'bg-rose-950/20' : ''}`}>
                           {displayMetric(row.pe.volume)}
                         </td>
+
+                        {/* Col 15: Chg in PE OI */}
                         <td className={`py-1.5 px-1.5 text-left font-medium ${
                           row.pe.oi_change >= 0 ? 'text-emerald-400' : 'text-rose-400'
                         } ${peItm ? 'bg-rose-950/20' : ''}`}>
                           {row.pe.oi_change == null ? 'N/A' : `${row.pe.oi_change >= 0 ? '+' : ''}${displayMetric(row.pe.oi_change)}`}
                         </td>
+
+                        {/* Col 16: PE OI */}
                         <td className={`py-1.5 px-1.5 text-left font-medium text-slate-300 ${peItm ? 'bg-rose-950/20' : ''} ${
-                          isSupport ? 'bg-emerald-950/40 ring-1 ring-emerald-500/50' : ''
+                          isS1 ? 'bg-emerald-950/40 ring-1 ring-emerald-500/50' : ''
                         }`}>
-                          {isSupport && (
-                            <div className="text-[8px] font-bold text-emerald-400 font-mono tracking-wider">SUPPORT BASE</div>
-                          )}
-                          <span className={isSupport ? 'text-white font-bold text-xs' : ''}>
+                          <span className={isS1 ? 'text-white font-bold text-xs' : ''}>
                             {displayMetric(row.pe.oi)}
                           </span>
                         </td>
-                        <td className={`py-1.5 px-1.5 text-left text-slate-500 ${peItm ? 'bg-rose-950/20' : ''}`}>
-                          {displayMetric(row.pe.previous_oi)}
+
+                        {/* Col 17: PE Pattern */}
+                        <td className={`py-1.5 px-1.5 text-center text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScoreStrike(strikeDetails)}
+                            title={`${peBuildup} (${peCode})`}
+                            className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${
+                              peCode === 'SB' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                              peCode === 'LW' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' :
+                              peCode === 'LB' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' :
+                              'bg-rose-900/60 text-rose-300 border-rose-700'
+                            }`}
+                          >
+                            {peCode}
+                          </button>
                         </td>
-                        <td className={`py-1.5 px-1.5 text-right text-[10px] ${peItm ? 'bg-rose-950/20' : ''}`}>
-                          <span className={`px-1 py-0.5 rounded ${
-                            row.pe.buildup === 'Long Buildup' ? 'bg-emerald-500/20 text-emerald-400' :
-                            row.pe.buildup === 'Short Buildup' ? 'bg-rose-500/20 text-rose-400' :
-                            'text-slate-400'
-                          }`}>
-                            {row.pe.buildup}
-                          </span>
+
+                        {/* Col 18: PE Score */}
+                        <td className={`py-1.5 px-1.5 text-center font-bold border-r border-[#232E47] ${
+                          peScore > 0 ? 'text-emerald-400' : peScore < 0 ? 'text-rose-400' : 'text-slate-400'
+                        } ${peItm ? 'bg-rose-950/20' : ''}`}>
+                          {peScore > 0 ? `+${peScore}` : peScore}
+                        </td>
+
+                        {/* Col 19: Total Score */}
+                        <td className="py-1.5 px-1.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScoreStrike(strikeDetails)}
+                            title="Click to view full breakdown"
+                            className={`px-2 py-0.5 rounded text-[11px] border cursor-pointer hover:scale-105 transition-transform ${scoreColorClass}`}
+                          >
+                            {totalScore > 0 ? `+${totalScore}` : totalScore}
+                          </button>
+                        </td>
+
+                        {/* Col 20: Market View */}
+                        <td className="py-1.5 px-2 text-center text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScoreStrike(strikeDetails)}
+                            title="Click for quantitative details"
+                            className={`px-2 py-0.5 rounded border ${marketViewClass} cursor-pointer hover:opacity-90`}
+                          >
+                            {marketView}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -884,12 +1124,108 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
               </tbody>
             </table>
           </div>
+
+          {/* SCORE DETAILS MODAL */}
+          {selectedScoreStrike && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono animate-fadeIn">
+              <div className="bg-[#0e1422] border border-[#232E47] rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl relative">
+                <div className="flex items-center justify-between pb-3 border-b border-[#232E47]">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block" />
+                      Strike ₹{selectedScoreStrike.strike.toLocaleString()} Quantitative Score Breakdown
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Underlying Spot: ₹{displayMetric(selectedScoreStrike.spot)} &bull; {selectedExpiry}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedScoreStrike(null)}
+                    className="p-1 rounded bg-[#1A2234] hover:bg-slate-700 text-slate-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Mathematical Formula Box */}
+                <div className="p-3 rounded-lg bg-[#080b11] border border-[#232E47] space-y-2">
+                  <div className="text-xs text-slate-400 uppercase font-semibold">Formula:</div>
+                  <div className="text-sm font-bold text-sky-300 font-mono">
+                    Total Score = CE Score ({selectedScoreStrike.ceScore > 0 ? `+${selectedScoreStrike.ceScore}` : selectedScoreStrike.ceScore}) + PE Score ({selectedScoreStrike.peScore > 0 ? `+${selectedScoreStrike.peScore}` : selectedScoreStrike.peScore}) = {selectedScoreStrike.totalScore > 0 ? `+${selectedScoreStrike.totalScore}` : selectedScoreStrike.totalScore}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-slate-400">Market View:</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
+                      selectedScoreStrike.totalScore >= 4 ? 'bg-emerald-700 text-white border-emerald-400' :
+                      selectedScoreStrike.totalScore >= 2 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                      selectedScoreStrike.totalScore >= -1 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                      selectedScoreStrike.totalScore >= -3 ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
+                      'bg-rose-900 text-rose-200 border-rose-500'
+                    }`}>
+                      {selectedScoreStrike.marketView}
+                    </span>
+                  </div>
+                </div>
+
+                {/* CE & PE Leg Breakdown Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* CE Card */}
+                  <div className="p-3 rounded-lg bg-[#121824] border border-emerald-500/30 space-y-1.5">
+                    <div className="font-bold text-emerald-400 uppercase flex items-center justify-between">
+                      <span>Call (CE) Leg</span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{selectedScoreStrike.ceCode}</span>
+                    </div>
+                    <div className="text-slate-300">Pattern: <strong>{selectedScoreStrike.ceBuildup}</strong></div>
+                    <div className="text-slate-400">Price Change: ₹{selectedScoreStrike.cePriceChange >= 0 ? '+' : ''}{displayMetric(selectedScoreStrike.cePriceChange)}</div>
+                    <div className="text-slate-400">OI Change: {selectedScoreStrike.ceOiChange >= 0 ? '+' : ''}{displayMetric(selectedScoreStrike.ceOiChange)} contracts</div>
+                    <div className="pt-1 border-t border-[#232E47] flex justify-between font-bold">
+                      <span className="text-slate-300">CE Score:</span>
+                      <span className={selectedScoreStrike.ceScore > 0 ? 'text-emerald-400' : 'text-rose-400'}>{selectedScoreStrike.ceScore > 0 ? `+${selectedScoreStrike.ceScore}` : selectedScoreStrike.ceScore}</span>
+                    </div>
+                  </div>
+
+                  {/* PE Card */}
+                  <div className="p-3 rounded-lg bg-[#121824] border border-rose-500/30 space-y-1.5">
+                    <div className="font-bold text-rose-400 uppercase flex items-center justify-between">
+                      <span>Put (PE) Leg</span>
+                      <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">{selectedScoreStrike.peCode}</span>
+                    </div>
+                    <div className="text-slate-300">Pattern: <strong>{selectedScoreStrike.peBuildup}</strong></div>
+                    <div className="text-slate-400">Price Change: ₹{selectedScoreStrike.pePriceChange >= 0 ? '+' : ''}{displayMetric(selectedScoreStrike.pePriceChange)}</div>
+                    <div className="text-slate-400">OI Change: {selectedScoreStrike.peOiChange >= 0 ? '+' : ''}{displayMetric(selectedScoreStrike.peOiChange)} contracts</div>
+                    <div className="pt-1 border-t border-[#232E47] flex justify-between font-bold">
+                      <span className="text-slate-300">PE Score:</span>
+                      <span className={selectedScoreStrike.peScore > 0 ? 'text-emerald-400' : 'text-rose-400'}>{selectedScoreStrike.peScore > 0 ? `+${selectedScoreStrike.peScore}` : selectedScoreStrike.peScore}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Institutional Rules Reference */}
+                <div className="p-2.5 rounded bg-[#080b11] border border-[#232E47] text-[10px] text-slate-400 space-y-1 leading-relaxed">
+                  <div className="font-semibold text-slate-300">Institutional Scoring Rules:</div>
+                  <div>&bull; CE: LB (Price UP &amp; OI UP) = +2 &bull; SC (Price UP &amp; OI DOWN) = +2 &bull; LW (Price DOWN &amp; OI DOWN) = -1 &bull; SB (Price DOWN &amp; OI UP) = -2</div>
+                  <div>&bull; PE: SB (Price DOWN &amp; OI UP) = +2 &bull; LW (Price DOWN &amp; OI DOWN) = +1 &bull; LB (Price UP &amp; OI UP) = -2 &bull; SC (Price UP &amp; OI DOWN) = -2</div>
+                </div>
+
+                <div className="text-right pt-2">
+                  <button
+                    onClick={() => setSelectedScoreStrike(null)}
+                    className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* OPTION PREMIUM CANDLESTICK & VOLUME CHART */}
           {selectedOptionChart && (
             <section className="mt-4 rounded-xl border border-[#232E47] bg-[#080b11] p-3" aria-label="Selected option contract chart">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h4 className="text-sm font-bold text-white">{selectedOptionChart.label} premium chart</h4>
-                  <p className="text-[10px] text-slate-400">Historical candles and live updates use the selected verified contract key.</p>
+                  <p className="text-[10px] text-slate-400">Historical candles and live updates use verified contract key with S1/S2/R1/R2 lines.</p>
                 </div>
                 <button type="button" onClick={() => setSelectedOptionChart(null)} aria-label="Close option chart" className="rounded-md border border-[#232E47] p-1.5 text-slate-300 hover:text-white">
                   <X className="h-4 w-4" />
@@ -902,6 +1238,13 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
                 displayName={selectedOptionChart.label}
                 height={420}
                 initialTimeframe="5m"
+                priceLevels={[
+                  ...(chainData?.support_resistance?.r2?.strike ? [{ price: chainData.support_resistance.r2.strike, title: 'R2 Ceiling', color: '#991B1B', lineWidth: 2 }] : []),
+                  ...(chainData?.support_resistance?.r1?.strike ? [{ price: chainData.support_resistance.r1.strike, title: 'R1 Wall', color: '#EF4444', lineWidth: 2 }] : []),
+                  ...(chainData?.atm_strike ? [{ price: chainData.atm_strike, title: 'ATM Pivot', color: '#F59E0B', lineWidth: 2 }] : []),
+                  ...(chainData?.support_resistance?.s1?.strike ? [{ price: chainData.support_resistance.s1.strike, title: 'S1 Floor', color: '#10B981', lineWidth: 2 }] : []),
+                  ...(chainData?.support_resistance?.s2?.strike ? [{ price: chainData.support_resistance.s2.strike, title: 'S2 Cushion', color: '#065F46', lineWidth: 2 }] : []),
+                ]}
               />
             </section>
           )}

@@ -70,7 +70,15 @@ const formatCandleLegendTime = (
   }
 };
 
-interface ProfessionalTradingChartProps {
+export interface PriceLevel {
+  price: number;
+  title: string;
+  color: string;
+  lineWidth?: number;
+  lineStyle?: number;
+}
+
+export interface ProfessionalTradingChartProps {
   symbol?: string;
   className?: string;
   height?: number;
@@ -79,6 +87,7 @@ interface ProfessionalTradingChartProps {
   displayName?: string;
   availableSymbols?: string[];
   onSymbolChange?: (symbol: string) => void;
+  priceLevels?: PriceLevel[];
 }
 
 export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> = ({
@@ -89,7 +98,8 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   instrumentKey,
   displayName,
   availableSymbols = [],
-  onSymbolChange
+  onSymbolChange,
+  priceLevels = []
 }) => {
   const rootContainerRef = useRef<HTMLDivElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -578,6 +588,26 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           series.setData(candlesData.map((c, i) => ({ time: c.time, value: values[i] }))
             .filter(item => item.value !== null && item.value !== undefined));
         }
+      }
+
+      // Draw Support / Resistance / Key Levels (S1, S2, R1, R2, ATM) if provided
+      if (priceLevels && priceLevels.length > 0) {
+        priceLevels.forEach(lvl => {
+          if (lvl && typeof lvl.price === 'number' && !isNaN(lvl.price)) {
+            try {
+              mainSeries.createPriceLine({
+                price: lvl.price,
+                color: lvl.color,
+                lineWidth: (lvl.lineWidth as any) || 2,
+                lineStyle: lvl.lineStyle ?? 0,
+                axisLabelVisible: true,
+                title: lvl.title,
+              });
+            } catch {
+              // Ignore chart price line error if any
+            }
+          }
+        });
       }
 
       if (preservedRangeRef.current) {

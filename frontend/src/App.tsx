@@ -19,6 +19,7 @@ import { GlobalMarketsAndCalendarPage } from './pages/GlobalMarketsAndCalendarPa
 import { IndianEconomyFundamentalsPage } from './pages/IndianEconomyFundamentalsPage';
 import { MarketNewsPage } from './pages/MarketNewsPage';
 import { SettingsAndDataSourcesPage } from './pages/SettingsAndDataSourcesPage';
+import { FinancialDictionary } from './components/FinancialDictionary';
 import { MarketToolsModal } from './components/MarketToolsModal';
 import type { ToolType } from './components/MarketToolsModal';
 
@@ -218,6 +219,11 @@ export const App: React.FC = () => {
         {/* 9. SETTINGS & DATA SOURCES (CENTRAL SCHEDULER + 15 STATUTORY AUTHORITIES) */}
         {(activeTab === 'settings-sources' || activeTab === 'data-quality') && (
           <SettingsAndDataSourcesPage dataStatus={dataStatus} />
+        )}
+
+        {/* 10. FINANCIAL DICTIONARY (ENGLISH - TELUGU) */}
+        {activeTab === 'financial-dictionary' && (
+          <FinancialDictionary onBackToOverview={() => setActiveTab('overview')} />
         )}
 
         {/* OTHER ANCILLARY MODULES & STOCK DETAIL */}

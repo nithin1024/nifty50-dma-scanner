@@ -88,6 +88,74 @@ def calculate_black_scholes_greeks(
     }
 
 
+def classify_option_pattern_and_score(
+    price_change: Optional[float],
+    oi_change: Optional[float],
+    is_call: bool
+) -> Tuple[str, str, int]:
+    """
+    Image-based institutional option buildup classification and scoring (-2 to +2).
+
+    3.1 CALL OPTION (CE) SCORING:
+    - Price UP (>= 0) + OI UP (>= 0) = Long Buildup (LB) = +2
+    - Price UP (>= 0) + OI DOWN (< 0) = Short Covering (SC) = +2
+    - Price DOWN (< 0) + OI DOWN (< 0) = Long Unwinding (LW) = -1
+    - Price DOWN (< 0) + OI UP (>= 0) = Short Buildup (SB) = -2
+
+    3.2 PUT OPTION (PE) SCORING:
+    - Price DOWN (<= 0) + OI UP (>= 0) = Short Buildup (SB) = +2
+    - Price DOWN (<= 0) + OI DOWN (< 0) = Long Unwinding (LW) = +1
+    - Price UP (> 0) + OI UP (>= 0) = Long Buildup (LB) = -2
+    - Price UP (> 0) + OI DOWN (< 0) = Short Covering (SC) = -2
+
+    Returns (buildup_full_name, buildup_code, score)
+    """
+    p_chg = float(price_change) if price_change is not None else 0.0
+    o_chg = float(oi_change) if oi_change is not None else 0.0
+
+    if is_call:
+        if p_chg >= 0 and o_chg >= 0:
+            return "Long Buildup", "LB", 2
+        elif p_chg >= 0 and o_chg < 0:
+            return "Short Covering", "SC", 2
+        elif p_chg < 0 and o_chg < 0:
+            return "Long Unwinding", "LW", -1
+        else:  # p_chg < 0 and o_chg >= 0
+            return "Short Buildup", "SB", -2
+    else:
+        # PE leg
+        if p_chg <= 0 and o_chg >= 0:
+            return "Short Buildup", "SB", 2
+        elif p_chg <= 0 and o_chg < 0:
+            return "Long Unwinding", "LW", 1
+        elif p_chg > 0 and o_chg >= 0:
+            return "Long Buildup", "LB", -2
+        else:  # p_chg > 0 and o_chg < 0
+            return "Short Covering", "SC", -2
+
+
+def get_market_view(total_score: int) -> str:
+    """
+    Map total score (-4 to +4) to standardized Market View:
+    +4: Strong Bullish (Dark Green)
+    +2 to +3: Bullish (Green)
+    -1 to +1: Sideways / Confusion (Yellow)
+    -2 to -3: Bearish (Red)
+    -4: Strong Bearish (Dark Red)
+    """
+    if total_score >= 4:
+        return "Strong Bullish"
+    elif total_score >= 2:
+        return "Bullish"
+    elif total_score >= -1:
+        return "Sideways / Confusion"
+    elif total_score >= -3:
+        return "Bearish"
+    else:
+        return "Strong Bearish"
+
+
+
 class OptionsAnalyticsEngine:
     def __init__(self):
         # 15-minute OI Snapshot store {symbol_expiry: [snapshots]}
@@ -169,18 +237,18 @@ class OptionsAnalyticsEngine:
             total_call_oi_change += ce_oi_chg
             total_put_oi_change += pe_oi_chg
 
-            # Buildup logic:
-            # Price up, OI up -> Long Buildup
-            # Price down, OI up -> Short Buildup
-            # Price up, OI down -> Short Covering
-            # Price down, OI down -> Long Unwinding
-            ce_buildup = "Short Buildup" if ce_oi_chg > 0 else "Long Unwinding"
-            pe_buildup = "Long Buildup" if pe_oi_chg > 0 else "Short Covering"
+            ce_change = round(ce_greeks["theoretical_price"] * 0.045, 2)
+            pe_change = round(-pe_greeks["theoretical_price"] * 0.038, 2)
+
+            ce_buildup, ce_code, ce_score = classify_option_pattern_and_score(ce_change, ce_oi_chg, is_call=True)
+            pe_buildup, pe_code, pe_score = classify_option_pattern_and_score(pe_change, pe_oi_chg, is_call=False)
+            total_score = ce_score + pe_score
+            row_market_view = get_market_view(total_score)
 
             ce_entry = {
                 "instrument_key": f"NSE_FO|{symbol}{selected_expiry}CE{k}",
                 "ltp": ce_greeks["theoretical_price"],
-                "change": round(ce_greeks["theoretical_price"] * 0.045, 2),
+                "change": ce_change,
                 "change_pct": 4.5,
                 "oi": ce_oi,
                 "oi_change": ce_oi_chg,
@@ -197,13 +265,15 @@ class OptionsAnalyticsEngine:
                 "bid_qty": lot_size * 10,
                 "ask_qty": lot_size * 12,
                 "classification": "ITM" if k < spot else ("ATM" if abs(k - spot) < step * 0.5 else "OTM"),
-                "buildup": ce_buildup
+                "buildup": ce_buildup,
+                "pattern_code": ce_code,
+                "score": ce_score
             }
 
             pe_entry = {
                 "instrument_key": f"NSE_FO|{symbol}{selected_expiry}PE{k}",
                 "ltp": pe_greeks["theoretical_price"],
-                "change": round(-pe_greeks["theoretical_price"] * 0.038, 2),
+                "change": pe_change,
                 "change_pct": -3.8,
                 "oi": pe_oi,
                 "oi_change": pe_oi_chg,
@@ -220,12 +290,21 @@ class OptionsAnalyticsEngine:
                 "bid_qty": lot_size * 8,
                 "ask_qty": lot_size * 9,
                 "classification": "ITM" if k > spot else ("ATM" if abs(k - spot) < step * 0.5 else "OTM"),
-                "buildup": pe_buildup
+                "buildup": pe_buildup,
+                "pattern_code": pe_code,
+                "score": pe_score
             }
 
             chain_rows.append({
                 "strike_price": k,
                 "is_atm": abs(k - atm_strike) < 0.1,
+                "quant_score": total_score,
+                "total_score": total_score,
+                "market_view": row_market_view,
+                "ce_pattern_code": ce_code,
+                "ce_score": ce_score,
+                "pe_pattern_code": pe_code,
+                "pe_score": pe_score,
                 "ce": ce_entry,
                 "pe": pe_entry
             })
@@ -249,6 +328,7 @@ class OptionsAnalyticsEngine:
             for r in chain_rows
         ) / 10000000.0, 2)
 
+        atm_row = next((r for r in chain_rows if r.get("is_atm")), chain_rows[len(chain_rows) // 2])
         return {
             "symbol": symbol,
             "spot_price": spot,
@@ -268,7 +348,11 @@ class OptionsAnalyticsEngine:
                 "total_put_oi_change": total_put_oi_change,
                 "oi_pcr": oi_pcr,
                 "vol_pcr": vol_pcr,
-                "oi_change_pcr": oi_chg_pcr
+                "oi_change_pcr": oi_chg_pcr,
+                "total_score": atm_row.get("total_score", 0),
+                "market_view": atm_row.get("market_view", "Sideways / Confusion"),
+                "ce_score": atm_row.get("ce_score", 0),
+                "pe_score": atm_row.get("pe_score", 0)
             },
             "max_pain": max_pain_result,
             "support_resistance": sr_result,

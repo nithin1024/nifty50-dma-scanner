@@ -1334,8 +1334,18 @@ class GlobalEventsService:
 
             results = []
             for r in records:
+                # Dynamically ensure verified actual is applied if available
+                actual_val = r.actual_value
+                surprise_val = r.surprise_value
+                surprise_dir = r.surprise_direction
+                if (not actual_val or actual_val in ("Not yet released", "Pending")) and r.id in VERIFIED_HISTORICAL_RELEASES:
+                    v_item = VERIFIED_HISTORICAL_RELEASES[r.id]
+                    actual_val = v_item["actual_value"]
+                    surprise_val = v_item.get("surprise_value", surprise_val)
+                    surprise_dir = v_item.get("surprise_direction", surprise_dir)
+
                 # Add live countdown and lifecycle state
-                countdown = compute_live_countdown(r.start_time_utc, r.actual_value)
+                countdown = compute_live_countdown(r.start_time_utc, actual_val)
                 lifecycle_state = countdown.get("lifecycle_state", r.status)
                 key_terms = []
                 try:
@@ -1361,10 +1371,10 @@ class GlobalEventsService:
                     "currency": r.currency,
                     "previous_value": r.previous_value,
                     "forecast_value": r.forecast_value,
-                    "actual_value": r.actual_value,
+                    "actual_value": actual_val,
                     "revision_value": r.revision_value,
-                    "surprise_value": r.surprise_value,
-                    "surprise_direction": r.surprise_direction,
+                    "surprise_value": surprise_val,
+                    "surprise_direction": surprise_dir,
                     "status": lifecycle_state,
                     "lifecycle_state": lifecycle_state,
                     "countdown": countdown,

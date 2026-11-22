@@ -31,6 +31,7 @@ export type NavTab =
   | 'monthly-report'
   | 'trading-chart'
   | 'all-volume' 
+  | 'financial-dictionary'
   | 'heavyweights' 
   | 'volume-analytics' 
   | 'historical'

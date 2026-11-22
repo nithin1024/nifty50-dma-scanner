@@ -3,22 +3,13 @@
   "instrument_key": "NSE_EQ|INE669C01036",
   "provider": "UPSTOX_HISTORICAL_CANDLE_V3",
   "price_adjustment": "UPSTOX_EXCHANGE_CANDLES",
-  "retrieval_timestamp": "2026-11-21T18:59:01.166369+00:00",
-  "total_sessions": 252,
+  "retrieval_timestamp": "2026-11-22T19:09:23.747769+00:00",
+  "total_sessions": 251,
   "min_required_sessions": 220,
   "quality_status": "VERIFIED",
-  "first_trading_date": "2025-11-17",
+  "first_trading_date": "2025-11-18",
   "latest_trading_date": "2026-11-20",
   "candles": [
-    {
-      "trading_date": "2025-11-17",
-      "open": 1440.0,
-      "high": 1455.9,
-      "low": 1438.3,
-      "close": 1452.8,
-      "volume": 999416,
-      "oi": 0.0
-    },
     {
       "trading_date": "2025-11-18",
       "open": 1444.0,
