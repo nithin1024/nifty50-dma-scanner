@@ -115,14 +115,45 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         </div>
       </div>
 
+      {/* Quick Navigation Anchor Bar for Clean, User-Friendly Dashboard Structure */}
+      <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-[#121824] border border-[#232E47] text-xs font-semibold">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Navigate:</span>
+        <a href="#section-benchmarks" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <TrendingUp className="w-3 h-3 text-emerald-400" />
+          <span>1. Market Overview &amp; Sectors</span>
+        </a>
+        <a href="#section-heavyweights" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <Crown className="w-3 h-3 text-amber-400" />
+          <span>2. Top 7 Heavyweights &amp; Live Volume</span>
+        </a>
+        <a href="#section-universe" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-indigo-500/20 text-slate-300 hover:text-indigo-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <BarChart3 className="w-3 h-3 text-indigo-400" />
+          <span>3. NIFTY 50 Universe (All Stocks)</span>
+        </a>
+        <a href="#section-options" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <Layers className="w-3 h-3 text-sky-400" />
+          <span>4. Option Chain Strength &amp; Levels</span>
+        </a>
+        <a href="#section-institutional" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <Activity className="w-3 h-3 text-emerald-400" />
+          <span>5. Institutional FII/DII Flows</span>
+        </a>
+        <a href="#section-economy" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <ShieldCheck className="w-3 h-3 text-purple-400" />
+          <span>6. Macro Economic Indicators</span>
+        </a>
+      </div>
+
       {/* 2. INDIAN MARKET OVERVIEW SECTION (SECTION 2.A & INTRADAYSCREENER SPECIFICATION) */}
-      <IndianMarketOverviewSection 
-        onNavigate={onNavigate}
-        onSelectStock={onSelectStock}
-      />
+      <div id="section-benchmarks">
+        <IndianMarketOverviewSection 
+          onNavigate={onNavigate}
+          onSelectStock={onSelectStock}
+        />
+      </div>
 
       {/* 3. TOP 7 NIFTY 50 HEAVYWEIGHTS & 5-MINUTE LIVE VOLUME TRACKER */}
-      <div className="p-5 rounded-2xl bg-[#121824] border border-[#232E47] shadow-xl space-y-4">
+      <div id="section-heavyweights" className="p-5 rounded-2xl bg-[#121824] border border-[#232E47] shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47] gap-3">
           <div>
             <div className="flex items-center space-x-2">
@@ -233,13 +264,20 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                   contribution_pts: 0.0558
                 }
               ]).map((hw: any, idx: number) => {
-                const isPos = (hw.market_data?.price_change_pct || 0) >= 0;
+                const price = hw.market_data?.ltp ?? hw.market_data?.current_price ?? 0;
+                const changePct = hw.market_data?.price_change_pct ?? 0;
+                const isPos = changePct >= 0;
                 const rvol = hw.volume_analytics?.rvol || 1.0;
                 const rvolColor = rvol >= 1.5 ? 'text-purple-300 bg-purple-500/20' :
                                   rvol >= 1.1 ? 'text-emerald-300 bg-emerald-500/20' :
                                   rvol <= 0.8 ? 'text-amber-300 bg-amber-500/20' : 'text-slate-300 bg-slate-700/30';
-                const histVols = hw.volume_analytics?.historical_volumes || [];
-                const maxVol = histVols.length > 0 ? Math.max(...histVols.map((v: any) => typeof v === 'number' ? v : v?.volume || 0), 1) : 1;
+                const histVols = (hw.volume_analytics?.historical_volumes && hw.volume_analytics.historical_volumes.length > 0)
+                  ? hw.volume_analytics.historical_volumes
+                  : (hw.six_session_history || []).map((s: any) => s.traded_volume ?? s.volume ?? 0);
+                const maxVol = histVols.length > 0 ? Math.max(...histVols.map((v: any) => typeof v === 'number' ? v : (v?.traded_volume ?? v?.volume ?? 0)), 1) : 1;
+                const latestVol = hw.market_data?.cumulative_volume ?? hw.volume_analytics?.latest_volume ?? 0;
+                const avgVol = hw.volume_analytics?.six_session_avg_volume ?? 0;
+                const contribPts = hw.contribution_pts ?? hw.weightage_impact?.approx_index_contribution_pts ?? hw.weightage_impact?.estimated_nifty_points_contribution ?? 0;
 
                 return (
                   <tr 
@@ -251,15 +289,15 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                     <td className="py-2.5 px-3 font-bold text-sky-400 font-sans">{hw.symbol}</td>
                     <td className="py-2.5 px-3 text-slate-300 font-sans truncate max-w-[150px]">{hw.company_name}</td>
                     <td className="py-2.5 px-3 text-right font-bold text-white">{hw.weightage?.toFixed(2)}%</td>
-                    <td className="py-2.5 px-3 text-right font-bold text-white">₹{hw.market_data?.current_price?.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-white">₹{price.toFixed(2)}</td>
                     <td className={`py-2.5 px-3 text-right font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {isPos ? '+' : ''}{hw.market_data?.price_change_pct?.toFixed(2)}%
+                      {isPos ? '+' : ''}{changePct.toFixed(2)}%
                     </td>
                     <td className="py-2.5 px-3 text-right text-sky-300 font-semibold">
-                      {formatIndianVolume(hw.volume_analytics?.latest_volume || 0)}
+                      {formatIndianVolume(latestVol)}
                     </td>
                     <td className="py-2.5 px-3 text-right text-slate-400">
-                      {formatIndianVolume(hw.volume_analytics?.six_session_avg_volume || 0)}
+                      {formatIndianVolume(avgVol)}
                     </td>
                     <td className="py-2.5 px-3 text-right">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${rvolColor}`}>
@@ -270,7 +308,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                     <td className="py-2.5 px-3 text-center">
                       <div className="flex items-end justify-center gap-1 h-6 w-24 mx-auto">
                         {histVols.slice(-6).map((vItem: any, vi: number) => {
-                          const vVal = typeof vItem === 'number' ? vItem : vItem?.volume || 0;
+                          const vVal = typeof vItem === 'number' ? vItem : (vItem?.traded_volume ?? vItem?.volume ?? 0);
                           const heightPct = Math.max(15, Math.min(100, Math.round((vVal / maxVol) * 100)));
                           const isLast = vi === histVols.slice(-6).length - 1;
                           return (
@@ -287,9 +325,9 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                       </div>
                     </td>
                     <td className={`py-2.5 px-3 text-right font-bold ${
-                      (hw.contribution_pts || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      contribPts >= 0 ? 'text-emerald-400' : 'text-rose-400'
                     }`}>
-                      {(hw.contribution_pts || 0) >= 0 ? '+' : ''}{(hw.contribution_pts || 0).toFixed(4)}
+                      {contribPts >= 0 ? '+' : ''}{contribPts.toFixed(4)}
                     </td>
                   </tr>
                 );
@@ -300,25 +338,31 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
       </div>
 
       {/* 4. NIFTY 50 ALL 50 CONSTITUENT STOCKS & DETAILED CANDLESTICK CHARTS (SECTION 4 & 5.F) */}
-      <Nifty50UniverseSection
-        stocks={dailyScan?.all_results || []}
-        sessionDate={dailyScan?.completed_session_date || '21 Nov 2026'}
-        onSelectStock={onSelectStock}
-      />
+      <div id="section-universe">
+        <Nifty50UniverseSection
+          stocks={dailyScan?.all_results || []}
+          sessionDate={dailyScan?.completed_session_date || '21 Nov 2026'}
+          onSelectStock={onSelectStock}
+        />
+      </div>
 
       {/* 5. PROMINENT ECONOMIC OVERVIEW SECTION (SECTION 2.B – CORE ECONOMIC INDICATORS) */}
-      <EconomicIndicatorsSection 
-        indicatorsData={(intelligence as any)?.economic_indicators} 
-        onNavigate={onNavigate} 
-      />
+      <div id="section-economy">
+        <EconomicIndicatorsSection 
+          indicatorsData={(intelligence as any)?.economic_indicators} 
+          onNavigate={onNavigate} 
+        />
+      </div>
 
       {/* 6. COMBINED INSTITUTIONAL FII / DII CASH & DERIVATIVES FLOWS SUITE */}
-      <MarketIntelligenceDashboard 
-        intelligence={intelligence || null} 
-      />
+      <div id="section-institutional">
+        <MarketIntelligenceDashboard 
+          intelligence={intelligence || null} 
+        />
+      </div>
 
       {/* 7. INSTITUTIONAL OPTION CHAIN MARKET STRENGTH SUMMARY (-4 TO +4 SCORING & S/R LEVELS) (SECTION 5.H) */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-[#121824] via-[#161F33] to-[#121824] border border-[#232E47] shadow-xl space-y-4 font-mono">
+      <div id="section-options" className="p-5 rounded-2xl bg-gradient-to-r from-[#121824] via-[#161F33] to-[#121824] border border-[#232E47] shadow-xl space-y-4 font-mono">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47] gap-3">
           <div>
             <div className="flex items-center space-x-2">

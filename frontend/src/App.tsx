@@ -73,9 +73,15 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Initial load
+  // Initial load & automatic 5-minute periodic refresh for live volumes, scans, and heavyweights
   useEffect(() => {
     loadAllData();
+    const intervalTimer = window.setInterval(() => {
+      console.log('Automated 5-minute interval: Refreshing market data, volumes & heavyweights...');
+      loadAllData();
+    }, 300000); // 5 minutes = 300,000 ms
+
+    return () => window.clearInterval(intervalTimer);
   }, [loadAllData]);
 
   // Live WebSocket Connection for intraday streaming

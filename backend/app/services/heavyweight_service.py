@@ -7,6 +7,7 @@ from app.services.historical_data_service import historical_data_service
 from app.services.dma_service import dma_engine
 from app.services.crossover_service import crossover_engine
 from app.services.volume_service import volume_engine
+from app.services import upstox_market_client as upstox
 
 logger = logging.getLogger("heavyweight_service")
 
@@ -40,24 +41,56 @@ class HeavyweightAnalyticsEngine:
         if not candles or len(candles) < 6:
             return None
 
-        recent_candle = candles[-1]
-        prev_candle = candles[-2] if len(candles) >= 2 else recent_candle
-        closes = [c["close"] for c in candles]
-        dates = [c["trading_date"] for c in candles]
+        # Check if live intraday 1-minute candles are available from Upstox
+        intra = []
+        try:
+            key = upstox.instrument_key_for_symbol(clean_sym)
+            if key:
+                intra = await upstox.get_intraday_candles_v3(key, "minutes", "1")
+        except Exception as e:
+            logger.debug("Could not fetch intraday candles for %s: %s", clean_sym, e)
 
-        # A. Live Market Data
-        ltp = recent_candle["close"]
-        open_p = recent_candle["open"]
-        high_p = recent_candle["high"]
-        low_p = recent_candle["low"]
-        prev_close = prev_candle["close"]
-        price_change = round(ltp - prev_close, 2)
-        price_change_pct = round(((ltp - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
-        cumulative_volume = int(recent_candle["volume"]) if recent_candle.get("volume") is not None else None
-        traded_value = round(cumulative_volume * ltp, 2) if cumulative_volume is not None else None
+        if intra and len(intra) >= 1:
+            recent_candle = candles[-1]
+            prev_close = recent_candle["close"]
+            ltp = float(intra[0][4])
+            open_p = float(intra[-1][1])
+            high_p = max(float(c[2]) for c in intra)
+            low_p = min(float(c[3]) for c in intra)
+            cumulative_volume = int(sum(c[5] for c in intra))
+            price_change = round(ltp - prev_close, 2)
+            price_change_pct = round(((ltp - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
+            traded_value = round(cumulative_volume * ltp, 2)
+            today_date = str(intra[0][0])[:10]
 
-        # B & C. Volume Analytics & 6-Session History
-        vol_data = volume_engine.analyze_stock_volume(clean_sym, candles)
+            combined_candles = candles[-5:] + [{
+                "trading_date": today_date,
+                "open": open_p,
+                "high": high_p,
+                "low": low_p,
+                "close": ltp,
+                "volume": cumulative_volume
+            }]
+            closes = [c["close"] for c in candles[:-1]] + [ltp]
+            dates = [c["trading_date"] for c in candles[:-1]] + [today_date]
+            vol_data = volume_engine.analyze_stock_volume(clean_sym, combined_candles)
+        else:
+            recent_candle = candles[-1]
+            prev_candle = candles[-2] if len(candles) >= 2 else recent_candle
+            closes = [c["close"] for c in candles]
+            dates = [c["trading_date"] for c in candles]
+
+            # A. Live Market Data
+            ltp = recent_candle["close"]
+            open_p = recent_candle["open"]
+            high_p = recent_candle["high"]
+            low_p = recent_candle["low"]
+            prev_close = prev_candle["close"]
+            price_change = round(ltp - prev_close, 2)
+            price_change_pct = round(((ltp - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
+            cumulative_volume = int(recent_candle["volume"]) if recent_candle.get("volume") is not None else None
+            traded_value = round(cumulative_volume * ltp, 2) if cumulative_volume is not None else None
+            vol_data = volume_engine.analyze_stock_volume(clean_sym, candles)
 
         # D. Technical DMA Analytics
         smas = dma_engine.calculate_all_smas(closes)
@@ -79,6 +112,7 @@ class HeavyweightAnalyticsEngine:
             # A. Live Market Data
             "market_data": {
                 "ltp": round(ltp, 2),
+                "current_price": round(ltp, 2),
                 "open": round(open_p, 2),
                 "high": round(high_p, 2),
                 "low": round(low_p, 2),
@@ -99,7 +133,8 @@ class HeavyweightAnalyticsEngine:
                 "volume_change_pct": vol_data.get("volume_change_pct"),
                 "volume_trend": vol_data.get("volume_trend"),
                 "volume_classification": vol_data.get("volume_classification"),
-                "price_volume_confirmation": vol_data.get("price_volume_confirmation")
+                "price_volume_confirmation": vol_data.get("price_volume_confirmation"),
+                "historical_volumes": [s.get("traded_volume", 0) for s in vol_data.get("six_session_history", [])]
             },
             # D. Technical Analytics
             "technical_analytics": {
@@ -116,10 +151,12 @@ class HeavyweightAnalyticsEngine:
                 "fresh_crossovers": fresh_crossovers
             },
             # E. Weightage Impact
+            "contribution_pts": approx_contribution,
             "weightage_impact": {
                 "index_weightage_pct": weightage,
                 "stock_price_change_pct": round(price_change_pct, 2),
                 "approx_index_contribution_pts": approx_contribution,
+                "estimated_nifty_points_contribution": approx_contribution,
                 "label": "Approximation based on index weightage (not official index-point contribution)",
                 "impact_status": "SUPPORTING" if approx_contribution > 0 else ("DRAGGING" if approx_contribution < 0 else "NEUTRAL")
             }
