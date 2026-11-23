@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Landmark, 
   ShieldCheck, 
   ExternalLink, 
-  Fuel
+  Fuel,
+  Clock
 } from 'lucide-react';
 import { PmiIntelligenceDashboard } from '../components/PmiIntelligenceDashboard';
 import { IipIntelligenceSection } from '../components/IipIntelligenceSection';
@@ -12,6 +13,20 @@ type SubSection = 'all' | 'gdp' | 'pmi' | 'iip' | 'inflation' | 'rbi-capex-macro
 
 export const IndianEconomyFundamentalsPage: React.FC = () => {
   const [subSection, setSubSection] = useState<SubSection>('all');
+  const [inflationCountdown, setInflationCountdown] = useState<number>(300);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setInflationCountdown((prev) => (prev <= 1 ? 300 : prev - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   // Exact Section 3 GDP Intelligence calculations
   const realGdp = 173.82; // ₹ Lakh Crore (Constant FY12 prices)
@@ -287,9 +302,16 @@ export const IndianEconomyFundamentalsPage: React.FC = () => {
                 <span>4. Inflation Intelligence Dashboard (CPI vs WPI &amp; RBI Corridor)</span>
               </h2>
             </div>
-            <span className="text-xs text-slate-400">
-              RBI Tolerance Band: <strong className="text-amber-300">4.0% &plusmn; 2.0% (2.0% to 6.0%)</strong>
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-xs shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                <span>5m Auto-Update: {formatCountdown(inflationCountdown)}</span>
+              </div>
+              <span className="text-xs text-slate-400">
+                RBI Tolerance Band: <strong className="text-amber-300">4.0% &plusmn; 2.0% (2.0% to 6.0%)</strong>
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

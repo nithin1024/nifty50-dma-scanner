@@ -20,7 +20,8 @@ import {
   Coins,
   ShieldCheck,
   Building2,
-  Factory
+  Factory,
+  Clock
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { 
@@ -91,6 +92,30 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
   useEffect(() => {
     fetchGlobalNews().then(data => setNewsFeed(data || [])).catch(() => {});
   }, []);
+
+  // 5-Minute Auto-Update Countdown Timer for Inflation Analytics Suite
+  const [inflationCountdown, setInflationCountdown] = useState<number>(300);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setInflationCountdown((prev) => {
+        if (prev <= 1) {
+          void fetchMarketIntelligence().then((next) => {
+            if (next) setUpstoxReport(next);
+          }).catch(() => {});
+          return 300;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const handleOpenTopic = async (topicId: string) => {
     try {
@@ -902,7 +927,12 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-xs shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>5m Auto-Update: {formatCountdown(inflationCountdown)}</span>
+                  </div>
                   <a
                     href={getMacroCsvDownloadUrl('inflation')}
                     download="india_inflation_cpi_wpi.csv"
