@@ -455,7 +455,53 @@ class InstitutionalDataService:
     @classmethod
     def get_cash_market_report(cls) -> Dict[str, Any]:
         """Calculates comprehensive FII and DII cash metrics, equity/debt breakdowns, and period aggregates."""
-        series = cls.DAILY_CASH_SERIES
+        series = list(cls.DAILY_CASH_SERIES)
+        try:
+            from app.database.session import SessionLocal
+            from app.models.institutional_flow import InstitutionalCashFlowSnapshot
+            from datetime import date as d_date
+            db = SessionLocal()
+            latest_db_rows = db.query(InstitutionalCashFlowSnapshot).order_by(InstitutionalCashFlowSnapshot.trading_date.desc()).limit(10).all()
+            if latest_db_rows:
+                by_date: Dict[str, Dict[str, Any]] = {}
+                for r in latest_db_rows:
+                    dt_str = r.trading_date.isoformat()
+                    if dt_str not in by_date:
+                        by_date[dt_str] = {}
+                    by_date[dt_str][r.category] = {
+                        "buy": r.buy_value_crores or 0.0,
+                        "sell": r.sell_value_crores or 0.0,
+                        "net": r.net_value_crores or 0.0,
+                    }
+                db.close()
+                max_existing_date = max((s.get("trading_date", "") for s in series), default="")
+                # Only insert if DB contains records NEWER than existing series
+                for dt_str, cats in sorted(by_date.items()):
+                    if dt_str > max_existing_date and "fii_fpi" in cats and "dii" in cats:
+                        fii = cats["fii_fpi"]
+                        dii = cats["dii"]
+                        d_obj = d_date.fromisoformat(dt_str)
+                        series.insert(0, {
+                            "date": d_obj.strftime("%d %b %Y"),
+                            "trading_date": dt_str,
+                            "publication_date": f"{d_obj.strftime('%d %b %Y')}, 07:15 PM IST",
+                            "fii_gross_buy": fii["buy"],
+                            "fii_gross_sell": fii["sell"],
+                            "fii_net": fii["net"],
+                            "dii_gross_buy": dii["buy"],
+                            "dii_gross_sell": dii["sell"],
+                            "dii_net": dii["net"],
+                            "equity": {
+                                "fii_buy": fii["buy"], "fii_sell": fii["sell"], "fii_net": fii["net"],
+                                "dii_buy": dii["buy"], "dii_sell": dii["sell"], "dii_net": dii["net"],
+                            },
+                            "debt": {"fii_buy": 0.0, "fii_sell": 0.0, "fii_net": 0.0, "dii_buy": 0.0, "dii_sell": 0.0, "dii_net": 0.0},
+                            "derivatives_turnover": {"index_futures_turnover": 0.0, "stock_futures_turnover": 0.0, "options_premium_turnover": 0.0}
+                        })
+                        max_existing_date = dt_str
+        except Exception:
+            pass
+
         latest = series[0]
         prev = series[1]
 

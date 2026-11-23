@@ -239,16 +239,60 @@ class MarketDataService:
         return "POST-MARKET CLOSED"
 
     async def fetch_index_quote(self, symbol: str, instrument_key: str) -> Optional[Dict[str, Any]]:
-        """Fetch the latest candles for an index from Upstox V3 with failover to Yahoo."""
+        """Fetch the live real-time intraday tick/candle for an index from Upstox V3 with failover to Yahoo."""
         try:
             today = datetime.now().date()
             start = today - timedelta(days=7)
-            candles = await upstox.get_historical_candles_v3(
-                instrument_key, "days", "1", today.isoformat(), start.isoformat()
-            )
-            if candles and len(candles) >= 1:
-                latest = candles[0]
-                prev = candles[1] if len(candles) > 1 else None
+
+            # 1. Fetch live 1-minute intraday candles for today's active session
+            intra_candles = []
+            try:
+                intra_candles = await upstox.get_intraday_candles_v3(instrument_key, "minutes", "1")
+            except Exception as intra_err:
+                logger.debug("Intraday candles fetch for %s: %s", symbol, intra_err)
+
+            # 2. Fetch daily historical candles for true previous close and EOD reference
+            daily_candles = []
+            try:
+                daily_candles = await upstox.get_historical_candles_v3(
+                    instrument_key, "days", "1", today.isoformat(), start.isoformat()
+                )
+            except Exception as daily_err:
+                logger.debug("Daily historical fetch for %s: %s", symbol, daily_err)
+
+            # Case A: Market session has active intraday candles (LTP is intra_candles[0])
+            if intra_candles and len(intra_candles) >= 1:
+                latest_intra = intra_candles[0]
+                close_p = float(latest_intra[4])
+                open_p = float(intra_candles[-1][1])
+                high_p = max(float(c[2]) for c in intra_candles)
+                low_p = min(float(c[3]) for c in intra_candles)
+
+                # Previous close is from the last completed EOD daily candle
+                prev_close = float(daily_candles[0][4]) if daily_candles else open_p
+                change = round(close_p - prev_close, 2)
+                change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
+                trading_date = str(latest_intra[0])[:10]
+                sparkline = [float(c[4]) for c in intra_candles[:15][::-1]]
+
+                return {
+                    "symbol": symbol,
+                    "current": close_p,
+                    "previous_close": prev_close,
+                    "change": change,
+                    "change_pct": change_pct,
+                    "open": open_p,
+                    "high": high_p,
+                    "low": low_p,
+                    "trading_date": trading_date,
+                    "sparkline": sparkline,
+                    "source": "Upstox V3 Live Feeds",
+                }
+
+            # Case B: Off-market / weekend / pre-market before first 1m candle
+            if daily_candles and len(daily_candles) >= 1:
+                latest = daily_candles[0]
+                prev = daily_candles[1] if len(daily_candles) > 1 else None
                 close_p = float(latest[4])
                 open_p = float(latest[1])
                 high_p = float(latest[2])
@@ -256,7 +300,6 @@ class MarketDataService:
                 prev_close = float(prev[4]) if prev else open_p
                 change = round(close_p - prev_close, 2)
                 change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
-
                 trading_date = str(latest[0])[:10]
                 return {
                     "symbol": symbol,
@@ -268,7 +311,7 @@ class MarketDataService:
                     "high": high_p,
                     "low": low_p,
                     "trading_date": trading_date,
-                    "source": "Upstox V3 / Official NSE/BSE",
+                    "source": "Upstox V3 EOD",
                 }
         except Exception as e:
             logger.warning("Upstox quote fetch failed for %s (%s). Attempting Yahoo Finance fallback.", symbol, e)
@@ -314,6 +357,24 @@ class MarketDataService:
     def get_spot_price(self, symbol: str) -> float:
         """Dynamic spot price retrieval for option engine and market intelligence."""
         sym_clean = symbol.upper().replace(" ", "").replace("_", "")
+
+        # Check cached live benchmarks first for actual real-time tick prices
+        if self._cached_overview and "benchmarks" in self._cached_overview:
+            for b in self._cached_overview["benchmarks"]:
+                b_sym = b.get("symbol", "").upper().replace(" ", "").replace("_", "")
+                if ("NIFTY50" in sym_clean or sym_clean == "NIFTY") and ("NIFTY50" in b_sym or b_sym == "NIFTY50"):
+                    if b.get("current"):
+                        return float(b["current"])
+                if "BANK" in sym_clean and "BANK" in b_sym:
+                    if b.get("current"):
+                        return float(b["current"])
+                if ("FINNIFTY" in sym_clean or "FIN" in sym_clean) and "FIN" in b_sym:
+                    if b.get("current"):
+                        return float(b["current"])
+                if "SENSEX" in sym_clean and "SENSEX" in b_sym:
+                    if b.get("current"):
+                        return float(b["current"])
+
         if "NIFTY50" in sym_clean or sym_clean == "NIFTY":
             return VERIFIED_FALLBACK_BENCHMARKS["NIFTY 50"]["current"]
         if "BANK" in sym_clean:
