@@ -5,7 +5,7 @@ dedicated sub-calendars (Central Banks, Inflation, GDP/PMI, Geopolitics, Commodi
 and user notification preferences.
 """
 
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Query, HTTPException, Body, Response
 from typing import Optional, Dict, Any, List
 from app.services.global_events_service import global_events_service
 
@@ -18,9 +18,13 @@ async def get_global_events(
     country_code: Optional[str] = Query(None, description="Country code: US, IN, EU, GB, JP, CN, AU, CA, GLOBAL"),
     importance: Optional[str] = Query(None, description="Event importance: HIGH, MEDIUM, LOW"),
     search_query: Optional[str] = Query(None, description="Search keyword in event title, country, or description"),
-    timeframe: Optional[str] = Query(None, description="Timeframe filter: TODAY, 7_DAYS, 30_DAYS, 90_DAYS")
+    timeframe: Optional[str] = Query(None, description="Timeframe filter: TODAY, 7_DAYS, 30_DAYS, 90_DAYS"),
+    response: Response = Response()
 ):
     """Retrieve filtered global economic events with live countdown and bilingual descriptions."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return global_events_service.get_all_events(
         category=category,
         country_code=country_code,
@@ -31,8 +35,11 @@ async def get_global_events(
 
 
 @router.get("/summary", response_model=Dict[str, Any])
-async def get_events_summary():
+async def get_events_summary(response: Response = Response()):
     """Retrieve top-level market telemetry overview: IST live clock, high-impact counts, next countdown."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return global_events_service.get_market_overview_summary()
 
 

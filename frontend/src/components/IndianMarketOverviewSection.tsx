@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Radio
+  Radio,
+  X
 } from 'lucide-react';
 import type { NavTab } from '../types';
 import { fetchLiveMarketOverview } from '../services/api';
+import { ProfessionalTradingChart } from './ProfessionalTradingChart';
 
 interface IndianMarketOverviewSectionProps {
   onNavigate?: (tab: NavTab) => void;
@@ -44,6 +46,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
   const [activeSector, setActiveSector] = useState<string>('BSEPBI');
   const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
   const [lastRefreshTime, setLastRefreshTime] = useState<string>('15:30:00 IST');
+  const [chartModalSymbol, setChartModalSymbol] = useState<string | null>(null);
 
   const [liveOverview, setLiveOverview] = useState<any>(null);
 
@@ -174,7 +177,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
   ];
 
   // Sector Performance Matrix (Complete 22 sectors with 5m, 1D, 7D, 30D, 90D, 52W + Constituents)
-  const sectors: SectorItem[] = [
+  const defaultSectors: SectorItem[] = [
     {
       id: 'BSEPBI',
       name: 'Bsepbi (Private Banks)',
@@ -516,7 +519,8 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
     }
   ];
 
-  const currentSectorData = sectors.find(s => s.id === activeSector) || sectors[0];
+  const displaySectors: SectorItem[] = (liveOverview?.sectors && liveOverview.sectors.length > 0) ? liveOverview.sectors : defaultSectors;
+  const currentSectorData = displaySectors.find(s => s.id === activeSector) || displaySectors[0];
 
   return (
     <div className="space-y-6">
@@ -553,11 +557,13 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
           {(liveOverview?.benchmarks || defaultBenchmarks).map((b: BenchmarkItem) => (
             <div 
               key={b.symbol}
-              className="p-3 rounded-xl bg-[#121824] border border-[#232E47] hover:border-sky-500/40 transition-all flex flex-col justify-between"
+              onClick={() => setChartModalSymbol(b.symbol)}
+              title={`Click to open live interactive chart for ${b.symbol}`}
+              className="p-3 rounded-xl bg-[#121824] border border-[#232E47] hover:border-sky-400 hover:scale-[1.02] cursor-pointer transition-all flex flex-col justify-between group shadow-sm"
             >
               <div>
                 <div className="flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="font-bold truncate">{b.symbol}</span>
+                  <span className="font-bold truncate group-hover:text-sky-300 transition-colors">{b.symbol}</span>
                   <span className={`px-1 py-0.2 rounded text-[9px] font-semibold ${
                     b.status === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700/50 text-slate-400'
                   }`}>
@@ -744,7 +750,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
 
             {/* Horizontal Diverging Bars */}
             <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
-              {sectors.map((sec) => {
+              {displaySectors.map((sec) => {
                 const val = selectedTimeframe === '5m' ? sec.change_5m :
                             selectedTimeframe === '1D' ? sec.change_1d :
                             selectedTimeframe === '7D' ? sec.change_7d :
@@ -818,6 +824,47 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
         </div>
 
       </div>
+
+      {/* Interactive Modal Chart for Benchmarks */}
+      {chartModalSymbol && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-6xl max-h-[95vh] bg-[#0F172A] border border-slate-700 rounded-2xl shadow-2xl overflow-y-auto p-4 sm:p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+              <div>
+                <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                  <span className="text-sky-400">{chartModalSymbol}</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-bold">
+                    Official Exchange Chart
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real-time OHLC candles, 5-minute interval volume, technical indicators (VWAP, EMA, SMA, RSI) &amp; full timeframe analysis
+                </p>
+              </div>
+              <button
+                onClick={() => setChartModalSymbol(null)}
+                className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors"
+                title="Close Chart"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="min-h-[520px]">
+              <ProfessionalTradingChart
+                symbol={
+                  chartModalSymbol.includes('NIFTY 50') ? 'NIFTY' :
+                  chartModalSymbol.includes('BANK NIFTY') ? 'BANKNIFTY' :
+                  chartModalSymbol.includes('FINNIFTY') ? 'FINNIFTY' :
+                  chartModalSymbol.includes('SENSEX') ? 'SENSEX' : chartModalSymbol
+                }
+                displayName={chartModalSymbol}
+                height={520}
+                initialTimeframe="5m"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

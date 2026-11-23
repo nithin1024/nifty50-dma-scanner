@@ -1338,11 +1338,17 @@ class GlobalEventsService:
                 actual_val = r.actual_value
                 surprise_val = r.surprise_value
                 surprise_dir = r.surprise_direction
-                if (not actual_val or actual_val in ("Not yet released", "Pending")) and r.id in VERIFIED_HISTORICAL_RELEASES:
+                if r.id in VERIFIED_HISTORICAL_RELEASES:
                     v_item = VERIFIED_HISTORICAL_RELEASES[r.id]
-                    actual_val = v_item["actual_value"]
+                    actual_val = v_item.get("actual_value", actual_val)
                     surprise_val = v_item.get("surprise_value", surprise_val)
                     surprise_dir = v_item.get("surprise_direction", surprise_dir)
+                
+                if (not surprise_val or surprise_dir == "PENDING") and actual_val and r.forecast_value:
+                    calc_surp = calculate_surprise(actual_val, r.forecast_value)
+                    if calc_surp.get("surprise_value"):
+                        surprise_val = calc_surp.get("surprise_value")
+                        surprise_dir = calc_surp.get("surprise_direction", surprise_dir)
 
                 # Add live countdown and lifecycle state
                 countdown = compute_live_countdown(r.start_time_utc, actual_val)
@@ -1400,7 +1406,16 @@ class GlobalEventsService:
                     )
                     utc_dt = time_info["utc_dt"].replace(tzinfo=None)
                     ist_dt = time_info["ist_dt"].replace(tzinfo=None)
-                    countdown = compute_live_countdown(utc_dt, item.get("actual_value"))
+                    actual_val = item.get("actual_value")
+                    surprise_val = None
+                    surprise_dir = "PENDING"
+                    if item["id"] in VERIFIED_HISTORICAL_RELEASES:
+                        v_item = VERIFIED_HISTORICAL_RELEASES[item["id"]]
+                        actual_val = v_item["actual_value"]
+                        surprise_val = v_item.get("surprise_value")
+                        surprise_dir = v_item.get("surprise_direction", "POSITIVE")
+
+                    countdown = compute_live_countdown(utc_dt, actual_val)
                     results.append({
                         "id": item["id"],
                         "event_name": item["event_name"],
@@ -1418,10 +1433,10 @@ class GlobalEventsService:
                         "currency": item["currency"],
                         "previous_value": item["previous_value"],
                         "forecast_value": item["forecast_value"],
-                        "actual_value": item["actual_value"],
+                        "actual_value": actual_val,
                         "revision_value": item.get("revision_value"),
-                        "surprise_value": None,
-                        "surprise_direction": "PENDING",
+                        "surprise_value": surprise_val,
+                        "surprise_direction": surprise_dir,
                         "status": countdown.get("lifecycle_state", "UPCOMING"),
                         "lifecycle_state": countdown.get("lifecycle_state", "UPCOMING"),
                         "countdown": countdown,
@@ -1456,8 +1471,17 @@ class GlobalEventsService:
                 )
                 utc_dt = time_info["utc_dt"].replace(tzinfo=None)
                 ist_dt = time_info["ist_dt"].replace(tzinfo=None)
-                countdown = compute_live_countdown(utc_dt, item.get("actual_value"))
-                status = "RELEASED" if item.get("actual_value") and item.get("actual_value") != "Not yet released" else "UPCOMING"
+                actual_val = item.get("actual_value")
+                surprise_val = None
+                surprise_dir = "PENDING"
+                if item["id"] in VERIFIED_HISTORICAL_RELEASES:
+                    v_item = VERIFIED_HISTORICAL_RELEASES[item["id"]]
+                    actual_val = v_item["actual_value"]
+                    surprise_val = v_item.get("surprise_value")
+                    surprise_dir = v_item.get("surprise_direction", "POSITIVE")
+
+                countdown = compute_live_countdown(utc_dt, actual_val)
+                status = "RELEASED" if actual_val and actual_val != "Not yet released" else "UPCOMING"
                 results.append({
                     "id": item["id"],
                     "event_name": item["event_name"],
@@ -1475,10 +1499,10 @@ class GlobalEventsService:
                     "currency": item["currency"],
                     "previous_value": item["previous_value"],
                     "forecast_value": item["forecast_value"],
-                    "actual_value": item["actual_value"],
+                    "actual_value": actual_val,
                     "revision_value": item.get("revision_value"),
-                    "surprise_value": None,
-                    "surprise_direction": "PENDING",
+                    "surprise_value": surprise_val,
+                    "surprise_direction": surprise_dir,
                     "status": countdown.get("lifecycle_state", status),
                     "lifecycle_state": countdown.get("lifecycle_state", status),
                     "countdown": countdown,

@@ -190,7 +190,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   };
 
   // Timeframes supported: Intraday 1m to 1h, and Historical 1D to 5Y
-  const timeframes = ['1m', '5m', '15m', '30m', '1h', '1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  const timeframes = ['5m', '15m', '30m', '1h', '1D', '5D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   // Load candle data
   useEffect(() => {

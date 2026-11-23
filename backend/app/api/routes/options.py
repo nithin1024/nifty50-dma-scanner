@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Response
 from typing import Optional, Dict, Any
 import asyncio
 import logging
@@ -378,9 +378,13 @@ async def get_option_chain(
     symbol: str = Query("NIFTY", description="NIFTY, BANKNIFTY or F&O constituent stock"),
     strike_range: int = Query(5, ge=5, le=25, description="Number of strikes above and below ATM"),
     expiry: Optional[str] = Query(None, description="Target expiry date (e.g. 20-NOV-2026)"),
-    snapshot_time: Optional[str] = Query(None, description="Optional ISO timestamp of a past snapshot")
+    snapshot_time: Optional[str] = Query(None, description="Optional ISO timestamp of a past snapshot"),
+    response: Response = Response(),
 ) -> Dict[str, Any]:
     """Return a chain built from Upstox's official option-chain response or historical snapshot."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     if snapshot_time and isinstance(snapshot_time, str):
         from app.database.session import SessionLocal
         from app.models.option_snapshot import OptionOISnapshotModel

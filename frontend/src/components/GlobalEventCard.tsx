@@ -178,7 +178,9 @@ export const GlobalEventCard: React.FC<GlobalEventCardProps> = ({
             event.surprise_direction === 'IN_LINE' ? 'text-sky-300' :
             'text-slate-600'
           }`}>
-            {event.surprise_value !== null ? `${event.surprise_value > 0 ? '+' : ''}${event.surprise_value}` : isUnverified ? 'Awaiting Data' : 'Pending'}
+            {event.surprise_value !== null && event.surprise_value !== undefined && (event.surprise_value as any) !== ''
+              ? (typeof event.surprise_value === 'number' && (event.surprise_value as number) > 0 ? `+${event.surprise_value}` : `${event.surprise_value}`)
+              : isUnverified ? 'Awaiting Data' : 'Pending'}
           </span>
         </div>
       </div>

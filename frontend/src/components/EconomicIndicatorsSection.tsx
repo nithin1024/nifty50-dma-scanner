@@ -534,12 +534,14 @@ export const EconomicIndicatorsSection: React.FC<EconomicIndicatorsSectionProps>
                 </button>
 
                 {isExpanded && (
-                  <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[#232E47]/60">
+                  <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-[#232E47]/60">
                     {ind.sub_metrics.map((sub, idx) => (
-                      <div key={idx} className="p-2 rounded-lg bg-[#0B0E14] border border-[#232E47] text-left">
-                        <div className="text-[10px] text-slate-400 font-medium truncate">{sub.label}</div>
-                        <div className="text-xs font-mono font-bold text-white mt-0.5">{sub.value}</div>
-                        <div className="text-[9px] text-slate-400 mt-0.5 line-clamp-1">{sub.desc}</div>
+                      <div key={idx} className="p-2.5 rounded-lg bg-[#0B0E14] border border-[#232E47] text-left flex flex-col justify-between">
+                        <div>
+                          <div className="text-[11px] text-slate-300 font-medium">{sub.label}</div>
+                          <div className="text-xs font-mono font-bold text-white mt-0.5">{sub.value}</div>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-1 leading-normal break-words">{sub.desc}</div>
                       </div>
                     ))}
                   </div>

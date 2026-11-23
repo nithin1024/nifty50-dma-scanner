@@ -111,19 +111,26 @@ def synthesize_intraday_candles(
 @router.get("/candles")
 async def get_chart_candles(
     symbol: str = Query("NIFTY", description="Instrument symbol (e.g. NIFTY, RELIANCE, HDFCBANK)"),
-    timeframe: str = Query("5m", description="Timeframe e.g. 1m, 5m, 15m, 30m, 1h, 1D, 1W, 1M"),
+    timeframe: str = Query("5m", description="Timeframe e.g. 1m, 5m, 15m, 30m, 1h, 1D, 5D, 1W, 1M"),
     chart_type: str = Query("CANDLESTICK", description="CANDLESTICK, LINE, AREA, HEIKIN_ASHI"),
     before: Optional[str] = Query(None, description="Load candles strictly earlier than this YYYY-MM-DD"),
     instrument_key: Optional[str] = Query(None, description="Optional verified Upstox instrument key"),
+    response: Response = Response(),
 ) -> Dict[str, Any]:
     """Retrieve actual Historical Candle V3 data; no generated bars or synthetic live tick."""
+    if response:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
     key = instrument_key or upstox.instrument_key_for_symbol(symbol.upper())
     if not key:
         raise HTTPException(status_code=404, detail=f"No Upstox instrument key found for symbol '{symbol}'. Verify ticker.")
     units = {
         "1m": ("minutes", "1"), "5m": ("minutes", "5"), "15m": ("minutes", "15"),
         "30m": ("minutes", "30"), "1h": ("hours", "1"), "1d": ("days", "1"), 
-        "1D": ("days", "1"), "1W": ("weeks", "1"), "1w": ("weeks", "1"),
+        "1D": ("days", "1"), "5d": ("days", "1"), "5D": ("days", "1"),
+        "1W": ("weeks", "1"), "1w": ("weeks", "1"),
         "Daily": ("days", "1"), "daily": ("days", "1"), 
         "1M": ("months", "1"), "3M": ("days", "1"), "6M": ("days", "1"), 
         "1Y": ("days", "1"), "3Y": ("days", "1"), "5Y": ("days", "1"), "max": ("days", "1")
@@ -139,7 +146,7 @@ async def get_chart_candles(
     elif unit in ("weeks", "months"):
         lookback = 365 * 5
     elif unit == "days":
-        lookback = {"1M": 31, "3M": 93, "6M": 186, "1Y": 370,
+        lookback = {"5d": 7, "5D": 7, "1M": 31, "3M": 93, "6M": 186, "1Y": 370,
                     "3Y": 365 * 3 + 5, "5Y": 365 * 5 + 10}.get(timeframe, 370)
     start = end - timedelta(days=lookback)
 

@@ -134,14 +134,23 @@ async def get_global_news(category: Optional[str] = Query(None, description="Opt
 
 
 @router.get("/overview", response_model=Dict[str, Any])
-async def get_institutional_overview() -> Dict[str, Any]:
+async def get_institutional_overview(response: Response = Response()) -> Dict[str, Any]:
     """Module 1: Comprehensive overview with indices, yields, commodities, currencies, FII/DII, and breadth."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return institutional_market_suite.get_institutional_overview()
 
 
 @router.get("/live-overview", response_model=Dict[str, Any])
-async def get_live_market_overview(force_refresh: bool = Query(False, description="Force live market recalculation")) -> Dict[str, Any]:
+async def get_live_market_overview(
+    force_refresh: bool = Query(False, description="Force live market recalculation"),
+    response: Response = Response()
+) -> Dict[str, Any]:
     """Live and verified session benchmark quotes, market breadth, and sector performance."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     from app.services.market_data_service import market_data_service
     return await market_data_service.get_live_market_overview(force_refresh=force_refresh)
 
