@@ -603,9 +603,15 @@ export const GlobalEventsPage: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
-                        {event.surprise_value !== null && event.surprise_value !== undefined ? (
-                          <span className={`font-semibold ${event.surprise_direction === 'POSITIVE' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {event.surprise_value > 0 ? '+' : ''}{event.surprise_value.toFixed(2)}%
+                        {event.surprise_value !== null && event.surprise_value !== undefined && event.surprise_value !== '' ? (
+                          <span className={`font-semibold ${
+                            event.surprise_direction === 'POSITIVE' ? 'text-emerald-400' :
+                            event.surprise_direction === 'NEGATIVE' ? 'text-rose-400' :
+                            event.surprise_direction === 'IN_LINE' ? 'text-sky-300' : 'text-slate-300'
+                          }`}>
+                            {typeof event.surprise_value === 'number'
+                              ? `${event.surprise_value > 0 ? '+' : ''}${event.surprise_value.toFixed(2)}%`
+                              : String(event.surprise_value)}
                           </span>
                         ) : (
                           <span className="text-slate-600">—</span>

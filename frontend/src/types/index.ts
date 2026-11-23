@@ -449,7 +449,7 @@ export interface GlobalEvent {
   forecast_value: string | null;
   actual_value: string | null;
   revision_value: string | null;
-  surprise_value: number | null;
+  surprise_value: number | string | null;
   surprise_direction: 'POSITIVE' | 'NEGATIVE' | 'IN_LINE' | 'PENDING';
   status: 'UPCOMING' | 'ONGOING' | 'RELEASED' | 'POSTPONED' | 'CANCELLED' | 'RELEASE_DUE' | 'DELAYED' | 'TIME_NOT_CONFIRMED';
   lifecycle_state?: string;

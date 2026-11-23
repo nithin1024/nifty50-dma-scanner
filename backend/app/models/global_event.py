@@ -28,7 +28,7 @@ class GlobalEventModel(Base):
     forecast_value = Column(String(50), nullable=True)
     actual_value = Column(String(50), nullable=True)
     revision_value = Column(String(50), nullable=True)
-    surprise_value = Column(Float, nullable=True)
+    surprise_value = Column(String(100), nullable=True)
     surprise_direction = Column(String(20), default="PENDING")  # POSITIVE, NEGATIVE, IN_LINE, PENDING
     status = Column(String(30), default="UPCOMING", index=True)  # UPCOMING, ONGOING, RELEASED, POSTPONED, CANCELLED
 

@@ -1189,10 +1189,14 @@ class GlobalEventsService:
             existing_events = {e.id: e for e in db.query(GlobalEventModel).all()}
 
             for item in MASTER_GLOBAL_EVENTS:
-                # Apply verified actual if available
+                # Apply verified actual + surprise from VERIFIED_HISTORICAL_RELEASES
+                verified_surprise_val = None
+                verified_surprise_dir = None
                 if item["id"] in VERIFIED_HISTORICAL_RELEASES:
                     v_info = VERIFIED_HISTORICAL_RELEASES[item["id"]]
                     item["actual_value"] = v_info["actual_value"]
+                    verified_surprise_val = v_info.get("surprise_value")
+                    verified_surprise_dir = v_info.get("surprise_direction")
 
                 # Compute exact timestamps
                 time_info = convert_local_to_utc_and_ist(
@@ -1208,6 +1212,9 @@ class GlobalEventsService:
                 ist_dt = time_info["ist_dt"].replace(tzinfo=None)
 
                 surprise = calculate_surprise(item.get("actual_value"), item.get("forecast_value"))
+                # Prefer VERIFIED surprise data over auto-calculated
+                final_surprise_val = verified_surprise_val if verified_surprise_val is not None else surprise.get("surprise_value")
+                final_surprise_dir = verified_surprise_dir if verified_surprise_dir is not None else surprise.get("surprise_direction", "PENDING")
                 terms_json = json.dumps(item.get("key_terms", []))
                 status = "RELEASED" if item.get("actual_value") and item.get("actual_value") not in ("Not yet released", "Pending", "-", "N/A") else "UPCOMING"
 
@@ -1232,8 +1239,8 @@ class GlobalEventsService:
                         forecast_value=item["forecast_value"],
                         actual_value=item["actual_value"],
                         revision_value=item.get("revision_value"),
-                        surprise_value=surprise.get("surprise_value"),
-                        surprise_direction=surprise.get("surprise_direction", "PENDING"),
+                        surprise_value=final_surprise_val,
+                        surprise_direction=final_surprise_dir,
                         status=status,
                         source_name=item["source_name"],
                         source_url=item["source_url"],
@@ -1251,8 +1258,8 @@ class GlobalEventsService:
                     existing = existing_events[item["id"]]
                     existing.actual_value = item["actual_value"]
                     existing.status = status
-                    existing.surprise_value = surprise.get("surprise_value")
-                    existing.surprise_direction = surprise.get("surprise_direction", "PENDING")
+                    existing.surprise_value = final_surprise_val
+                    existing.surprise_direction = final_surprise_dir
                     existing.description_en = item["description_en"]
                     existing.description_te = item["description_te"]
                     existing.last_verified_timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
