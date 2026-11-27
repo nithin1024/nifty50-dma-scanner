@@ -94,6 +94,14 @@ export async function fetchTopHeavyweights(): Promise<HeavyweightsReport> {
   return response.json();
 }
 
+export async function fetchBankingHeavyweights(): Promise<any> {
+  const response = await fetch(`${API_BASE}/heavyweights/banking`);
+  if (!response.ok) {
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function fetchAllVolumeAnalytics(): Promise<any> {
   const response = await fetch(`${API_BASE}/volume/all-50`);
   if (!response.ok) {

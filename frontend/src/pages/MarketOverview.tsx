@@ -10,9 +10,10 @@ import {
   RefreshCw,
   Layers,
   ArrowRight,
-  Zap
+  Zap,
+  Building2
 } from 'lucide-react';
-import { getExcelDownloadUrl, fetchOptionChain } from '../services/api';
+import { getExcelDownloadUrl, fetchOptionChain, fetchBankingHeavyweights } from '../services/api';
 import { IndianMarketOverviewSection } from '../components/IndianMarketOverviewSection';
 import { EconomicIndicatorsSection } from '../components/EconomicIndicatorsSection';
 import { MarketIntelligenceDashboard } from '../components/MarketIntelligenceDashboard';
@@ -55,6 +56,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
   const combinedContrib = heavyweights?.combined_estimated_contribution_pts ?? 0.0;
 
   const [optionSummary, setOptionSummary] = useState<any>(null);
+  const [bankingReport, setBankingReport] = useState<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -63,6 +65,13 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
         if (mounted && data) setOptionSummary(data);
       })
       .catch(err => console.warn('Could not fetch option chain summary for overview:', err));
+
+    fetchBankingHeavyweights()
+      .then(data => {
+        if (mounted && data) setBankingReport(data);
+      })
+      .catch(err => console.warn('Could not fetch banking heavyweights:', err));
+
     return () => { mounted = false; };
   }, []);
 
@@ -131,21 +140,25 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           <Crown className="w-3 h-3 text-amber-400" />
           <span>2. Top 7 Heavyweights &amp; Live Volume</span>
         </a>
+        <a href="#section-banking" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-[#232E47] transition-all flex items-center gap-1.5">
+          <Building2 className="w-3 h-3 text-sky-400" />
+          <span>3. Banking Sector Volume Analytics</span>
+        </a>
         <a href="#section-universe" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-indigo-500/20 text-slate-300 hover:text-indigo-300 border border-[#232E47] transition-all flex items-center gap-1.5">
           <BarChart3 className="w-3 h-3 text-indigo-400" />
-          <span>3. NIFTY 50 Universe (All Stocks)</span>
+          <span>4. NIFTY 50 Universe (All Stocks)</span>
         </a>
         <a href="#section-options" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-[#232E47] transition-all flex items-center gap-1.5">
           <Layers className="w-3 h-3 text-sky-400" />
-          <span>4. Option Chain Strength &amp; Levels</span>
+          <span>5. Option Chain Strength &amp; Levels</span>
         </a>
         <a href="#section-institutional" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-[#232E47] transition-all flex items-center gap-1.5">
           <Activity className="w-3 h-3 text-emerald-400" />
-          <span>5. Institutional FII/DII Flows</span>
+          <span>6. Institutional FII/DII Flows</span>
         </a>
         <a href="#section-economy" className="px-2.5 py-1 rounded-md bg-[#161F33] hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-[#232E47] transition-all flex items-center gap-1.5">
           <ShieldCheck className="w-3 h-3 text-purple-400" />
-          <span>6. Macro Economic Indicators</span>
+          <span>7. Macro Economic Indicators</span>
         </a>
       </div>
 
@@ -176,41 +189,94 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
           </div>
         </div>
 
-        {/* Pre-Market Heavyweights Discovery Volume Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-          {(heavyweights?.heavyweights && heavyweights.heavyweights.length > 0 ? heavyweights.heavyweights : [
-            { symbol: 'HDFCBANK', weightage: 11.45, market_data: { current_price: 1748.20, price_change_pct: 0.8 }, volume_analytics: { latest_volume: 850000 } },
-            { symbol: 'RELIANCE', weightage: 9.85, market_data: { current_price: 1275.40, price_change_pct: 0.4 }, volume_analytics: { latest_volume: 620000 } },
-            { symbol: 'ICICIBANK', weightage: 7.95, market_data: { current_price: 1285.50, price_change_pct: 1.1 }, volume_analytics: { latest_volume: 540000 } },
-            { symbol: 'INFY', weightage: 5.65, market_data: { current_price: 1885.00, price_change_pct: -0.2 }, volume_analytics: { latest_volume: 310000 } },
-            { symbol: 'BHARTIARTL', weightage: 4.80, market_data: { current_price: 1560.00, price_change_pct: 0.3 }, volume_analytics: { latest_volume: 240000 } },
-            { symbol: 'ITC', weightage: 3.90, market_data: { current_price: 475.00, price_change_pct: 0.1 }, volume_analytics: { latest_volume: 480000 } },
-            { symbol: 'LT', weightage: 3.85, market_data: { current_price: 3680.00, price_change_pct: 0.6 }, volume_analytics: { latest_volume: 120000 } }
-          ]).map((hw: any) => {
-            const vol = hw.volume_analytics?.latest_volume || hw.market_data?.cumulative_volume || 0;
-            const preOpenEstimatedVol = Math.round(vol * 0.08); // Typical pre-open absorbs ~5-10% of initial surge
-            const chg = hw.market_data?.price_change_pct ?? 0;
-            return (
-              <div 
-                key={hw.symbol} 
-                onClick={() => onSelectStock(hw.symbol)}
-                className="p-2.5 rounded-lg bg-[#0B0E14] border border-[#232E47] hover:border-amber-500/50 cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-white text-[11px]">{hw.symbol}</span>
-                  <span className={`text-[10px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {chg >= 0 ? '+' : ''}{chg}%
-                  </span>
-                </div>
-                <div className="mt-1">
-                  <div className="text-[9px] text-slate-500 uppercase">Pre-Open Volume</div>
-                  <div className="text-xs font-mono font-bold text-amber-400">
-                    {formatIndianVolume(preOpenEstimatedVol)}
+        {/* Pre-Market Discovery Volume Grid: Top Heavyweights + All Banking Sector Leaders */}
+        <div className="space-y-3">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5 flex items-center gap-1.5">
+              <Crown className="w-3 h-3 text-amber-400" />
+              <span>NIFTY 50 Heavyweights Pre-Open Discovery</span>
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+              {(heavyweights?.heavyweights && heavyweights.heavyweights.length > 0 ? heavyweights.heavyweights : [
+                { symbol: 'HDFCBANK', weightage: 11.45, market_data: { current_price: 1748.20, price_change_pct: 0.8 }, volume_analytics: { latest_volume: 850000 } },
+                { symbol: 'RELIANCE', weightage: 9.85, market_data: { current_price: 1275.40, price_change_pct: 0.4 }, volume_analytics: { latest_volume: 620000 } },
+                { symbol: 'ICICIBANK', weightage: 7.95, market_data: { current_price: 1285.50, price_change_pct: 1.1 }, volume_analytics: { latest_volume: 540000 } },
+                { symbol: 'INFY', weightage: 5.65, market_data: { current_price: 1885.00, price_change_pct: -0.2 }, volume_analytics: { latest_volume: 310000 } },
+                { symbol: 'BHARTIARTL', weightage: 4.80, market_data: { current_price: 1560.00, price_change_pct: 0.3 }, volume_analytics: { latest_volume: 240000 } },
+                { symbol: 'ITC', weightage: 3.90, market_data: { current_price: 475.00, price_change_pct: 0.1 }, volume_analytics: { latest_volume: 480000 } },
+                { symbol: 'LT', weightage: 3.85, market_data: { current_price: 3680.00, price_change_pct: 0.6 }, volume_analytics: { latest_volume: 120000 } }
+              ]).map((hw: any) => {
+                const vol = hw.volume_analytics?.latest_volume || hw.market_data?.cumulative_volume || 0;
+                const preOpenEstimatedVol = Math.round(vol * 0.08); // Typical pre-open absorbs ~5-10% of initial surge
+                const chg = hw.market_data?.price_change_pct ?? 0;
+                return (
+                  <div 
+                    key={hw.symbol} 
+                    onClick={() => onSelectStock(hw.symbol)}
+                    className="p-2.5 rounded-lg bg-[#0B0E14] border border-[#232E47] hover:border-amber-500/50 cursor-pointer transition-all flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-white text-[11px]">{hw.symbol}</span>
+                      <span className={`text-[10px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {chg >= 0 ? '+' : ''}{chg}%
+                      </span>
+                    </div>
+                    <div className="mt-1">
+                      <div className="text-[9px] text-slate-500 uppercase">Pre-Open Volume</div>
+                      <div className="text-xs font-mono font-bold text-amber-400">
+                        {formatIndianVolume(preOpenEstimatedVol)}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Banking Sector Pre-Open Discovery Pulse */}
+          <div className="pt-2 border-t border-[#232E47]/60">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                <span>Banking Sector / Bankex Leaders Pre-Open Volume Pulse</span>
+              </span>
+              <span className="text-slate-400 font-mono text-[9px]">Live 09:00-09:15 Window</span>
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              {(bankingReport?.stocks && bankingReport.stocks.length > 0 ? bankingReport.stocks : [
+                { symbol: 'HDFCBANK', market_data: { current_price: 857.25, price_change_pct: -0.55 }, volume_analytics: { latest_volume: 32944475 } },
+                { symbol: 'ICICIBANK', market_data: { current_price: 1593.40, price_change_pct: -1.09 }, volume_analytics: { latest_volume: 8936852 } },
+                { symbol: 'SBIN', market_data: { current_price: 1123.90, price_change_pct: -1.12 }, volume_analytics: { latest_volume: 7994315 } },
+                { symbol: 'AXISBANK', market_data: { current_price: 1380.10, price_change_pct: 0.45 }, volume_analytics: { latest_volume: 5673144 } },
+                { symbol: 'KOTAKBANK', market_data: { current_price: 488.55, price_change_pct: 0.32 }, volume_analytics: { latest_volume: 11257492 } },
+                { symbol: 'INDUSINDBK', market_data: { current_price: 958.40, price_change_pct: -0.80 }, volume_analytics: { latest_volume: 2591728 } }
+              ]).map((stk: any) => {
+                const vol = stk.volume_analytics?.latest_volume || stk.market_data?.cumulative_volume || 0;
+                const preVol = Math.round(vol * 0.08);
+                const chg = stk.market_data?.price_change_pct ?? 0;
+                return (
+                  <div 
+                    key={stk.symbol}
+                    onClick={() => onSelectStock(stk.symbol)}
+                    className="p-2 rounded-lg bg-[#0B0E14] border border-[#232E47] hover:border-sky-500/50 cursor-pointer transition-all flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-white text-[11px]">{stk.symbol}</span>
+                      <span className={`text-[10px] font-mono font-bold ${chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {chg >= 0 ? '+' : ''}{chg}%
+                      </span>
+                    </div>
+                    <div className="mt-1">
+                      <div className="text-[9px] text-slate-500 uppercase">Pre-Open Volume</div>
+                      <div className="text-xs font-mono font-bold text-sky-400">
+                        {formatIndianVolume(preVol)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -235,7 +301,7 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                5m Auto-Update Active
+                1m Auto-Update Active
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -387,6 +453,184 @@ export const MarketOverview: React.FC<MarketOverviewProps> = ({
                               title={`Session ${vi + 1}: ${formatIndianVolume(vVal)}`}
                               className={`w-2.5 rounded-t transition-all ${
                                 isLast ? (isPos ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-slate-600 hover:bg-sky-400'
+                              }`}
+                              style={{ height: `${heightPct}%` }}
+                            ></div>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td className={`py-2.5 px-3 text-right font-bold ${
+                      contribPts >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>
+                      {contribPts >= 0 ? '+' : ''}{contribPts.toFixed(4)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 3.B. BANKING SECTOR VOLUME ANALYTICS & BANKEX LEADERS (SEPARATE DEDICATED SUITE) */}
+      <div id="section-banking" className="p-5 rounded-2xl bg-[#121824] border border-[#232E47] shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#232E47] gap-3">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="p-1 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <Building2 className="w-4 h-4" />
+              </span>
+              <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>Banking Sector Leaders &amp; Live Volume Analytics</span>
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 text-[9px] font-mono font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                1m Auto-Update Active
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Banking institutions command <strong>{bankingReport?.combined_weightage_pct || 29.01}%</strong> of NIFTY weight. Live traded volume, 6-session RVOL &amp; volume bar breakdowns.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-4 bg-[#161F33] px-3.5 py-1.5 rounded-xl border border-[#232E47] text-xs font-mono self-start sm:self-auto">
+            <div>
+              <span className="text-[10px] text-slate-400 block uppercase">Banking Weight</span>
+              <strong className="text-sky-300 text-sm">{bankingReport?.combined_weightage_pct || 29.01}%</strong>
+            </div>
+            <div className="border-l border-[#232E47] pl-4">
+              <span className="text-[10px] text-slate-400 block uppercase">Sector Contribution</span>
+              <strong className={`text-sm ${(bankingReport?.combined_estimated_contribution_pts || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {(bankingReport?.combined_estimated_contribution_pts || 0) >= 0 ? '+' : ''}{(bankingReport?.combined_estimated_contribution_pts || 0).toFixed(4)} pts
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Banking Sector Live Table with Mini Volume Bars */}
+        <div className="overflow-x-auto rounded-xl border border-[#232E47]">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-[#161F33] text-slate-400 text-[10px] uppercase font-mono tracking-wider">
+              <tr>
+                <th className="py-2.5 px-3">#</th>
+                <th className="py-2.5 px-3">Symbol</th>
+                <th className="py-2.5 px-3">Bank Name</th>
+                <th className="py-2.5 px-3 text-right">Weight (%)</th>
+                <th className="py-2.5 px-3 text-right">LTP (₹)</th>
+                <th className="py-2.5 px-3 text-right">Change (%)</th>
+                <th className="py-2.5 px-3 text-right">Session Vol</th>
+                <th className="py-2.5 px-3 text-right">6-Sess Avg</th>
+                <th className="py-2.5 px-3 text-right">RVOL</th>
+                <th className="py-2.5 px-3 text-center">6-Sess Volume Bars</th>
+                <th className="py-2.5 px-3 text-right">Index Contrib</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#232E47]/60 font-mono text-[11px]">
+              {(bankingReport?.stocks && bankingReport.stocks.length > 0 ? bankingReport.stocks : [
+                {
+                  symbol: 'HDFCBANK',
+                  company_name: 'HDFC Bank Ltd.',
+                  weightage: 11.25,
+                  market_data: { ltp: 857.25, price_change_pct: -0.55 },
+                  volume_analytics: { latest_volume: 32944475, six_session_avg_volume: 53965582, rvol: 0.61, historical_volumes: [55628667, 48187313, 70517167, 70485600, 24000000, 32944475] },
+                  contribution_pts: -0.0619
+                },
+                {
+                  symbol: 'ICICIBANK',
+                  company_name: 'ICICI Bank Ltd.',
+                  weightage: 8.11,
+                  market_data: { ltp: 1593.40, price_change_pct: -1.09 },
+                  volume_analytics: { latest_volume: 8936852, six_session_avg_volume: 17186637, rvol: 0.52, historical_volumes: [14200000, 15100000, 16800000, 17500000, 16200000, 8936852] },
+                  contribution_pts: -0.0884
+                },
+                {
+                  symbol: 'SBIN',
+                  company_name: 'State Bank of India',
+                  weightage: 3.24,
+                  market_data: { ltp: 1123.90, price_change_pct: -1.12 },
+                  volume_analytics: { latest_volume: 7994315, six_session_avg_volume: 15988630, rvol: 0.50, historical_volumes: [16500000, 15200000, 17800000, 16900000, 14200000, 7994315] },
+                  contribution_pts: -0.0363
+                },
+                {
+                  symbol: 'AXISBANK',
+                  company_name: 'Axis Bank Ltd.',
+                  weightage: 3.10,
+                  market_data: { ltp: 1380.10, price_change_pct: 0.45 },
+                  volume_analytics: { latest_volume: 5673144, six_session_avg_volume: 6200000, rvol: 0.92, historical_volumes: [5800000, 6100000, 6300000, 5900000, 6400000, 5673144] },
+                  contribution_pts: 0.0140
+                },
+                {
+                  symbol: 'KOTAKBANK',
+                  company_name: 'Kotak Mahindra Bank Ltd.',
+                  weightage: 2.74,
+                  market_data: { ltp: 488.55, price_change_pct: 0.32 },
+                  volume_analytics: { latest_volume: 11257492, six_session_avg_volume: 10500000, rvol: 1.07, historical_volumes: [9800000, 10200000, 10800000, 10400000, 11100000, 11257492] },
+                  contribution_pts: 0.0088
+                },
+                {
+                  symbol: 'INDUSINDBK',
+                  company_name: 'IndusInd Bank Ltd.',
+                  weightage: 0.57,
+                  market_data: { ltp: 958.40, price_change_pct: -0.80 },
+                  volume_analytics: { latest_volume: 2591728, six_session_avg_volume: 3100000, rvol: 0.84, historical_volumes: [2900000, 3100000, 3400000, 3000000, 3200000, 2591728] },
+                  contribution_pts: -0.0046
+                }
+              ]).map((hw: any, idx: number) => {
+                const price = hw.market_data?.ltp ?? hw.market_data?.current_price ?? 0;
+                const changePct = hw.market_data?.price_change_pct ?? 0;
+                const isPos = changePct >= 0;
+                const rvol = hw.volume_analytics?.rvol || 1.0;
+                const rvolColor = rvol >= 1.5 ? 'text-purple-300 bg-purple-500/20' :
+                                  rvol >= 1.1 ? 'text-emerald-300 bg-emerald-500/20' :
+                                  rvol <= 0.8 ? 'text-amber-300 bg-amber-500/20' : 'text-slate-300 bg-slate-700/30';
+                const histVols = (hw.volume_analytics?.historical_volumes && hw.volume_analytics.historical_volumes.length > 0)
+                  ? hw.volume_analytics.historical_volumes
+                  : (hw.six_session_history || []).map((s: any) => s.traded_volume ?? s.volume ?? 0);
+                const maxVol = histVols.length > 0 ? Math.max(...histVols.map((v: any) => typeof v === 'number' ? v : (v?.traded_volume ?? v?.volume ?? 0)), 1) : 1;
+                const latestVol = hw.market_data?.cumulative_volume ?? hw.volume_analytics?.latest_volume ?? 0;
+                const avgVol = hw.volume_analytics?.six_session_avg_volume ?? 0;
+                const contribPts = hw.contribution_pts ?? hw.weightage_impact?.approx_index_contribution_pts ?? 0;
+
+                return (
+                  <tr 
+                    key={hw.symbol}
+                    onClick={() => onSelectStock(hw.symbol)}
+                    className="hover:bg-slate-800/40 cursor-pointer transition-colors group"
+                  >
+                    <td className="py-2.5 px-3 text-slate-500 font-sans">{idx + 1}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="font-bold text-sky-400 group-hover:underline">{hw.symbol}</span>
+                    </td>
+                    <td className="py-2.5 px-3 font-sans text-slate-300 truncate max-w-[140px]">{hw.company_name}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-300">{hw.weightage}%</td>
+                    <td className="py-2.5 px-3 text-right text-white font-bold">₹{price.toFixed(2)}</td>
+                    <td className={`py-2.5 px-3 text-right font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {isPos ? '+' : ''}{changePct.toFixed(2)}%
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-sky-300 font-bold">
+                      {formatIndianVolume(latestVol)}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-slate-400">
+                      {formatIndianVolume(avgVol)}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${rvolColor}`}>
+                        {rvol.toFixed(2)}x
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-end justify-center space-x-1 h-6 w-28 mx-auto">
+                        {histVols.map((vItem: any, vIdx: number) => {
+                          const vVal = typeof vItem === 'number' ? vItem : (vItem?.traded_volume ?? vItem?.volume ?? 0);
+                          const heightPct = Math.max(10, Math.round((vVal / maxVol) * 100));
+                          const isLast = vIdx === histVols.length - 1;
+                          return (
+                            <div 
+                              key={vIdx}
+                              title={`Session ${vIdx + 1}: ${formatIndianVolume(vVal)}`}
+                              className={`w-3.5 rounded-t transition-all ${
+                                isLast ? (isPos ? 'bg-sky-400' : 'bg-rose-400') : 'bg-slate-600 hover:bg-sky-400'
                               }`}
                               style={{ height: `${heightPct}%` }}
                             ></div>

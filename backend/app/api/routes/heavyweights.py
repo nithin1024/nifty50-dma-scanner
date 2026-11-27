@@ -11,6 +11,12 @@ async def get_all_heavyweights():
     return await heavyweight_engine.get_all_heavyweights_report()
 
 
+@router.get("/banking", response_model=Dict[str, Any])
+async def get_banking_sector_heavyweights():
+    """Retrieve dedicated volume analytics and tracking for all Banking stocks in NIFTY 50."""
+    return await heavyweight_engine.get_banking_sector_report()
+
+
 @router.get("/{symbol}", response_model=Dict[str, Any])
 async def get_heavyweight_details(symbol: str):
     """Retrieve individual card metrics, 6-session volume history, DMAs, and impact for a heavyweight."""

@@ -3,6 +3,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 
 from app.services.constituents_service import constituents_service, TOP_7_HEAVYWEIGHT_SYMBOLS
+
+ALL_BANKING_SYMBOLS = ["HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK", "KOTAKBANK", "INDUSINDBK"]
+ALL_TRACKED_SYMBOLS = list(set(TOP_7_HEAVYWEIGHT_SYMBOLS + ALL_BANKING_SYMBOLS))
 from app.services.historical_data_service import historical_data_service
 from app.services.dma_service import dma_engine
 from app.services.crossover_service import crossover_engine
@@ -28,7 +31,7 @@ class HeavyweightAnalyticsEngine:
     @classmethod
     async def get_heavyweight_details(cls, symbol: str) -> Optional[Dict[str, Any]]:
         clean_sym = symbol.strip().upper()
-        if clean_sym not in TOP_7_HEAVYWEIGHT_SYMBOLS:
+        if clean_sym not in ALL_TRACKED_SYMBOLS:
             return None
 
         constituent = constituents_service.get_by_symbol(clean_sym)
@@ -218,6 +221,50 @@ class HeavyweightAnalyticsEngine:
             "supporters_count": len(supporters),
             "draggers_count": len(draggers),
             "heavyweights": items
+        }
+
+    @classmethod
+    async def get_banking_sector_report(cls) -> Dict[str, Any]:
+        """
+        Dedicated volume analytics and tracking suite for all NIFTY 50 Banking sector constituents.
+        """
+        items = []
+        for sym in ALL_BANKING_SYMBOLS:
+            detail = await cls.get_heavyweight_details(sym)
+            if detail:
+                items.append(detail)
+
+        items.sort(key=lambda x: x["weightage"], reverse=True)
+        combined_weight = round(sum(item["weightage"] for item in items), 2)
+        combined_contribution = round(sum(item["weightage_impact"]["approx_index_contribution_pts"] for item in items), 4)
+
+        supporters = [item for item in items if item["weightage_impact"]["approx_index_contribution_pts"] > 0]
+        draggers = [item for item in items if item["weightage_impact"]["approx_index_contribution_pts"] < 0]
+
+        top_supporter = max(items, key=lambda x: x["weightage_impact"]["approx_index_contribution_pts"]) if items else None
+        top_dragger = min(items, key=lambda x: x["weightage_impact"]["approx_index_contribution_pts"]) if items else None
+
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "sector": "Banking",
+            "stock_count": len(items),
+            "combined_weightage_pct": combined_weight,
+            "combined_estimated_contribution_pts": combined_contribution,
+            "top_supporter": {
+                "symbol": top_supporter["symbol"],
+                "company_name": top_supporter["company_name"],
+                "contribution_pts": top_supporter["weightage_impact"]["approx_index_contribution_pts"],
+                "price_change_pct": top_supporter["market_data"]["price_change_pct"]
+            } if top_supporter else None,
+            "top_dragger": {
+                "symbol": top_dragger["symbol"],
+                "company_name": top_dragger["company_name"],
+                "contribution_pts": top_dragger["weightage_impact"]["approx_index_contribution_pts"],
+                "price_change_pct": top_dragger["market_data"]["price_change_pct"]
+            } if top_dragger else None,
+            "supporters_count": len(supporters),
+            "draggers_count": len(draggers),
+            "stocks": items
         }
 
 

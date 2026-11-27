@@ -640,9 +640,80 @@ class InstitutionalDataService:
         }
 
     @classmethod
+    def _fetch_live_participant_oi_from_nse(cls, limit_days: int = 15) -> List[Dict[str, Any]]:
+        """Fetch live official participant-wise open interest CSV files from NSE archives."""
+        import urllib.request, csv
+        from datetime import timedelta
+        from zoneinfo import ZoneInfo
+        today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+        headers = {"User-Agent": "Mozilla/5.0"}
+        live_records: List[Dict[str, Any]] = []
+        for i in range(limit_days):
+            dt = today - timedelta(days=i)
+            dt_str = dt.strftime("%d%m%Y")
+            url = f"https://archives.nseindia.com/content/nsccl/fao_participant_oi_{dt_str}.csv"
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    lines = resp.read().decode("utf-8").splitlines()
+                    rows = list(csv.reader(lines))
+                    entry = {
+                        "date": dt.strftime("%d %b %Y"),
+                        "trading_date": dt.isoformat(),
+                        "publication_date": f"{dt.strftime('%d %b %Y')}, 07:45 PM IST"
+                    }
+                    for r in rows[2:6]:
+                        if not r: continue
+                        cat = r[0].strip().lower()
+                        if cat == "fii":
+                            entry["fii_index_futures_long"] = int(r[1])
+                            entry["fii_index_futures_short"] = int(r[2])
+                            entry["fii_index_futures_net"] = int(r[1]) - int(r[2])
+                            entry["fii_stock_futures_long"] = int(r[3])
+                            entry["fii_stock_futures_short"] = int(r[4])
+                            entry["fii_stock_futures_net"] = int(r[3]) - int(r[4])
+                            entry["fii_index_call_long"] = int(r[5])
+                            entry["fii_index_put_long"] = int(r[6])
+                            entry["fii_index_call_short"] = int(r[7])
+                            entry["fii_index_put_short"] = int(r[8])
+                            entry["fii_index_call_net"] = int(r[5]) - int(r[7])
+                            entry["fii_index_put_net"] = int(r[6]) - int(r[8])
+                        elif cat == "dii":
+                            entry["dii_index_futures_long"] = int(r[1])
+                            entry["dii_index_futures_short"] = int(r[2])
+                            entry["dii_index_futures_net"] = int(r[1]) - int(r[2])
+                            entry["dii_stock_futures_long"] = int(r[3])
+                            entry["dii_stock_futures_short"] = int(r[4])
+                            entry["dii_stock_futures_net"] = int(r[3]) - int(r[4])
+                        elif cat == "pro":
+                            entry["pro_index_futures_long"] = int(r[1])
+                            entry["pro_index_futures_short"] = int(r[2])
+                            entry["pro_index_futures_net"] = int(r[1]) - int(r[2])
+                        elif cat == "client":
+                            entry["client_index_futures_long"] = int(r[1])
+                            entry["client_index_futures_short"] = int(r[2])
+                            entry["client_index_futures_net"] = int(r[1]) - int(r[2])
+                    if "fii_index_futures_net" in entry:
+                        live_records.append(entry)
+            except Exception:
+                pass
+        return live_records
+
+    @classmethod
     def get_derivatives_positioning_report(cls) -> Dict[str, Any]:
         """Participant-wise derivatives analysis across Index Futures, Stock Futures, and Index Options."""
-        series = cls.DAILY_DERIVATIVES_SERIES
+        series = list(cls.DAILY_DERIVATIVES_SERIES)
+        # Attempt to pull any newly released daily sessions directly from NSE official archives
+        try:
+            live_nse = cls._fetch_live_participant_oi_from_nse(limit_days=5)
+            if live_nse:
+                max_existing = max((s.get("trading_date", "") for s in series), default="")
+                for r in reversed(live_nse):
+                    if r["trading_date"] > max_existing:
+                        series.insert(0, r)
+        except Exception:
+            pass
+
         latest = series[0]
         prev = series[1]
 
