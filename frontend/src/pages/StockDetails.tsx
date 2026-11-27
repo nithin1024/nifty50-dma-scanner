@@ -40,10 +40,10 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
 
     loadDetails(true);
 
-    // Auto-update every 5 minutes (300,000 ms) so today's live volume bar and DMA stay fresh
+    // Auto-update every 1 minute (60,000 ms) so today's live volume bar and DMA stay fresh
     const interval = setInterval(() => {
       loadDetails(false);
-    }, 300000);
+    }, 60000);
 
     return () => { 
       isMounted = false; 

@@ -68,17 +68,19 @@ async def get_stock_details(
     closes = [c["close"] for c in candles]
     dates = [c["trading_date"] for c in candles]
 
-    # Incorporate today's live intraday candle and live cumulative volume (Upstox / live feed)
+    # Incorporate today's live intraday candle and live cumulative volume (Upstox / live feed / Yahoo fallback)
+    from zoneinfo import ZoneInfo
+    from datetime import datetime
+    from app.services.market_data_service import get_latest_trading_session_iso
+    merged_live = False
     try:
         from app.services import upstox_market_client
         from app.services.upstox_feed_service import subscription_manager
-        from zoneinfo import ZoneInfo
-        from datetime import datetime
         inst_key = constituent.get("upstox_instrument_key") or upstox_market_client.instrument_key_for_symbol(symbol.upper())
         if inst_key:
             intra = await upstox_market_client.get_intraday_candles_v3(inst_key, "minutes", "1")
             if intra and len(intra) >= 1:
-                today_ist_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+                today_ist_str = str(intra[0][0])[:10] or datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
                 ltp = float(intra[0][4])
                 open_p = float(intra[-1][1])
                 high_p = max(float(c[2]) for c in intra)
@@ -110,8 +112,48 @@ async def get_stock_details(
                     })
                     closes.append(ltp)
                     dates.append(today_ist_str)
+                merged_live = True
     except Exception:
         pass
+
+    # Fallback: If Upstox intraday wasn't merged and historical archive is behind latest trading session, pull live/latest session from Yahoo Finance
+    latest_session_iso = get_latest_trading_session_iso()
+    if not merged_live and (not dates or dates[-1] < latest_session_iso):
+        try:
+            import httpx
+            y_sym = f"{symbol.upper()}.NS"
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{y_sym}?interval=1d&range=5d"
+            async with httpx.AsyncClient(timeout=6.0, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    res = (resp.json().get("chart", {}).get("result") or [{}])[0]
+                    meta = res.get("meta", {})
+                    ts_list = res.get("timestamp") or []
+                    q = (res.get("indicators", {}).get("quote") or [{}])[0]
+                    reg_price = meta.get("regularMarketPrice")
+                    for idx, ts in enumerate(ts_list):
+                        dt_str = datetime.fromtimestamp(ts, tz=ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+                        if dt_str > (dates[-1] if dates else ""):
+                            o = q.get("open", [None])[idx]
+                            h = q.get("high", [None])[idx]
+                            l = q.get("low", [None])[idx]
+                            c = q.get("close", [None])[idx]
+                            v = q.get("volume", [None])[idx]
+                            if idx == len(ts_list) - 1 and c is None and reg_price is not None:
+                                c = reg_price
+                            if c is not None and v is not None:
+                                candles.append({
+                                    "trading_date": dt_str,
+                                    "open": round(float(o or c), 2),
+                                    "high": round(float(h or c), 2),
+                                    "low": round(float(l or c), 2),
+                                    "close": round(float(c), 2),
+                                    "volume": int(v),
+                                })
+                                closes.append(round(float(c), 2))
+                                dates.append(dt_str)
+        except Exception:
+            pass
 
     latest_close = closes[-1]
 

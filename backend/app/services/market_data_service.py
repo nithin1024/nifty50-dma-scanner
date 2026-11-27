@@ -159,7 +159,7 @@ def get_today_date_str() -> str:
     return get_current_ist_time().strftime("%d %b %Y")
 
 
-def get_latest_trading_session_date_str() -> str:
+def get_latest_trading_session_dt() -> datetime:
     now_ist = get_current_ist_time()
     weekday = now_ist.weekday()
     if weekday == 5:  # Saturday -> Friday session
@@ -172,7 +172,15 @@ def get_latest_trading_session_date_str() -> str:
         dt = now_ist - timedelta(days=1)
     else:
         dt = now_ist
-    return dt.strftime("%d %b %Y")
+    return dt
+
+
+def get_latest_trading_session_date_str() -> str:
+    return get_latest_trading_session_dt().strftime("%d %b %Y")
+
+
+def get_latest_trading_session_iso() -> str:
+    return get_latest_trading_session_dt().strftime("%Y-%m-%d")
 
 
 def get_next_trading_session_str() -> str:
@@ -292,27 +300,30 @@ class MarketDataService:
             # Case B: Off-market / weekend / pre-market before first 1m candle
             if daily_candles and len(daily_candles) >= 1:
                 latest = daily_candles[0]
-                prev = daily_candles[1] if len(daily_candles) > 1 else None
-                close_p = float(latest[4])
-                open_p = float(latest[1])
-                high_p = float(latest[2])
-                low_p = float(latest[3])
-                prev_close = float(prev[4]) if prev else open_p
-                change = round(close_p - prev_close, 2)
-                change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
                 trading_date = str(latest[0])[:10]
-                return {
-                    "symbol": symbol,
-                    "current": close_p,
-                    "previous_close": prev_close,
-                    "change": change,
-                    "change_pct": change_pct,
-                    "open": open_p,
-                    "high": high_p,
-                    "low": low_p,
-                    "trading_date": trading_date,
-                    "source": "Upstox V3 EOD",
-                }
+                if trading_date >= get_latest_trading_session_iso():
+                    prev = daily_candles[1] if len(daily_candles) > 1 else None
+                    close_p = float(latest[4])
+                    open_p = float(latest[1])
+                    high_p = float(latest[2])
+                    low_p = float(latest[3])
+                    prev_close = float(prev[4]) if prev else open_p
+                    change = round(close_p - prev_close, 2)
+                    change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
+                    return {
+                        "symbol": symbol,
+                        "current": close_p,
+                        "previous_close": prev_close,
+                        "change": change,
+                        "change_pct": change_pct,
+                        "open": open_p,
+                        "high": high_p,
+                        "low": low_p,
+                        "trading_date": trading_date,
+                        "source": "Upstox V3 EOD",
+                    }
+                else:
+                    logger.info("Upstox EOD for %s is stale (%s < %s), falling back to Yahoo Live", symbol, trading_date, get_latest_trading_session_iso())
         except Exception as e:
             logger.warning("Upstox quote fetch failed for %s (%s). Attempting Yahoo Finance fallback.", symbol, e)
 
@@ -326,30 +337,40 @@ class MarketDataService:
 
         return None
 
-    async def fetch_yahoo_quote(self, symbol: str, ticker: str) -> Optional[Dict[str, Any]]:
+    async def fetch_yahoo_quote(self, symbol: str, ticker: str, client: Optional[httpx.AsyncClient] = None) -> Optional[Dict[str, Any]]:
         """Fetch regular market price and change from Yahoo Finance."""
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=2d"
         try:
-            async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
+            if client is not None:
                 resp = await client.get(url)
-                if resp.status_code == 200:
-                    meta = resp.json().get("chart", {}).get("result", [{}])[0].get("meta", {})
-                    price = meta.get("regularMarketPrice")
-                    prev = meta.get("previousClose") or meta.get("chartPreviousClose")
-                    if price is not None:
-                        price = float(price)
-                        prev = float(prev) if prev is not None else price
-                        change = round(price - prev, 2)
-                        change_pct = round((change / prev) * 100, 2) if prev else 0.0
-                        return {
-                            "symbol": symbol,
-                            "current": round(price, 2),
-                            "previous_close": round(prev, 2),
-                            "change": change,
-                            "change_pct": change_pct,
-                            "source": "Yahoo Global Feed",
-                        }
+            else:
+                async with httpx.AsyncClient(timeout=10.0, headers=headers) as c:
+                    resp = await c.get(url)
+            if resp.status_code == 200:
+                res_list = resp.json().get("chart", {}).get("result", [])
+                if not res_list:
+                    return None
+                res = res_list[0]
+                meta = res.get("meta", {})
+                price = meta.get("regularMarketPrice")
+                prev = meta.get("previousClose") or meta.get("chartPreviousClose")
+                closes = [c for c in res.get("indicators", {}).get("quote", [{}])[0].get("close", []) if c is not None]
+                if prev is None and len(closes) >= 2:
+                    prev = closes[-2]
+                if price is not None:
+                    price = float(price)
+                    prev = float(prev) if prev is not None else price
+                    change = round(price - prev, 2)
+                    change_pct = round((change / prev) * 100, 2) if prev else 0.0
+                    return {
+                        "symbol": symbol,
+                        "current": round(price, 2),
+                        "previous_close": round(prev, 2),
+                        "change": change,
+                        "change_pct": change_pct,
+                        "source": "Yahoo Global Feed",
+                    }
         except Exception as e:
             logger.warning("Could not fetch Yahoo quote for %s: %s", symbol, e)
         return None
@@ -631,6 +652,26 @@ class MarketDataService:
             ]
         }
 
+        # Enrich all standard_constituents with live Yahoo .NS quotes concurrently
+        unique_syms = sorted({c["symbol"] for items in standard_constituents.values() for c in items})
+        live_stock_quotes: Dict[str, Dict[str, Any]] = {}
+        try:
+            async with httpx.AsyncClient(timeout=8.0, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}) as y_client:
+                y_tasks = {sym: self.fetch_yahoo_quote(sym, f"{sym}.NS", client=y_client) for sym in unique_syms}
+                y_results = await asyncio.gather(*y_tasks.values(), return_exceptions=True)
+                for sym, res in zip(y_tasks.keys(), y_results):
+                    if isinstance(res, dict) and res.get("current"):
+                        live_stock_quotes[sym] = res
+        except Exception as e:
+            logger.debug("Batch Yahoo constituent enrichment error: %s", e)
+
+        for sec_items in standard_constituents.values():
+            for item in sec_items:
+                lq = live_stock_quotes.get(item["symbol"])
+                if lq:
+                    item["price"] = lq["current"]
+                    item["change_pct"] = lq["change_pct"]
+
         sectors = []
         for sec_id, (ticker, sec_name) in SECTOR_YAHOO_MAP.items():
             l_quote = live_sector_quotes.get(sec_id)
@@ -659,7 +700,7 @@ class MarketDataService:
             })
 
         today_date_str = get_today_date_str()
-        session_date_str = scan.get("completed_session_date") or get_latest_trading_session_date_str()
+        session_date_str = get_latest_trading_session_date_str()
         next_session_str = get_next_trading_session_str()
 
         overview_payload = {

@@ -78,6 +78,44 @@ class HeavyweightAnalyticsEngine:
             dates = [c["trading_date"] for c in candles[:-1]] + [today_date]
             vol_data = volume_engine.analyze_stock_volume(clean_sym, combined_candles)
         else:
+            # Check if historical archive is behind latest trading session; if so, pull live/latest session from Yahoo Finance
+            from zoneinfo import ZoneInfo
+            from app.services.market_data_service import get_latest_trading_session_iso
+            latest_session_iso = get_latest_trading_session_iso()
+            if candles[-1].get("trading_date", "") < latest_session_iso:
+                try:
+                    import httpx
+                    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_sym}.NS?interval=1d&range=5d"
+                    async with httpx.AsyncClient(timeout=5.0, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                        resp = await client.get(url)
+                        if resp.status_code == 200:
+                            res = (resp.json().get("chart", {}).get("result") or [{}])[0]
+                            meta = res.get("meta", {})
+                            ts_list = res.get("timestamp") or []
+                            q = (res.get("indicators", {}).get("quote") or [{}])[0]
+                            reg_price = meta.get("regularMarketPrice")
+                            for idx, ts in enumerate(ts_list):
+                                dt_str = datetime.fromtimestamp(ts, tz=ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+                                if dt_str > candles[-1].get("trading_date", ""):
+                                    o = q.get("open", [None])[idx]
+                                    h = q.get("high", [None])[idx]
+                                    l = q.get("low", [None])[idx]
+                                    c = q.get("close", [None])[idx]
+                                    v = q.get("volume", [None])[idx]
+                                    if idx == len(ts_list) - 1 and c is None and reg_price is not None:
+                                        c = reg_price
+                                    if c is not None and v is not None:
+                                        candles.append({
+                                            "trading_date": dt_str,
+                                            "open": round(float(o or c), 2),
+                                            "high": round(float(h or c), 2),
+                                            "low": round(float(l or c), 2),
+                                            "close": round(float(c), 2),
+                                            "volume": int(v),
+                                        })
+                except Exception as y_err:
+                    logger.debug("Yahoo fallback failed for %s: %s", clean_sym, y_err)
+
             recent_candle = candles[-1]
             prev_candle = candles[-2] if len(candles) >= 2 else recent_candle
             closes = [c["close"] for c in candles]

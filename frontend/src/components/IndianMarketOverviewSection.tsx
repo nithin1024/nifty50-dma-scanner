@@ -211,7 +211,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       constituents: [
         { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1005.00, change_pct: 8.88 },
         { symbol: 'CUB', name: 'City Union Bank', price: 250.00, change_pct: 7.07 },
-        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 516.00, change_pct: 3.08 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 500.00, change_pct: -1.95 },
         { symbol: 'FEDERALBNK', name: 'Federal Bank Ltd', price: 204.50, change_pct: 2.65 },
         { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
         { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1748.20, change_pct: 2.12 },
@@ -234,7 +234,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       change_52w: 16.90,
       constituents: [
         { symbol: 'INDUSINDBK', name: 'IndusInd Bank', price: 1005.00, change_pct: 8.88 },
-        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 516.00, change_pct: 3.08 },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 500.00, change_pct: -1.95 },
         { symbol: 'SBIN', name: 'State Bank of India', price: 818.50, change_pct: 2.80 },
         { symbol: 'FEDERALBNK', name: 'Federal Bank Ltd', price: 204.50, change_pct: 2.65 },
         { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.50, change_pct: 2.45 },
@@ -558,7 +558,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
             <span>Today: <strong className="text-sky-400 font-mono">{liveOverview?.today_date || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
             <span>&bull;</span>
-            <span>Last Session: <strong className="text-white font-mono">{liveOverview?.session_date || '20 Nov 2026'}</strong></span>
+            <span>Last Session: <strong className="text-white font-mono">{liveOverview?.session_date || '27 Nov 2026'}</strong></span>
             <span>&bull;</span>
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
               liveOverview?.market_status === 'LIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
