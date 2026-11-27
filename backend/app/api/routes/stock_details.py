@@ -70,13 +70,13 @@ async def get_stock_details(
 
     # Incorporate today's live intraday candle and live cumulative volume (Upstox / live feed)
     try:
-        from app.services.upstox_market_client import upstox
+        from app.services import upstox_market_client
         from app.services.upstox_feed_service import subscription_manager
         from zoneinfo import ZoneInfo
         from datetime import datetime
-        inst_key = constituent.get("upstox_instrument_key") or upstox.instrument_key_for_symbol(symbol.upper())
+        inst_key = constituent.get("upstox_instrument_key") or upstox_market_client.instrument_key_for_symbol(symbol.upper())
         if inst_key:
-            intra = await upstox.get_intraday_candles_v3(inst_key, "minutes", "1")
+            intra = await upstox_market_client.get_intraday_candles_v3(inst_key, "minutes", "1")
             if intra and len(intra) >= 1:
                 today_ist_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
                 ltp = float(intra[0][4])

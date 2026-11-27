@@ -25,15 +25,30 @@ export const StockDetails: React.FC<StockDetailsProps> = ({
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    fetchStockDetails(selectedSymbol, '5y')
-      .then(res => {
-        if (isMounted) setData(res);
-      })
-      .catch(err => console.error(err))
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-    return () => { isMounted = false; };
+
+    const loadDetails = (showLoading = false) => {
+      if (showLoading) setLoading(true);
+      fetchStockDetails(selectedSymbol, '5y')
+        .then(res => {
+          if (isMounted) setData(res);
+        })
+        .catch(err => console.error(err))
+        .finally(() => {
+          if (isMounted && showLoading) setLoading(false);
+        });
+    };
+
+    loadDetails(true);
+
+    // Auto-update every 5 minutes (300,000 ms) so today's live volume bar and DMA stay fresh
+    const interval = setInterval(() => {
+      loadDetails(false);
+    }, 300000);
+
+    return () => { 
+      isMounted = false; 
+      clearInterval(interval);
+    };
   }, [selectedSymbol]);
 
   const filteredSymbols = availableSymbols.filter(s => 
