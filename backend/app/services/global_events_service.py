@@ -83,7 +83,7 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "country_code": "IN",
         "country_flag": "🇮🇳",
         "category": "CENTRAL_BANK",
-        "year": 2026, "month": 12, "day": 6, "hour": 10, "minute": 0,
+        "year": 2026, "month": 12, "day": 4, "hour": 10, "minute": 0,
         "original_timezone": "Asia/Kolkata",
         "importance": "HIGH",
         "currency": "INR",
@@ -187,10 +187,10 @@ MASTER_GLOBAL_EVENTS: List[Dict[str, Any]] = [
         "original_timezone": "Asia/Kolkata",
         "importance": "HIGH",
         "currency": "INR",
-        "previous_value": "5.49%",
+        "previous_value": "5.54%",
         "forecast_value": "5.80%",
-        "actual_value": "6.21%",
-        "revision_value": None,
+        "actual_value": "6.09%",
+        "revision_value": "Previous Sep revised from 5.49% to 5.54%",
         "source_name": "Ministry of Statistics and Programme Implementation (MOSPI)",
         "source_url": "https://www.mospi.gov.in/",
         "description_en": (
@@ -1121,11 +1121,11 @@ VERIFIED_HISTORICAL_RELEASES: Dict[str, Dict[str, Any]] = {
         "source": "U.S. Bureau of Labor Statistics (BLS)"
     },
     "evt_in_cpi_202611": {
-        "actual_value": "6.21%",
-        "surprise_value": "+0.41%",
+        "actual_value": "6.09%",
+        "surprise_value": "+0.29%",
         "surprise_direction": "NEGATIVE",
         "status": "RELEASED",
-        "source": "MoSPI Ministry of Statistics"
+        "source": "MoSPI Ministry of Statistics (Oct 2026, released 12 Nov)"
     },
     "evt_in_wpi_202611": {
         "actual_value": "2.36%",

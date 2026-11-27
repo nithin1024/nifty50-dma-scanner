@@ -943,7 +943,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   </a>
                   <div className="flex items-center space-x-1 px-3 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono font-bold text-xs">
                     <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>RBI Ceiling: 6.0% (Breached at 6.21%)</span>
+                    <span>RBI Ceiling: 6.0% (Breached at 6.09%)</span>
                   </div>
                 </div>
               </div>
@@ -959,7 +959,7 @@ export const MarketIntelligenceDashboard: React.FC<MarketIntelligenceDashboardPr
                   <div className="space-y-1.5 text-xs font-mono">
                     <div className="flex justify-between py-1 border-b border-[#232E47]/40">
                       <span className="text-slate-300">Headline CPI YoY</span>
-                      <strong className="text-rose-400 font-bold">6.21% (Breaches 6% ceiling)</strong>
+                      <strong className="text-rose-400 font-bold">6.09% (Breaches 6% ceiling)</strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#232E47]/40">
                       <span className="text-slate-300">Core CPI (ex Food &amp; Fuel)</span>

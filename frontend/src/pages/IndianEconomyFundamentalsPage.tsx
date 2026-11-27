@@ -324,7 +324,7 @@ export const IndianEconomyFundamentalsPage: React.FC = () => {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between items-center py-1 border-b border-[#232E47]/50">
                   <span className="text-slate-300 font-medium">Headline CPI YoY</span>
-                  <span className="font-mono font-bold text-rose-400 text-sm">6.21% (Breaches 6% ceiling)</span>
+                  <span className="font-mono font-bold text-rose-400 text-sm">6.09% (Breaches 6% ceiling)</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-b border-[#232E47]/50">
                   <span className="text-slate-300 font-medium">Core CPI (ex Food &amp; Fuel)</span>

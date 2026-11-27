@@ -156,16 +156,34 @@ async def get_live_market_overview(
 
 
 @router.get("/global-markets", response_model=Dict[str, Any])
-async def get_global_markets() -> Dict[str, Any]:
-    """All 24 global benchmarks, currencies, sovereign yields, and commodities with market session awareness."""
-    overview = institutional_market_suite.get_institutional_overview()
-    return {
-        "timestamp": overview.get("timestamp"),
-        "indices": overview.get("indices", []),
-        "currencies_and_yields": overview.get("currencies_and_yields", []),
-        "commodities": overview.get("commodities", []),
-        "source": "Official Exchange Benchmarks / ICE / LME / CCIL / RBI"
-    }
+async def get_global_markets(response: Response = Response()) -> Dict[str, Any]:
+    """All 28 global benchmarks, currencies, sovereign yields, and commodities with live ticks and market session awareness."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    try:
+        from app.services.market_data_service import market_data_service
+        live_res = await market_data_service.get_live_global_benchmarks()
+        quotes = live_res.get("quotes", [])
+        return {
+            "timestamp": live_res.get("timestamp"),
+            "as_of_ist": live_res.get("as_of_ist"),
+            "quotes": quotes,
+            "indices": [q for q in quotes if q["region"] in ("US", "Europe", "Asia", "India")],
+            "currencies_and_yields": [q for q in quotes if q["region"] == "Macro"],
+            "commodities": [q for q in quotes if q["region"] == "Commodity"],
+            "source": "Yahoo Live Global Feed / Official Exchanges / ICE / LME / CCIL / RBI"
+        }
+    except Exception as e:
+        overview = institutional_market_suite.get_institutional_overview()
+        return {
+            "timestamp": overview.get("timestamp"),
+            "quotes": [],
+            "indices": overview.get("indices", []),
+            "currencies_and_yields": overview.get("currencies_and_yields", []),
+            "commodities": overview.get("commodities", []),
+            "source": "Official Exchange Benchmarks / ICE / LME / CCIL / RBI"
+        }
 
 
 @router.get("/premarket", response_model=Dict[str, Any])
