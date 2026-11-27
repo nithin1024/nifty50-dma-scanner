@@ -67,6 +67,52 @@ async def get_stock_details(
 
     closes = [c["close"] for c in candles]
     dates = [c["trading_date"] for c in candles]
+
+    # Incorporate today's live intraday candle and live cumulative volume (Upstox / live feed)
+    try:
+        from app.services.upstox_market_client import upstox
+        from app.services.upstox_feed_service import subscription_manager
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        inst_key = constituent.get("upstox_instrument_key") or upstox.instrument_key_for_symbol(symbol.upper())
+        if inst_key:
+            intra = await upstox.get_intraday_candles_v3(inst_key, "minutes", "1")
+            if intra and len(intra) >= 1:
+                today_ist_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+                ltp = float(intra[0][4])
+                open_p = float(intra[-1][1])
+                high_p = max(float(c[2]) for c in intra)
+                low_p = min(float(c[3]) for c in intra)
+                cum_vol = int(sum(c[5] for c in intra if len(c) > 5 and c[5] is not None))
+                tick = subscription_manager.latest_ticks.get(inst_key)
+                if tick:
+                    if tick.get("volume") and int(tick["volume"]) > cum_vol:
+                        cum_vol = int(tick["volume"])
+                    if tick.get("ltp"):
+                        ltp = float(tick["ltp"])
+                        high_p = max(high_p, ltp)
+                        low_p = min(low_p, ltp)
+
+                if dates and dates[-1] == today_ist_str:
+                    candles[-1]["close"] = ltp
+                    candles[-1]["high"] = max(candles[-1]["high"], high_p)
+                    candles[-1]["low"] = min(candles[-1]["low"], low_p)
+                    candles[-1]["volume"] = cum_vol
+                    closes[-1] = ltp
+                else:
+                    candles.append({
+                        "trading_date": today_ist_str,
+                        "open": open_p,
+                        "high": high_p,
+                        "low": low_p,
+                        "close": ltp,
+                        "volume": cum_vol
+                    })
+                    closes.append(ltp)
+                    dates.append(today_ist_str)
+    except Exception:
+        pass
+
     latest_close = closes[-1]
 
     smas = dma_engine.calculate_all_smas(closes)

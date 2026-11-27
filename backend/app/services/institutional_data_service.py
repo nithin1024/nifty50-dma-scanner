@@ -297,20 +297,68 @@ class InstitutionalDataService:
     # Daily Historical Index Futures & Stock Futures Derivatives Positioning (NSE Participant-Wise)
     DAILY_DERIVATIVES_SERIES: List[Dict[str, Any]] = [
         {
+            "date": "26 Nov 2026",
+            "trading_date": "2026-11-26",
+            "publication_date": "26 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 37660, "fii_index_futures_short": 126129, "fii_index_futures_net": -88469,
+            "dii_index_futures_long": 54517, "dii_index_futures_short": 45968, "dii_index_futures_net": 8549,
+            "pro_index_futures_long": 35510, "pro_index_futures_short": 28838, "pro_index_futures_net": 6672,
+            "client_index_futures_long": 150618, "client_index_futures_short": 77370, "client_index_futures_net": 73248,
+            # Stock Futures (Participant-Wise Open Interest)
+            "fii_stock_futures_long": 3424190, "fii_stock_futures_short": 2540254, "fii_stock_futures_net": 883936,
+            "dii_stock_futures_long": 306239, "dii_stock_futures_short": 4288982, "dii_stock_futures_net": -3982743,
+            # Index Options (Calls & Puts)
+            "fii_index_call_long": 535348, "fii_index_call_short": 644850, "fii_index_call_net": -109502,
+            "fii_index_put_long": 774403, "fii_index_put_short": 558824, "fii_index_put_net": 215579
+        },
+        {
+            "date": "25 Nov 2026",
+            "trading_date": "2026-11-25",
+            "publication_date": "25 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 38700, "fii_index_futures_short": 123930, "fii_index_futures_net": -85230,
+            "dii_index_futures_long": 54959, "dii_index_futures_short": 39905, "dii_index_futures_net": 15054,
+            "pro_index_futures_long": 29834, "pro_index_futures_short": 29497, "pro_index_futures_net": 337,
+            "client_index_futures_long": 146754, "client_index_futures_short": 76915, "client_index_futures_net": 69839,
+            # Stock Futures
+            "fii_stock_futures_long": 3418014, "fii_stock_futures_short": 2560938, "fii_stock_futures_net": 857076,
+            "dii_stock_futures_long": 288613, "dii_stock_futures_short": 4263730, "dii_stock_futures_net": -3975117,
+            # Index Options
+            "fii_index_call_long": 453411, "fii_index_call_short": 575534, "fii_index_call_net": -122123,
+            "fii_index_put_long": 713682, "fii_index_put_short": 442714, "fii_index_put_net": 270968
+        },
+        {
+            "date": "23 Nov 2026",
+            "trading_date": "2026-11-23",
+            "publication_date": "23 Nov 2026, 07:45 PM IST",
+            # Index Futures
+            "fii_index_futures_long": 30649, "fii_index_futures_short": 121598, "fii_index_futures_net": -90949,
+            "dii_index_futures_long": 52934, "dii_index_futures_short": 33166, "dii_index_futures_net": 19768,
+            "pro_index_futures_long": 17521, "pro_index_futures_short": 40506, "pro_index_futures_net": -22985,
+            "client_index_futures_long": 163812, "client_index_futures_short": 69646, "client_index_futures_net": 94166,
+            # Stock Futures
+            "fii_stock_futures_long": 3397963, "fii_stock_futures_short": 2593524, "fii_stock_futures_net": 804439,
+            "dii_stock_futures_long": 277217, "dii_stock_futures_short": 4212946, "dii_stock_futures_net": -3935729,
+            # Index Options
+            "fii_index_call_long": 395710, "fii_index_call_short": 485893, "fii_index_call_net": -90183,
+            "fii_index_put_long": 629193, "fii_index_put_short": 317883, "fii_index_put_net": 311310
+        },
+        {
             "date": "20 Nov 2026",
             "trading_date": "2026-11-20",
             "publication_date": "20 Nov 2026, 07:45 PM IST",
             # Index Futures
-            "fii_index_futures_long": 104800, "fii_index_futures_short": 142500, "fii_index_futures_net": -37700,
-            "dii_index_futures_long": 68500, "dii_index_futures_short": 22100, "dii_index_futures_net": 46400,
-            "pro_index_futures_long": 48200, "pro_index_futures_short": 39500, "pro_index_futures_net": 8700,
-            "client_index_futures_long": 198000, "client_index_futures_short": 180400, "client_index_futures_net": 17600,
+            "fii_index_futures_long": 75864, "fii_index_futures_short": 146318, "fii_index_futures_net": -70454,
+            "dii_index_futures_long": 52405, "dii_index_futures_short": 35254, "dii_index_futures_net": 17151,
+            "pro_index_futures_long": 53026, "pro_index_futures_short": 40985, "pro_index_futures_net": 12041,
+            "client_index_futures_long": 155681, "client_index_futures_short": 114419, "client_index_futures_net": 41262,
             # Stock Futures (Participant-Wise Open Interest)
-            "fii_stock_futures_long": 1535000, "fii_stock_futures_short": 965000, "fii_stock_futures_net": 570000,
-            "dii_stock_futures_long": 752000, "dii_stock_futures_short": 1695000, "dii_stock_futures_net": -943000,
+            "fii_stock_futures_long": 3673303, "fii_stock_futures_short": 2671683, "fii_stock_futures_net": 1001620,
+            "dii_stock_futures_long": 460150, "dii_stock_futures_short": 4352471, "dii_stock_futures_net": -3892321,
             # Index Options (Calls & Puts)
-            "fii_index_call_long": 465000, "fii_index_call_short": 375000, "fii_index_call_net": 90000,
-            "fii_index_put_long": 442000, "fii_index_put_short": 428000, "fii_index_put_net": 14000
+            "fii_index_call_long": 882959, "fii_index_call_short": 992566, "fii_index_call_net": -109607,
+            "fii_index_put_long": 1425970, "fii_index_put_short": 1041238, "fii_index_put_net": 384732
         },
         {
             "date": "19 Nov 2026",
