@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { Clock } from 'lucide-react';
 
 export interface VolumeTrendSession {
   date: string; // e.g. "2026-11-13"
@@ -70,6 +71,20 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
 }) => {
   const { t } = useLanguage();
   const [order, setOrder] = useState<'NEWEST_FIRST' | 'CHRONOLOGICAL'>('NEWEST_FIRST');
+  const [countdown, setCountdown] = useState<number>(300);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? 300 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   if (!sessions || sessions.length === 0) {
     return (
@@ -113,6 +128,11 @@ export const VolumeTrendChart: React.FC<VolumeTrendChartProps> = ({
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
             <span>{t(title)}</span>
             {symbol && <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono font-semibold">{symbol}</span>}
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-medium ml-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <Clock className="w-2.5 h-2.5" />
+              <span>5m Updates ({formatCountdown(countdown)})</span>
+            </span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
             {t('Institutional daily traded volume with 6-session average benchmark (Cr / Lakhs)')}

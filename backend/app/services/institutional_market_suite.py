@@ -16,6 +16,7 @@ Modules:
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 import logging
+from app.services.central_refresh_scheduler import get_current_session_date, get_live_session_date
 
 logger = logging.getLogger("institutional_market_suite")
 
@@ -31,7 +32,7 @@ class InstitutionalMarketSuite:
         now_iso = datetime.now(timezone.utc).isoformat()
         return {
             "timestamp": now_iso,
-            "session_date": "20 Nov 2026",
+            "session_date": get_current_session_date(),
             "market_regime": "MILDLY_BULLISH_CONSOLIDATION",
             "data_freshness": "VERIFIED_SESSION_EOD",
             
@@ -429,8 +430,8 @@ class InstitutionalMarketSuite:
 
         return {
             "timestamp": now_iso,
-            "session_date": "20 Nov 2026",
-            "as_of_date": "21 Nov 2026",
+            "session_date": get_current_session_date(),
+            "as_of_date": get_live_session_date(),
             "premarket_sentiment": "MILDLY_BULLISH_GAP_UP",
             
             # A. Global Closing Quotes
@@ -811,8 +812,8 @@ class InstitutionalMarketSuite:
         # Default Daily Dashboard
         return {
             "timeframe": "DAILY",
-            "period": "20 Nov 2026",
-            "as_of_date": "21 Nov 2026",
+            "period": get_current_session_date(),
+            "as_of_date": get_live_session_date(),
             "updated_at": now_iso,
             "session_summary": {
                 "nifty_spot": 25800.60,

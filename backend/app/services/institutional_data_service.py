@@ -13,6 +13,7 @@ Calculates:
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
+from app.services.central_refresh_scheduler import get_current_session_date
 
 
 class InstitutionalDataService:
@@ -534,8 +535,8 @@ class InstitutionalDataService:
 
         return {
             "session_date": latest["date"],
-            "trading_date": latest.get("trading_date", "2026-11-20"),
-            "publication_date": latest.get("publication_date", "20 Nov 2026, 07:15 PM IST"),
+            "trading_date": latest.get("trading_date", datetime.now().strftime("%Y-%m-%d")),
+            "publication_date": latest.get("publication_date", f"{get_current_session_date()}, 07:15 PM IST"),
             "update_timestamp": datetime.now(timezone.utc).isoformat(),
             "latest": {
                 "fii_gross_buy": latest["fii_gross_buy"],

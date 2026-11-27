@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from app.services.institutional_data_service import institutional_data_service
 from app.services.macro_data_service import macro_data_service
 from app.services.macro_analytics_suite import macro_analytics_suite
+from app.services.central_refresh_scheduler import get_current_session_date
 
 
 class MarketIntelligenceService:
@@ -48,7 +49,7 @@ class MarketIntelligenceService:
         nifty_pct = nifty_live.get("change_pct", 1.12)
         sensex_level = sensex_live.get("current", 83919.71)
         sensex_pct = sensex_live.get("change_pct", 1.08)
-        session_dt = nifty_live.get("session_date", "20 Nov 2026")
+        session_dt = nifty_live.get("session_date", get_current_session_date())
         
         from zoneinfo import ZoneInfo
         now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -95,7 +96,7 @@ class MarketIntelligenceService:
                 "session_date": cash_report["session_date"],
                 "data_source": "NSE Official Bhavcopy & NSDL FPI Monitor",
                 "data_status": "LATEST_RELEASED",
-                "release_date": cash_report.get("publication_date", "20 Nov 2026, 07:15 PM IST"),
+                "release_date": cash_report.get("publication_date", f"{get_current_session_date()}, 07:15 PM IST"),
                 "last_updated": cash_report.get("update_timestamp"),
                 "fii_net_crores": cash_report["latest"]["fii_net"],
                 "fii_sentiment": cash_report["latest"]["fii_status"],

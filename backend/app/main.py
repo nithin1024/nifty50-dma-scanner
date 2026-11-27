@@ -36,6 +36,13 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Database startup sync warning: {e}")
     settings = get_settings()
     from app.services.central_refresh_scheduler import central_refresh_scheduler
+    # Warm up FII/DII data from NSE on startup so latest data is immediately available
+    try:
+        from app.services.nse_fii_dii_service import nse_fii_dii_service
+        asyncio.create_task(nse_fii_dii_service.get_report())
+        logger.info("Scheduled FII/DII NSE warm-up task")
+    except Exception as e:
+        logger.warning(f"FII/DII warm-up scheduling warning: {e}")
     snapshot_task = asyncio.create_task(_oi_snapshot_scheduler(), name="oi-snapshot-scheduler")
     await central_refresh_scheduler.start()
     if settings.UPSTOX_ACCESS_TOKEN.strip():

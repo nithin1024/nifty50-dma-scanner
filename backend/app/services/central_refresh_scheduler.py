@@ -44,7 +44,23 @@ def get_current_session_date() -> str:
             dt = now_ist
         return dt.strftime("%d %b %Y")
     except Exception:
-        return "20 Nov 2026"
+        return datetime.now(INDIA_TZ).strftime("%d %b %Y")
+
+
+def get_live_session_date() -> str:
+    """Dynamically returns today's active or latest trading session date in IST."""
+    try:
+        now_ist = datetime.now(INDIA_TZ)
+        weekday = now_ist.weekday()
+        if weekday == 5:
+            dt = now_ist - timedelta(days=1)
+        elif weekday == 6:
+            dt = now_ist - timedelta(days=2)
+        else:
+            dt = now_ist
+        return dt.strftime("%d %b %Y")
+    except Exception:
+        return datetime.now(INDIA_TZ).strftime("%d %b %Y")
 
 
 class PipelineStatus:

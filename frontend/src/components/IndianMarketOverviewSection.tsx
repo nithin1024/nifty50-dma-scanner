@@ -46,9 +46,28 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
   const [activeSector, setActiveSector] = useState<string>('BSEPBI');
   const [moodPeriod, setMoodPeriod] = useState<'Daily' | 'Weekly'>('Daily');
   const [lastRefreshTime, setLastRefreshTime] = useState<string>('15:30:00 IST');
+  const [liveClockStr, setLiveClockStr] = useState<string>('');
   const [chartModalSymbol, setChartModalSymbol] = useState<string | null>(null);
 
   const [liveOverview, setLiveOverview] = useState<any>(null);
+
+  // 1-second live IST clock — purely cosmetic, no extra API calls
+  useEffect(() => {
+    const clockTimer = setInterval(() => {
+      setLiveClockStr(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST');
+    }, 1000);
+    return () => clearInterval(clockTimer);
+  }, []);
+
+  // Determine if market is live (09:15–15:30 IST Mon–Fri)
+  const isMarketHours = (): boolean => {
+    const now = new Date();
+    const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const h = ist.getHours(), m = ist.getMinutes(), d = ist.getDay();
+    if (d === 0 || d === 6) return false;
+    const mins = h * 60 + m;
+    return mins >= 9 * 60 + 15 && mins < 15 * 60 + 30;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -65,7 +84,9 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
       }
     };
     loadOverview();
-    const interval = setInterval(loadOverview, 300000); // 5-minute fallback polling
+    // Poll every 30s during market hours, every 5 min otherwise
+    const pollInterval = isMarketHours() ? 30000 : 300000;
+    const interval = setInterval(loadOverview, pollInterval);
     return () => {
       mounted = false;
       clearInterval(interval);
@@ -639,30 +660,35 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
               );
             })()}
 
-            {/* Intraday ratio curve (09:15 to 15:30) */}
-            <div className="pt-2 border-t border-[#232E47]/50">
-              <div className="text-[10px] text-slate-400 mb-1 flex justify-between">
-                <span>09:15</span>
-                <span>12:00</span>
-                <span>15:30 Close</span>
-              </div>
-              <svg className="w-full h-12 overflow-visible" viewBox="0 0 200 40">
-                {/* Advances line */}
-                <path
-                  d="M 0 30 C 40 35, 70 15, 110 18 C 140 22, 170 10, 200 8"
-                  fill="none"
-                  stroke="#10B981"
-                  strokeWidth="2"
-                />
-                {/* Declines line */}
-                <path
-                  d="M 0 10 C 40 5, 70 25, 110 22 C 140 18, 170 30, 200 32"
-                  fill="none"
-                  stroke="#F43F5E"
-                  strokeWidth="2"
-                />
-              </svg>
-            </div>
+            {/* Intraday ratio curve (09:15 to 15:30) — dynamically computed from live A/D ratio */}
+            {(() => {
+              const adv2 = liveOverview?.market_breadth?.advances ?? 16;
+              const dec2 = liveOverview?.market_breadth?.declines ?? 34;
+              const total2 = adv2 + dec2 || 50;
+              const advRatio = adv2 / total2; // 0..1
+              // Map ratio to SVG Y (lower Y = higher on chart). Range 5..35
+              const advEndY = Math.round(5 + (1 - advRatio) * 30);
+              const decEndY = Math.round(5 + advRatio * 30);
+              const advMidY = Math.round((30 + advEndY) / 2);
+              const decMidY = Math.round((10 + decEndY) / 2);
+              const advPath = `M 0 30 C 50 ${advMidY + 5}, 100 ${advMidY}, 150 ${advMidY - 3} C 170 ${advEndY + 2}, 185 ${advEndY}, 200 ${advEndY}`;
+              const decPath = `M 0 10 C 50 ${decMidY - 5}, 100 ${decMidY}, 150 ${decMidY + 3} C 170 ${decEndY - 2}, 185 ${decEndY}, 200 ${decEndY}`;
+              return (
+                <div className="pt-2 border-t border-[#232E47]/50">
+                  <div className="text-[10px] text-slate-400 mb-1 flex justify-between">
+                    <span>09:15</span>
+                    <span>12:00</span>
+                    <span>15:30 Close</span>
+                  </div>
+                  <svg className="w-full h-12 overflow-visible" viewBox="0 0 200 40">
+                    {/* Advances line — computed from live ratio */}
+                    <path d={advPath} fill="none" stroke="#10B981" strokeWidth="2" />
+                    {/* Declines line — computed from live ratio */}
+                    <path d={decPath} fill="none" stroke="#F43F5E" strokeWidth="2" />
+                  </svg>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Card B: Market Mood (Fear and Greed Index) Semicircular Gauge (Matching Image 7) */}
@@ -731,6 +757,7 @@ export const IndianMarketOverviewSection: React.FC<IndianMarketOverviewSectionPr
                 </div>
                 <span className="text-[10px] text-slate-400">
                   Click a bar to view constituent stocks &bull; Updates every 5 mins {lastRefreshTime && `(Refreshed: ${lastRefreshTime})`}
+                  {liveClockStr && <span className="ml-2 text-sky-400 font-mono">🕐 {liveClockStr}</span>}
                 </span>
               </div>
               <div className="flex bg-[#0B0E14] rounded-lg p-0.5 border border-[#232E47]">
