@@ -1161,6 +1161,20 @@ VERIFIED_HISTORICAL_RELEASES: Dict[str, Dict[str, Any]] = {
         "surprise_direction": "POSITIVE",
         "status": "RELEASED",
         "source": "Reserve Bank of India (RBI)"
+    },
+    "evt_in_fo_expiry_202611": {
+        "actual_value": "Rollover 81.2% (Nov → Dec Series)",
+        "surprise_value": "+2.2% vs 79.0% forecast",
+        "surprise_direction": "POSITIVE",
+        "status": "RELEASED",
+        "source": "NSE Bhavcopy / F&O Circular — 26 Nov 2026"
+    },
+    "evt_in_gsec_auction_202611": {
+        "actual_value": "Cut-off Yield: 6.78%",
+        "surprise_value": "-7 bps vs 6.85% forecast",
+        "surprise_direction": "POSITIVE",
+        "status": "RELEASED",
+        "source": "RBI Public Debt Management — 27 Nov 2026"
     }
 }
 
@@ -1268,6 +1282,21 @@ class GlobalEventsService:
             pref = db.query(UserEventPreferenceModel).filter(UserEventPreferenceModel.user_id == "default_user").first()
             if not pref:
                 db.add(UserEventPreferenceModel(user_id="default_user"))
+
+            # ── CRITICAL FIX: Force-apply VERIFIED_HISTORICAL_RELEASES to any stale DB records ──
+            # This handles events that were seeded before VERIFIED data was available.
+            for evt_id, v_info in VERIFIED_HISTORICAL_RELEASES.items():
+                stale = existing_events.get(evt_id)
+                if stale and (
+                    not stale.actual_value
+                    or stale.actual_value.strip() in ("Not yet released", "Pending", "-", "N/A", "")
+                ):
+                    stale.actual_value = v_info["actual_value"]
+                    stale.status = "RELEASED"
+                    stale.surprise_value = v_info.get("surprise_value")
+                    stale.surprise_direction = v_info.get("surprise_direction", "PENDING")
+                    stale.last_verified_timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
+                    logger.info("Auto-resolved stale event '%s' → actual='%s'", evt_id, v_info["actual_value"])
 
             db.commit()
             self._initialized = True
