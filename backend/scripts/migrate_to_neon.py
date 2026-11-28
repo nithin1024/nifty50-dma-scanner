@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from sqlalchemy import create_engine, inspect, MetaData, text
+from sqlalchemy import create_engine, inspect, MetaData, text, Integer
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
@@ -82,8 +82,8 @@ def migrate(source_url: str, target_url: str, batch_size: int = 500) -> None:
             for i in range(0, len(rows), batch_size):
                 t_conn.execute(tgt_tbl.insert(), rows[i : i + batch_size])
 
-            # Reset PostgreSQL serial sequence if table has an integer 'id' primary key
-            if "id" in tgt_tbl.columns:
+            # Reset PostgreSQL serial sequence only if table has an integer 'id' primary key
+            if "id" in tgt_tbl.columns and isinstance(tgt_tbl.columns["id"].type, Integer):
                 t_conn.execute(
                     text(
                         f"SELECT setval(pg_get_serial_sequence('\"{table_name}\"', 'id'), "
