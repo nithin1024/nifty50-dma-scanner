@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import logging
 import json
+import os
 
 from app.config import get_settings
 from app.api.routes import health, stocks, daily_scanner, live_scanner, data_status, history, stock_details, volume_analytics, heavyweights, export, market_intelligence, global_events, ema_scanner, options, chart, all_stocks
@@ -27,14 +28,21 @@ logger = logging.getLogger("nifty50_dma_scanner")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    logger.info("Starting %s v%s in %s mode", settings.APP_NAME, __version__, settings.APP_ENV)
+    is_serverless = os.getenv("VERCEL") == "1"
+    logger.info("Starting %s v%s in %s mode (serverless=%s)", settings.APP_NAME, __version__, settings.APP_ENV, is_serverless)
     # Initialize database tables and sync constituents
     try:
         db_service.init_db()
-        db_service.sync_constituents_to_db()
-        global_events_service.init_database_events()
+        if not is_serverless:
+            db_service.sync_constituents_to_db()
+            global_events_service.init_database_events()
     except Exception as e:
         logger.warning(f"Database startup sync warning: {e}")
+
+    if is_serverless:
+        yield
+        return
+
     settings = get_settings()
     from app.services.central_refresh_scheduler import central_refresh_scheduler
     # Warm up FII/DII data from NSE on startup so latest data is immediately available
