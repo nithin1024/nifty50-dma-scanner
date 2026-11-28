@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { NavTab, BackendHealth, DataStatusReport, DailyScanResponse, LiveScanResponse, HeavyweightsReport, MarketIntelligenceReport } from './types';
-import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights, triggerLiveScanRefresh, fetchMarketIntelligence } from './services/api';
+import { fetchHealth, fetchDataStatus, fetchDailyScan, fetchLiveScan, fetchTopHeavyweights, triggerLiveScanRefresh, fetchMarketIntelligence, getWsUrl } from './services/api';
 import { Navbar } from './components/Navbar';
 import { MarketOverview } from './pages/MarketOverview';
 import { DailyScanner } from './pages/DailyScanner';
@@ -86,8 +86,7 @@ export const App: React.FC = () => {
 
   // Live WebSocket Connection for intraday streaming
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/live-scanner`;
+    const wsUrl = getWsUrl('/ws/live-scanner');
     let stopped = false;
     let reconnectTimer: number | undefined;
 

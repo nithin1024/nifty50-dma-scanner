@@ -1,0 +1,25 @@
+name: EOD Market Data & Institutional Refresh
+
+on:
+  schedule:
+    # 19:20 IST and 20:05 IST (Mon-Fri) -> 13:50 UTC and 14:35 UTC
+    - cron: '50 13 * * 1-5'
+    - cron: '35 14 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  trigger-eod-pipelines:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.BACKEND_URL != '' }}
+    steps:
+      - name: Wake backend and check health
+        run: |
+          curl -fsSL --retry 3 --retry-delay 10 "${{ secrets.BACKEND_URL }}/api/v1/health"
+
+      - name: Refresh FII/DII Cash Flow pipeline
+        run: |
+          curl -fsSL -X POST --retry 2 --retry-delay 5 "${{ secrets.BACKEND_URL }}/api/v1/health/refresh/fii_dii_cash"
+
+      - name: Refresh Participant-Wise Derivatives OI pipeline
+        run: |
+          curl -fsSL -X POST --retry 2 --retry-delay 5 "${{ secrets.BACKEND_URL }}/api/v1/health/refresh/derivatives_oi"

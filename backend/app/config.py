@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/nifty50_dma"
+    NEON_DATABASE_URL: str = ""
     DATA_FRESHNESS_THRESHOLD_SECONDS: int = 60
     UPSTOX_API_KEY: str = ""
     UPSTOX_API_SECRET: str = ""
@@ -45,6 +46,13 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def effective_database_url(self) -> str:
+        url = (self.NEON_DATABASE_URL or self.DATABASE_URL).strip()
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
+        return url
 
 
 @lru_cache

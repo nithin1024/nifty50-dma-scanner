@@ -8,7 +8,17 @@ import type {
   HeavyweightsReport
 } from '../types';
 
-const API_BASE = '/api/v1';
+const _apiOrigin = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE = _apiOrigin ? `${_apiOrigin}/api/v1` : '/api/v1';
+
+export function getWsUrl(path: string): string {
+  const wsOrigin = (import.meta.env.VITE_WS_BASE_URL || '').replace(/\/$/, '');
+  if (wsOrigin) {
+    return `${wsOrigin}${path}`;
+  }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${path}`;
+}
 
 async function readApiError(response: Response): Promise<string> {
   const body = await response.json().catch(() => ({}));

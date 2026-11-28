@@ -21,7 +21,8 @@ import {
   fetchExpiries, 
   fetchStrategyPayoff, 
   fetchOptionsAlerts, 
-  fetchDataQualityReport 
+  fetchDataQualityReport,
+  getWsUrl
 } from '../services/api';
 
 type OptionsTab = 
@@ -100,8 +101,7 @@ export const NiftyLiveOptionChainDashboard: React.FC<NiftyLiveOptionChainDashboa
 
   // Initial load: F&O Universe
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${protocol}//${window.location.host}/ws/options-feed`);
+    const socket = new WebSocket(getWsUrl('/ws/options-feed'));
     feedSocketRef.current = socket;
     socket.onmessage = event => {
       let message: any;

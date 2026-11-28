@@ -20,7 +20,7 @@ import {
   Activity, 
   Layers
 } from 'lucide-react';
-import { fetchChartCandles, getChartCsvDownloadUrl } from '../services/api';
+import { fetchChartCandles, getChartCsvDownloadUrl, getWsUrl } from '../services/api';
 
 const getChartBucketTime = (timestampMs: number, timeframe: string): number => {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -250,8 +250,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
   }, [chartSymbol, timeframe, chartType, instrumentKey]);
 
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${protocol}//${window.location.host}/ws/chart-feed`);
+    const socket = new WebSocket(getWsUrl('/ws/chart-feed'));
     feedSocketRef.current = socket;
     socket.onmessage = event => {
       let message: any;
