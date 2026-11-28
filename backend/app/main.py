@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -86,6 +87,9 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+
+# Compress JSON/static responses > 1 KB to cut hosting bandwidth by ~75-85%
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS Middleware configuration
 app.add_middleware(

@@ -245,7 +245,7 @@ export const ProfessionalTradingChart: React.FC<ProfessionalTradingChartProps> =
           })
           .catch(() => {});
       }
-    }, 15000);
+    }, 60000);
     return () => clearInterval(intervalTimer);
   }, [chartSymbol, timeframe, chartType, instrumentKey]);
 
